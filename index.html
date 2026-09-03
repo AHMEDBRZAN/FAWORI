@@ -85,7 +85,6 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
 .modal-action{width:100%;padding:15px;background:var(--primary);border:none;color:#fff;font-size:15px;font-weight:700;border-radius:12px;cursor:pointer;margin-top:10px}
 .modal-action:hover{background:var(--primary-dark)}
 
-/* ===== المحاكي الجديد ===== */
 .room-selector{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
 .room-option{background:var(--gray);border:2px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:.3s}
 .room-option.active{border-color:var(--primary);background:var(--light-gray)}
@@ -106,7 +105,9 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
 .placeholder .cam-icon{font-size:60px;margin-bottom:12px}
 .preview-btns{position:absolute;bottom:10px;left:10px;z-index:5;display:flex;gap:8px}
 .preview-btns button{background:rgba(0,0,0,.75);color:#fff;border:2px solid var(--primary);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
-.tap-hint{background:var(--gray);border:2px dashed var(--primary);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--primary);font-weight:700;text-align:center;margin-bottom:16px}
+.tap-hint{background:var(--gray);border:2px dashed var(--primary);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--primary);font-weight:700;text-align:center;margin-bottom:16px;transition:.3s}
+.processing{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:6;color:var(--primary);font-weight:800;font-size:15px}
+.processing.active{display:flex}
 
 .color-palette{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
 .base-color{aspect-ratio:1;border-radius:10px;cursor:pointer;border:3px solid transparent;transition:.3s;position:relative}
@@ -222,17 +223,18 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
       </div>
 
       <div class="room-preview" id="roomPreview">
-        <div class="placeholder" id="placeholder"><div class="cam-icon">📷</div>التقط صورة لغرفتك بالكاميرا<br>ثم اضغط على الجدران لتلوينها</div>
+        <div class="placeholder" id="placeholder"><div class="cam-icon">📷</div>التقط صورة لغرفتك بالكاميرا<br>ثم اضغط ضغطة واحدة على أي جدار</div>
         <img id="roomPhoto" src="" alt="" style="display:none">
         <div id="roomSvg" style="display:none"></div>
         <canvas id="paintCanvas"></canvas>
+        <div class="processing" id="processing">️ جارٍ تحليل الصورة...</div>
         <div class="preview-btns">
           <button onclick="document.getElementById('cameraInput').click()">📷 صورة جديدة</button>
           <button onclick="clearPaint()">🧹 مسح الطلاء</button>
         </div>
       </div>
 
-      <div class="tap-hint" id="tapHint">👆 اختر لوناً ودرجته ثم اضغط على الجدار في الصورة</div>
+      <div class="tap-hint" id="tapHint">👆 ضغطة واحدة على الجدار = تلوين الضلع كاملاً مع تجنّب الأثاث والسقف</div>
 
       <div class="current-color-bar">
         <div class="dot" id="currentDot" style="background:#E8651A"></div>
@@ -261,25 +263,21 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
   </div>
 </div>
 
-<!-- مدخلات الكاميرا والمعرض -->
 <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleCapture(event)">
 <input type="file" id="galleryInput" accept="image/*" style="display:none" onchange="handleCapture(event)">
 
 <script>
-/* ========== الصور النموذجية (اختيارية للتجربة فقط) ========== */
+/* ========== البيانات ========== */
 const roomPhotos={living:['IMG_3663.webp','IMG_3664.jpeg'],bedroom:['IMG_3662.png','IMG_3661.jpeg'],kitchen:[],bathroom:[]};
 const roomNames={living:'الصالون',bedroom:'غرفة النوم',kitchen:'المطبخ',bathroom:'الحمام'};
 const roomSVGs={
 kitchen:()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect class="svg-wall" data-orig="#B9BCBE" width="800" height="360" fill="#B9BCBE"/><rect y="360" width="800" height="140" fill="#CFD2D4"/><rect x="40" y="60" width="300" height="90" rx="6" fill="#8f9498"/><rect x="40" y="230" width="320" height="30" fill="#E8E8E8"/><rect x="40" y="260" width="320" height="100" fill="#7d8286"/><rect x="600" y="80" width="140" height="280" rx="8" fill="#a8adb1"/><rect x="250" y="330" width="330" height="120" rx="8" fill="#E9E9E9"/><rect x="380" y="345" width="90" height="8" rx="4" fill="#111"/><circle cx="200" cy="60" r="22" fill="#e8c76a"/><circle cx="400" cy="50" r="26" fill="#e8c76a"/><circle cx="560" cy="60" r="22" fill="#e8c76a"/><path d="M200 0 V40 M400 0 V26 M560 0 V40" stroke="#666" stroke-width="3"/></svg>',
 bathroom:()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect class="svg-wall" data-orig="#EDEDED" width="800" height="380" fill="#EDEDED"/><path d="M100 0 q40 120 -20 380 M300 0 q60 150 10 380 M550 0 q-50 160 0 380 M700 0 q30 140 -10 380" stroke="#cfcfcf" stroke-width="4" fill="none"/><rect y="380" width="800" height="120" fill="#B9BCBE"/><rect x="300" y="70" width="220" height="150" fill="#f8fbff" stroke="#fff" stroke-width="8"/><rect x="60" y="230" width="220" height="60" rx="8" fill="#fff"/><ellipse cx="430" cy="330" rx="160" ry="60" fill="#141414"/><rect x="620" y="60" width="130" height="260" fill="#EAF6FC" stroke="#333" stroke-width="5"/><rect x="640" y="340" width="90" height="45" rx="6" fill="#b98a5a"/></svg>'
 };
-
 function bucketSVG(label,brand){
   brand=brand||'FAWORI';
   return '<svg viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg"><path d="M35 62 Q100 16 165 62" stroke="#E8651A" stroke-width="7" fill="none" stroke-linecap="round"/><ellipse cx="100" cy="57" rx="72" ry="16" fill="#E8651A"/><rect x="28" y="55" width="144" height="14" rx="4" fill="#E8651A"/><path d="M32 69 L42 172 Q100 184 158 172 L168 69 Z" fill="#161616"/><path d="M32 69 L42 172 Q70 178 100 179 L100 69 Z" fill="#242424"/><text x="100" y="116" font-family="Arial" font-size="25" font-weight="900" fill="#fff" text-anchor="middle" letter-spacing="2">'+brand+'</text><rect x="50" y="130" width="100" height="26" rx="5" fill="#fff"/><text x="100" y="147" font-family="Arial" font-size="12" font-weight="bold" fill="#333" text-anchor="middle">'+label+'</text></svg>';
 }
-
-/* ========== المنتجات ========== */
 const products=[
  {id:1,name:'Silikonlu Mat',brand:'FAWORI',category:'interior',badge:'الأكثر مبيعاً',desc:'دهان سيلكون مات داخلي فاخر، مقاومة عالية للرطوبة والبقع، لمسة مات أنيقة وتغطية ممتازة.',coverage:'8-10 م²/ل',drying:'2-4 ساعات',warranty:'5 سنوات',usage:['نظّف السطح وأزل الأتربة','طبّق البرايمر وانتظر الجفاف','طبّق الطبقة الأولى','انتظر 4-6 ساعات','طبّق الطبقة الثانية']},
  {id:2,name:'Premium Astar',brand:'FAWORI',category:'primer',badge:'أساس',desc:'برايمر أساسي عالي الجودة يجهّز السطح ويزيد التصاق الدهان النهائي ويوحّد الامتصاص.',coverage:'10-12 م²/ل',drying:'1-2 ساعات',warranty:'10 سنوات',usage:['نظّف السطح من الغبار','خفّف البرايمر حسب التعليمات','طبّق طبقة متساوية','انتظر الجفاف الكامل','طبّق الدهان النهائي']},
@@ -292,8 +290,6 @@ const products=[
  {id:9,name:'Yaqoot Premium',brand:'Yaqoot',category:'interior',badge:'مميز',desc:'دهان يعقوب بريميوم بألوان ثابتة وثبات لوني ممتاز.',coverage:'9-11 م²/ل',drying:'2-4 ساعات',warranty:'6 سنوات',usage:['نظّف السطح','طبّق البرايمر','طبّق طبقتين']},
  {id:10,name:'Sidra Classic',brand:'Sidra',category:'interior',desc:'دهان سدرة الكلاسيكي بجودة موثوقة وتغطية جيدة.',coverage:'8-10 م²/ل',drying:'2-3 ساعات',warranty:'4 سنوات',usage:['نظّف السطح','طبّق البرايمر','طبّق طبقتين']}
 ];
-
-/* ========== عائلات الألوان + توليد الدرجات ========== */
 const baseColors=[
  {name:'برتقالي FAWORI',hex:'#E8651A'},{name:'أحمر',hex:'#B22222'},{name:'ترراكوتا',hex:'#C1440E'},{name:'بني',hex:'#8B4513'},
  {name:'بيج',hex:'#D9C7A7'},{name:'كريمي',hex:'#EFE6D0'},{name:'أبيض',hex:'#FFFFFF'},{name:'رمادي',hex:'#808080'},
@@ -305,10 +301,10 @@ const swatchColors=['#C1440E','#8B4513','#F5DEB3','#E8D5B7','#191970','#A9A9A9',
 const sizes=['2L','3L','5L','10L','20L'];
 
 let currentCategory='all',currentRoom='living',currentColor='#E8651A',currentBaseName='برتقالي FAWORI';
-let mode='none'; /* none | photo | svg */
-let W=0,H=0,imgData=null,mask=null;
+let mode='none';
+let W=0,H=0,origData=null,blurR,blurG,blurB,gradArr,maskA=null;
 
-/* ========== أدوات الألوان ========== */
+/* ========== أدوات لون ========== */
 function hexToRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];}
 function rgbToHex(r){return '#'+r.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('').toUpperCase();}
 function mixHex(a,b,t){const A=hexToRgb(a),B=hexToRgb(b);return rgbToHex(A.map((v,i)=>v+(B[i]-v)*t));}
@@ -333,7 +329,7 @@ function filterProducts(){
 }
 function filterByCategory(c,btn){currentCategory=c;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');filterProducts();}
 
-/* ========== التنقل ========== */
+/* ========== تنقل ========== */
 function showScreen(id,btn){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -345,7 +341,7 @@ function openModal(id){document.getElementById(id).classList.add('active');docum
 function closeModal(id){document.getElementById(id).classList.remove('active');document.body.style.overflow='auto';}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);}));
 
-/* ========== تفاصيل المنتج ========== */
+/* ========== تفاصيل منتج ========== */
 function openProduct(id){
   const p=products.find(x=>x.id===id);if(!p)return;
   document.getElementById('m-name').textContent=p.name+' | '+p.brand;
@@ -362,20 +358,16 @@ function openProduct(id){
 function pick(el){el.parentElement.querySelectorAll('.active').forEach(a=>a.classList.remove('active'));el.classList.add('active');}
 
 /* ========== المحاكي ========== */
-function openSimulator(){
-  openModal('simulatorModal');
-  buildPalette();
-}
+function openSimulator(){openModal('simulatorModal');buildPalette();}
 function buildPalette(){
-  document.getElementById('palette').innerHTML=baseColors.map((c,i)=>'<div class="base-color" style="background:'+c.hex+'" title="'+c.name+'" onclick="chooseBase('+i+',this)"></div>').join('');
+  document.getElementById('palette').innerHTML=baseColors.map((c,i)=>'<div class="base-color" style="background:'+c.hex+'" onclick="chooseBase('+i+',this)"></div>').join('');
 }
 function chooseBase(i,el){
   document.querySelectorAll('.base-color').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   const base=baseColors[i];
   document.getElementById('shadesTitle').textContent='٢) درجات '+base.name+':';
-  const shades=getShades(base.hex);
-  document.getElementById('shadesGrid').innerHTML=shades.map(s=>'<div class="shade" style="background:'+s+'" onclick="selectShade(\''+s+'\',\''+base.name+'\',this)"></div>').join('');
+  document.getElementById('shadesGrid').innerHTML=getShades(base.hex).map(s=>'<div class="shade" style="background:'+s+'" onclick="selectShade(\''+s+'\',\''+base.name+'\',this)"></div>').join('');
   document.getElementById('shadesSection').style.display='block';
   selectShade(base.hex,base.name,null);
 }
@@ -391,8 +383,6 @@ function applyCurrentColor(){
   if(mode==='photo')renderPaint();
   else if(mode==='svg')document.querySelectorAll('#roomSvg .svg-wall').forEach(w=>w.setAttribute('fill',currentColor));
 }
-
-/* ========== تغيير نوع الغرفة ========== */
 function changeRoom(room,btn){
   currentRoom=room;
   document.querySelectorAll('.room-option').forEach(b=>b.classList.remove('active'));
@@ -400,18 +390,15 @@ function changeRoom(room,btn){
   showPlaceholder();
 }
 function showPlaceholder(){
-  mode='none';imgData=null;mask=null;W=H=0;
+  mode='none';origData=null;maskA=null;
   document.getElementById('placeholder').style.display='flex';
   document.getElementById('roomPhoto').style.display='none';
   document.getElementById('roomSvg').style.display='none';
   const c=document.getElementById('paintCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height);
-  document.getElementById('tapHint').textContent='📷 صوّر '+roomNames[currentRoom]+' الآن لتجربة الألوان عليها';
+  document.getElementById('tapHint').textContent='📷 صوّر '+roomNames[currentRoom]+' الآن لتجربة الألوان';
 }
-
-/* ========== التقاط الصورة من الكاميرا/المعرض ========== */
 function handleCapture(e){
-  const file=e.target.files[0];
-  if(!file)return;
+  const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>setPhoto(ev.target.result);
   reader.readAsDataURL(file);
@@ -421,7 +408,7 @@ function setPhoto(src){
   const img=document.getElementById('roomPhoto');
   document.getElementById('placeholder').style.display='none';
   document.getElementById('roomSvg').style.display='none';
-  img.onload=()=>{mode='photo';setupCanvas();document.getElementById('tapHint').textContent='👆 اضغط على الجدار في صورتك ليتم تلوينه باللون '+currentBaseName;};
+  img.onload=()=>{mode='photo';analyzeImage();};
   img.style.display='block';
   img.src=src;
 }
@@ -435,81 +422,161 @@ function loadSample(){
     const svgBox=document.getElementById('roomSvg');
     svgBox.style.display='block';svgBox.innerHTML=roomSVGs[currentRoom]();
     applyCurrentColor();
-    document.getElementById('tapHint').textContent='👆 اضغط على الجدار لتلوينه (وضع الرسم التجريبي)';
   }
 }
 
-/* ========== معالجة الصورة + Flood Fill ========== */
-function setupCanvas(){
-  const img=document.getElementById('roomPhoto'),c=document.getElementById('paintCanvas');
-  const scale=Math.min(1,700/img.naturalWidth);
-  W=c.width=Math.round(img.naturalWidth*scale);
-  H=c.height=Math.round(img.naturalHeight*scale);
-  const ctx=c.getContext('2d',{willReadFrequently:true});
-  ctx.drawImage(img,0,0,W,H);
-  imgData=ctx.getImageData(0,0,W,H);
-  mask=new Uint8Array(W*H);
-  ctx.clearRect(0,0,W,H);
+/* ============================================================
+   محرك تحليل الجدران الاحترافي
+   1) تنعيم (Blur) لإزالة ضوضاء JPEG
+   2) كشف حواف (Sobel) لإيقاف النمو عند الأثاث/السقف/الزوايا
+   3) نمو مناطق متسلسل (يتبع تدرّج الإضاءة حتى يغطي الضلع كاملاً)
+   4) ملء الفجوات الصغيرة (مفاتيح/صور) مع إبقاء الأثاث الكبير
+   5) تنعيم أطراف القناع لدهان طبيعي
+============================================================ */
+function analyzeImage(){
+  document.getElementById('processing').classList.add('active');
+  setTimeout(()=>{
+    const img=document.getElementById('roomPhoto'),c=document.getElementById('paintCanvas');
+    const scale=Math.min(1,480/img.naturalWidth);
+    W=c.width=Math.max(1,Math.round(img.naturalWidth*scale));
+    H=c.height=Math.max(1,Math.round(img.naturalHeight*scale));
+    const ctx=c.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(img,0,0,W,H);
+    origData=ctx.getImageData(0,0,W,H);
+    ctx.clearRect(0,0,W,H);
+    const N=W*H,d=origData.data;
+    blurR=new Float32Array(N);blurG=new Float32Array(N);blurB=new Float32Array(N);
+    for(let i=0,p=0;i<N;i++,p+=4){blurR[i]=d[p];blurG[i]=d[p+1];blurB[i]=d[p+2];}
+    boxBlur(blurR);boxBlur(blurG);boxBlur(blurB);
+    boxBlur(blurR);boxBlur(blurG);boxBlur(blurB);
+    gradArr=new Float32Array(N);
+    for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+      const i=y*W+x;
+      gradArr[i]=Math.abs(lum(i+1)-lum(i-1))+Math.abs(lum(i+W)-lum(i-W));
+    }
+    maskA=new Float32Array(N);
+    document.getElementById('processing').classList.remove('active');
+    document.getElementById('tapHint').textContent='👆 اضغط ضغطة واحدة على الجدار — سيُلوَّن الضلع كاملاً تلقائياً';
+  },50);
+}
+function lum(i){return 0.299*blurR[i]+0.587*blurG[i]+0.114*blurB[i];}
+function boxBlur(a){
+  const t=new Float32Array(a.length);
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      let s=0,c=0;
+      for(let dy=-1;dy<=1;dy++){
+        const yy=y+dy;if(yy<0||yy>=H)continue;
+        const row=yy*W;
+        for(let dx=-1;dx<=1;dx++){
+          const xx=x+dx;if(xx<0||xx>=W)continue;
+          s+=a[row+xx];c++;
+        }
+      }
+      t[y*W+x]=s/c;
+    }
+  }
+  a.set(t);
 }
 function floodFrom(sx,sy){
-  if(!imgData)return false;
-  const d=imgData.data;
-  const x0=Math.max(0,Math.min(W-1,sx|0)),y0=Math.max(0,Math.min(H-1,sy|0));
-  const si=(y0*W+x0)*4;
-  const sr=d[si],sg=d[si+1],sb=d[si+2];
-  const local=new Uint8Array(W*H);
+  if(!blurR)return false;
+  const x0=Math.max(1,Math.min(W-2,sx|0)),y0=Math.max(1,Math.min(H-2,sy|0));
+  const si=y0*W+x0;
+  const sr=blurR[si],sg=blurG[si],sb=blurB[si];
+  const comp=new Uint8Array(W*H);
   const stack=[x0,y0];
-  let count=0;const maxArea=W*H*0.45,T_SEED=100;
+  comp[si]=1;let count=1;
+  const maxA=W*H*0.75,GT=55,ST=220,LT=75;
   while(stack.length){
     const y=stack.pop(),x=stack.pop();
-    const idx=y*W+x;
-    if(local[idx]||mask[idx])continue;
-    const i=idx*4;
-    const dS=Math.abs(d[i]-sr)+Math.abs(d[i+1]-sg)+Math.abs(d[i+2]-sb);
-    if(dS>T_SEED)continue;
-    local[idx]=1;count++;
-    if(count>maxArea)return false;
-    if(x+1<W)stack.push(x+1,y);
-    if(x>0)stack.push(x-1,y);
-    if(y+1<H)stack.push(x,y+1);
-    if(y>0)stack.push(x,y-1);
+    const i=y*W+x;
+    const cr=blurR[i],cg=blurG[i],cb=blurB[i];
+    // الجيران
+    for(let k=0;k<4;k++){
+      const nx=x+(k===0?1:k===1?-1:0),ny=y+(k===2?1:k===3?-1:0);
+      if(nx<1||ny<1||nx>=W-1||ny>=H-1)continue;
+      const n=ny*W+nx;
+      if(comp[n])continue;
+      if(gradArr[n]>GT)continue;                                   // حافة = توقّف
+      const dr=blurR[n]-sr,dg=blurG[n]-sg,db=blurB[n]-sb;
+      if(Math.abs(dr)+Math.abs(dg)+Math.abs(db)>ST)continue;      // انزياح كلي كبير
+      const nr=blurR[n]-cr,ng=blurG[n]-cg,nb=blurB[n]-cb;
+      if(Math.abs(nr)+Math.abs(ng)+Math.abs(nb)>LT)continue;      // فرق محلي كبير
+      comp[n]=1;count++;
+      if(count>maxAreaGuard())return false;
+      stack.push(nx,ny);
+    }
   }
-  if(count>400){for(let i=0;i<local.length;i++)if(local[i])mask[i]=1;return true;}
-  return false;
+  function maxAreaGuard(){return maxA;}
+  if(count<500)return false;
+  fillHoles(comp);
+  feather(comp);
+  return true;
+}
+function fillHoles(comp){
+  const bg=new Uint8Array(W*H);
+  const stack=[];
+  const pushB=(x,y)=>{const i=y*W+x;if(!comp[i]&&!bg[i]){bg[i]=1;stack.push(x,y);}};
+  for(let x=0;x<W;x++){pushB(x,0);pushB(x,H-1);}
+  for(let y=0;y<H;y++){pushB(0,y);pushB(W-1,y);}
+  while(stack.length){
+    const y=stack.pop(),x=stack.pop();
+    if(x+1<W){const i=y*W+x+1;if(!comp[i]&&!bg[i]){bg[i]=1;stack.push(x+1,y);}}
+    if(x>0){const i=y*W+x-1;if(!comp[i]&&!bg[i]){bg[i]=1;stack.push(x-1,y);}}
+    if(y+1<H){const i=(y+1)*W+x;if(!comp[i]&&!bg[i]){bg[i]=1;stack.push(x,y+1);}}
+    if(y>0){const i=(y-1)*W+x;if(!comp[i]&&!bg[i]){bg[i]=1;stack.push(x,y-1);}}
+  }
+  let holes=0;
+  for(let i=0;i<W*H;i++)if(!comp[i]&&!bg[i])holes++;
+  if(holes<W*H*0.2){for(let i=0;i<W*H;i++)if(!comp[i]&&!bg[i])comp[i]=1;}
+}
+function feather(comp){
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    let s=0,c=0;
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+      const yy=y+dy,xx=x+dx;
+      if(yy<0||yy>=H||xx<0||xx>=W)continue;
+      s+=comp[yy*W+xx];c++;
+    }
+    const i=y*W+x,v=s/c;
+    if(v>maskA[i])maskA[i]=v;
+  }
 }
 function renderPaint(){
-  if(!imgData||!mask)return;
+  if(!origData||!maskA)return;
   const c=document.getElementById('paintCanvas'),ctx=c.getContext('2d');
-  const out=ctx.createImageData(W,H),d=imgData.data,o=out.data;
+  const out=ctx.createImageData(W,H),d=origData.data,o=out.data;
   const [r,g,b]=hexToRgb(currentColor);
-  for(let i=0,p=0;i<mask.length;i++,p+=4){
-    if(!mask[i])continue;
-    const lum=(0.299*d[p]+0.587*d[p+1]+0.114*d[p+2])/255;
-    const f=0.25+0.85*lum;
-    o[p]=Math.min(255,r*f);o[p+1]=Math.min(255,g*f);o[p+2]=Math.min(255,b*f);o[p+3]=235;
+  for(let i=0,p=0;i<maskA.length;i++,p+=4){
+    const a=maskA[i];
+    if(a<=0.05)continue;
+    const l=(0.299*d[p]+0.587*d[p+1]+0.114*d[p+2])/255;
+    const f=0.25+0.85*l;
+    o[p]=Math.min(255,r*f);o[p+1]=Math.min(255,g*f);o[p+2]=Math.min(255,b*f);
+    o[p+3]=Math.round(240*a);
   }
   ctx.putImageData(out,0,0);
 }
 function clearPaint(){
-  if(mask)mask.fill(0);
+  if(maskA)maskA.fill(0);
   const c=document.getElementById('paintCanvas');
   c.getContext('2d').clearRect(0,0,c.width,c.height);
   document.querySelectorAll('#roomSvg .svg-wall').forEach(w=>w.setAttribute('fill',w.dataset.orig));
 }
 
-/* النقر على الجدار */
 document.getElementById('roomPreview').addEventListener('click',function(e){
   if(e.target.tagName==='BUTTON')return;
   if(mode==='photo'){
     const rect=this.getBoundingClientRect();
     const x=(e.clientX-rect.left)/rect.width*W;
     const y=(e.clientY-rect.top)/rect.height*H;
-    if(floodFrom(x,y))renderPaint();
-  }else if(mode==='svg'){
-    applyCurrentColor();
-  }else{
-    document.getElementById('cameraInput').click();
-  }
+    if(!floodFrom(x,y)){
+      const h=document.getElementById('tapHint');
+      h.textContent='⚠️ لم يتم التحديد — اضغط مباشرة على سطح الجدار وليس الأثاث';
+      setTimeout(()=>{h.textContent='👆 اضغط ضغطة واحدة على الجدار — سيُلوَّن الضلع كاملاً تلقائياً';},2500);
+    }else renderPaint();
+  }else if(mode==='svg'){applyCurrentColor();}
+  else{document.getElementById('cameraInput').click();}
 });
 
 document.addEventListener('DOMContentLoaded',()=>{loadFeatured();filterProducts();loadBrands();buildPalette();});
