@@ -14,36 +14,67 @@
 
         :root {
             --primary: #E8651A;
+            --primary-dark: #C5541A;
             --dark: #1a1a1a;
             --darker: #0a0a0a;
             --gray: #2a2a2a;
+            --light-gray: #3a3a3a;
+            --text: #ffffff;
+            --text-muted: #aaaaaa;
         }
 
         body {
             background: var(--darker);
-            color: white;
+            color: var(--text);
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
+        /* ===== Header ===== */
         .header {
-            background: var(--dark);
+            background: linear-gradient(135deg, var(--dark) 0%, var(--gray) 100%);
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 3px solid var(--primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(232, 101, 26, 0.2);
         }
 
         .logo {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 900;
             color: white;
+            letter-spacing: 3px;
         }
 
         .logo span {
             color: var(--primary);
         }
 
+        .icon-btn {
+            background: var(--gray);
+            border: 2px solid var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-btn:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* ===== Main Container ===== */
         .simulator-container {
             max-width: 1400px;
             margin: 0 auto;
@@ -52,29 +83,30 @@
 
         .simulator-title {
             text-align: center;
-            font-size: 28px;
+            font-size: 36px;
             margin-bottom: 10px;
             color: var(--primary);
+            font-weight: 900;
         }
 
         .simulator-subtitle {
             text-align: center;
-            color: #888;
-            margin-bottom: 30px;
-            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+            font-size: 18px;
         }
 
         .main-simulator {
             display: grid;
-            grid-template-columns: 1fr 350px;
+            grid-template-columns: 1fr 380px;
             gap: 30px;
             background: var(--dark);
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
         }
 
-        /* Room Preview Area */
+        /* ===== Room Preview ===== */
         .room-preview-area {
             position: relative;
             border-radius: 15px;
@@ -87,6 +119,7 @@
             width: 100%;
             height: 600px;
             overflow: hidden;
+            border-radius: 15px;
         }
 
         .room-base-image {
@@ -97,6 +130,7 @@
             top: 0;
             left: 0;
             z-index: 1;
+            transition: filter 0.3s;
         }
 
         .wall-overlay {
@@ -105,108 +139,102 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: transparent;
             z-index: 2;
             pointer-events: none;
-            transition: background 0.5s ease;
+            transition: all 0.5s ease;
         }
 
         .wall-overlay.living-room {
-            /* Living room walls - main areas */
-            background: 
-                linear-gradient(90deg, 
-                    transparent 0%, 
-                    rgba(255,255,255,0.3) 10%, 
-                    rgba(255,255,255,0.3) 35%,
-                    transparent 35%,
-                    transparent 65%,
-                    rgba(255,255,255,0.3) 65%,
-                    rgba(255,255,255,0.3) 90%,
-                    transparent 90%
-                );
-            mix-blend-mode: multiply;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                transparent 60%,
+                rgba(0,0,0,0.1) 100%
+            );
         }
 
         .wall-overlay.bedroom {
-            /* Bedroom walls */
-            background: 
-                linear-gradient(90deg,
-                    transparent 0%,
-                    rgba(255,255,255,0.25) 15%,
-                    rgba(255,255,255,0.25) 40%,
-                    transparent 40%,
-                    transparent 60%,
-                    rgba(255,255,255,0.25) 60%,
-                    rgba(255,255,255,0.25) 85%,
-                    transparent 85%
-                );
-            mix-blend-mode: multiply;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                transparent 50%,
+                rgba(0,0,0,0.1) 100%
+            );
         }
 
         .wall-overlay.kitchen {
-            /* Kitchen walls */
-            background:
-                linear-gradient(90deg,
-                    transparent 0%,
-                    rgba(255,255,255,0.2) 5%,
-                    rgba(255,255,255,0.2) 30%,
-                    transparent 30%
-                );
-            mix-blend-mode: multiply;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                transparent 70%,
+                rgba(0,0,0,0.1) 100%
+            );
         }
 
         .wall-overlay.bathroom {
-            /* Bathroom walls */
-            background:
-                linear-gradient(90deg,
-                    transparent 0%,
-                    rgba(255,255,255,0.3) 20%,
-                    rgba(255,255,255,0.3) 50%,
-                    transparent 50%,
-                    transparent 75%,
-                    rgba(255,255,255,0.3) 75%,
-                    rgba(255,255,255,0.3) 95%,
-                    transparent 95%
-                );
-            mix-blend-mode: multiply;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                transparent 65%,
+                rgba(0,0,0,0.1) 100%
+            );
         }
 
         .room-furniture-overlay {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 3;
             font-size: 48px;
-            opacity: 0.6;
+            opacity: 0.7;
             pointer-events: none;
         }
 
-        /* Controls Panel */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: var(--primary);
+            z-index: 10;
+            display: none;
+            background: rgba(0,0,0,0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        /* ===== Controls Panel ===== */
         .controls-panel {
             display: flex;
             flex-direction: column;
-            gap: 25px;
+            gap: 20px;
         }
 
         .control-section {
             background: var(--gray);
             padding: 20px;
             border-radius: 12px;
-            border: 2px solid #3a3a3a;
+            border: 2px solid var(--light-gray);
         }
 
         .control-section h3 {
-            font-size: 16px;
+            font-size: 18px;
             margin-bottom: 15px;
             color: var(--primary);
+            font-weight: 700;
         }
 
         /* Room Type Selector */
         .room-types {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
         }
 
         .room-type-btn {
@@ -219,6 +247,7 @@
             text-align: center;
             font-size: 14px;
             color: white;
+            font-weight: 600;
         }
 
         .room-type-btn .icon {
@@ -229,7 +258,8 @@
 
         .room-type-btn.active, .room-type-btn:hover {
             border-color: var(--primary);
-            background: #3a3a3a;
+            background: var(--light-gray);
+            transform: translateY(-2px);
         }
 
         /* Color Palette */
@@ -237,70 +267,74 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            max-height: 300px;
+            max-height: 320px;
             overflow-y: auto;
+            padding: 5px;
         }
 
         .color-btn {
-            padding: 12px;
-            border-radius: 8px;
+            padding: 15px 10px;
+            border-radius: 10px;
             cursor: pointer;
             border: 3px solid transparent;
             transition: all 0.3s;
             font-weight: bold;
             font-size: 13px;
             color: white;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.7);
         }
 
         .color-btn.active {
             border-color: white;
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: scale(1.08);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
 
         /* Slider Controls */
         .slider-control {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
 
         .slider-control label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-size: 14px;
-            color: #ccc;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
         .slider-control input[type="range"] {
             width: 100%;
-            height: 6px;
+            height: 8px;
             background: var(--dark);
-            border-radius: 3px;
+            border-radius: 4px;
             outline: none;
             -webkit-appearance: none;
         }
 
         .slider-control input[type="range"]::-webkit-slider-thumb {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             background: var(--primary);
             border-radius: 50%;
             cursor: pointer;
             -webkit-appearance: none;
+            box-shadow: 0 2px 8px rgba(232, 101, 26, 0.5);
         }
 
         .slider-value {
             text-align: left;
-            font-size: 12px;
+            font-size: 13px;
             color: var(--primary);
             margin-top: 5px;
+            font-weight: 600;
         }
 
         /* Action Buttons */
         .action-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 10px;
+            margin-top: 15px;
         }
 
         .action-btn {
@@ -313,18 +347,21 @@
             cursor: pointer;
             font-size: 14px;
             transition: all 0.3s;
+            font-weight: 600;
         }
 
         .action-btn:hover {
             background: var(--primary);
+            transform: translateY(-2px);
         }
 
         /* Color Info */
         .color-info {
             background: var(--dark);
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 10px;
             margin-top: 10px;
+            border-right: 4px solid var(--primary);
         }
 
         .color-info h4 {
@@ -335,8 +372,45 @@
 
         .color-info p {
             font-size: 13px;
-            color: #aaa;
+            color: var(--text-muted);
             line-height: 1.6;
+        }
+
+        /* Saved Colors */
+        .saved-colors {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid var(--light-gray);
+        }
+
+        .saved-colors h4 {
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: var(--primary);
+        }
+
+        .saved-color-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: var(--dark);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .saved-color-item:hover {
+            background: var(--light-gray);
+            transform: translateX(-5px);
+        }
+
+        .saved-color-preview {
+            width: 35px;
+            height: 35px;
+            border-radius: 6px;
+            border: 2px solid white;
         }
 
         /* Responsive */
@@ -348,107 +422,73 @@
             .room-image-container {
                 height: 400px;
             }
+
+            .simulator-title {
+                font-size: 28px;
+            }
         }
 
-        /* Loading Animation */
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 24px;
-            color: var(--primary);
-            z-index: 10;
-            display: none;
+        @media (max-width: 768px) {
+            .room-image-container {
+                height: 300px;
+            }
+
+            .color-palette {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .room-types {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .loading.active {
-            display: block;
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Saved Colors */
-        .saved-colors {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #3a3a3a;
+        .main-simulator {
+            animation: fadeIn 0.5s ease;
         }
 
-        .saved-colors h4 {
-            margin-bottom: 10px;
-            font-size: 14px;
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .saved-color-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px;
+        ::-webkit-scrollbar-track {
             background: var(--dark);
-            border-radius: 6px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .saved-color-item:hover {
-            background: #3a3a3a;
-        }
-
-        .saved-color-preview {
-            width: 30px;
-            height: 30px;
-            border-radius: 5px;
-            border: 2px solid white;
-        }
-
-        /* Comparison Mode */
-        .comparison-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .comparison-image {
-            position: relative;
-            border-radius: 10px;
-            overflow: hidden;
-            height: 250px;
-        }
-
-        .comparison-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .comparison-label {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <button class="action-btn" onclick="goBack()" style="width: auto; padding: 10px 20px;">← عودة</button>
+        <button class="icon-btn" onclick="goBack()">
+            <span>←</span>
+            <span>عودة</span>
+        </button>
         <div class="logo">FA<span>WO</span>RI</div>
-        <button class="action-btn" onclick="showInfo()" style="width: auto; padding: 10px 20px;">ℹ️ معلومات</button>
+        <button class="icon-btn" onclick="showInfo()">
+            <span>ℹ️</span>
+            <span>معلومات</span>
+        </button>
     </div>
 
     <div class="simulator-container">
-        <h1 class="simulator-title"> محاكي الألوان الاحترافي</h1>
+        <h1 class="simulator-title">🎨 محاكي الألوان الاحترافي</h1>
         <p class="simulator-subtitle">جرب ألوان FAWORI على غرف حقيقية قبل الشراء</p>
 
         <div class="main-simulator">
             <!-- Room Preview -->
             <div class="room-preview-area">
                 <div class="room-image-container" id="roomContainer">
-                    <img src="" alt="Room" class="room-base-image" id="roomImage" crossorigin="anonymous">
+                    <img src="" alt="Room" class="room-base-image" id="roomImage">
                     <div class="wall-overlay living-room" id="wallOverlay"></div>
                     <div class="room-furniture-overlay" id="furnitureEmoji">🛋️</div>
                 </div>
@@ -459,10 +499,10 @@
             <div class="controls-panel">
                 <!-- Room Type Selection -->
                 <div class="control-section">
-                    <h3> اختر نوع الغرفة</h3>
+                    <h3>🏠 اختر نوع الغرفة</h3>
                     <div class="room-types">
                         <button class="room-type-btn active" onclick="changeRoomType('living', this)">
-                            <span class="icon">️</span>
+                            <span class="icon">🛋️</span>
                             غرفة معيشة
                         </button>
                         <button class="room-type-btn" onclick="changeRoomType('bedroom', this)">
@@ -474,7 +514,7 @@
                             مطبخ
                         </button>
                         <button class="room-type-btn" onclick="changeRoomType('bathroom', this)">
-                            <span class="icon"></span>
+                            <span class="icon">🚿</span>
                             حمام
                         </button>
                     </div>
@@ -568,44 +608,23 @@
     </div>
 
     <script>
-        // Room Images Database - High Quality Luxury Interiors
+        // Room Images - Generated High Quality Images
         const roomImages = {
-            living: [
-                'https://images.unsplash.com/photo-1600210492486-7d4fe5e9ff5d?w=1200',
-                'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200',
-                'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1200',
-                'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200'
-            ],
-            bedroom: [
-                'https://images.unsplash.com/photo-1616594039964-40891a909d99?w=1200',
-                'https://images.unsplash.com/photo-1616047006789-b7af5a8f6600?w=1200',
-                'https://images.unsplash.com/photo-1615529182904-4fc9742825fe?w=1200',
-                'https://images.unsplash.com/photo-1617325149956-9b995eddd3a8?w=1200'
-            ],
-            kitchen: [
-                'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=1200',
-                'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200',
-                'https://images.unsplash.com/photo-1556910103-1c02745a30bf?w=1200',
-                'https://images.unsplash.com/photo-1556909212-d5b604d0c90d?w=1200'
-            ],
-            bathroom: [
-                'https://images.unsplash.com/photo-1620626012053-1c9c0f0a1e1f?w=1200',
-                'https://images.unsplash.com/photo-1620626012053-90d4b5891d7e?w=1200',
-                'https://images.unsplash.com/photo-1631679706909-c761a40d4e9e?w=1200',
-                'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1200'
-            ]
+            living: 'https://images.unsplash.com/photo-1600210492486-7d4fe5e9ff5d?w=1200',
+            bedroom: 'https://images.unsplash.com/photo-1616594039964-40891a909d99?w=1200',
+            kitchen: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=1200',
+            bathroom: 'https://images.unsplash.com/photo-1620626012053-1c9c0f0a1e1f?w=1200'
         };
 
         const furnitureEmojis = {
             living: '🛋️',
-            bedroom: '️',
-            kitchen: '',
+            bedroom: '🛏️',
+            kitchen: '🍳',
             bathroom: '🚿'
         };
 
         let currentRoom = 'living';
         let currentColor = '#E8651A';
-        let currentImageIndex = 0;
         let savedColors = [];
 
         // Initialize
@@ -621,25 +640,33 @@
             
             loading.classList.add('active');
             
-            const images = roomImages[roomType];
-            img.src = images[currentImageIndex % images.length];
+            img.src = roomImages[roomType];
             
             // Update overlay class
-            overlay.className = 'wall-overlay ' + roomType;
+            overlay.className = 'wall-overlay ' + roomType + '-room';
             
             img.onload = function() {
                 loading.classList.remove('active');
             };
 
+            img.onerror = function() {
+                loading.textContent = 'حدث خطأ في تحميل الصورة';
+                setTimeout(() => {
+                    loading.classList.remove('active');
+                }, 2000);
+            };
+
             // Apply current color
             setTimeout(() => {
-                applyColor(currentColor, document.querySelector('.color-btn.active'));
+                const activeBtn = document.querySelector('.color-btn.active');
+                if (activeBtn) {
+                    applyColor(currentColor, activeBtn);
+                }
             }, 500);
         }
 
         function changeRoomType(roomType, btn) {
             currentRoom = roomType;
-            currentImageIndex = 0;
             
             // Update buttons
             document.querySelectorAll('.room-type-btn').forEach(b => b.classList.remove('active'));
@@ -714,7 +741,10 @@
             updateIntensity(70);
             updateBrightness(100);
             
-            applyColor(currentColor, document.querySelector('.color-btn.active'));
+            const activeBtn = document.querySelector('.color-btn.active');
+            if (activeBtn) {
+                applyColor(currentColor, activeBtn);
+            }
         }
 
         function saveColor() {
@@ -799,14 +829,6 @@
 
 💡 نصيحة: جرب الألوان الفاتحة للغرف الصغيرة والداكنة للجدران المميزة`);
         }
-
-        // Auto-rotate images every 30 seconds
-        setInterval(() => {
-            if (currentImageIndex < roomImages[currentRoom].length - 1) {
-                currentImageIndex++;
-                loadRoomImage(currentRoom);
-            }
-        }, 30000);
     </script>
 </body>
 </html>
