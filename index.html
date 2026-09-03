@@ -82,7 +82,7 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
 .size-option.active{background:var(--primary);border-color:var(--primary)}
 .color-option{width:42px;height:42px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.3s}
 .color-option.active,.color-option:hover{border-color:#fff;transform:scale(1.12)}
-.modal-action{width:100%;padding:15px;background:var(--primary);border:none;color:#fff;font-size:15px;font-weight:700;border-radius:12px;cursor:pointer;margin-top:15px}
+.modal-action{width:100%;padding:15px;background:var(--primary);border:none;color:#fff;font-size:15px;font-weight:700;border-radius:12px;cursor:pointer;margin-top:10px}
 .modal-action:hover{background:var(--primary-dark)}
 
 .room-selector{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
@@ -90,11 +90,15 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
 .room-option.active{border-color:var(--primary);background:var(--light-gray)}
 .room-option .icon{font-size:32px;display:block;margin-bottom:6px}
 .room-option span{font-size:13px;font-weight:600}
-.room-preview{position:relative;width:100%;height:300px;background:#000;border-radius:12px;overflow:hidden;margin-bottom:16px}
+
+.room-preview{position:relative;width:100%;height:300px;background:#000;border-radius:12px;overflow:hidden;margin-bottom:10px;cursor:crosshair}
 .room-preview img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.room-preview canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
 .room-preview svg{width:100%;height:100%;position:absolute;inset:0}
-.wall-overlay{position:absolute;inset:0;pointer-events:none;transition:background .5s;z-index:2}
-.switch-photo{position:absolute;bottom:10px;left:10px;z-index:5;background:rgba(0,0,0,.7);color:#fff;border:2px solid var(--primary);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer}
+.preview-btns{position:absolute;bottom:10px;left:10px;z-index:5;display:flex;gap:8px}
+.preview-btns button{background:rgba(0,0,0,.75);color:#fff;border:2px solid var(--primary);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.tap-hint{background:var(--gray);border:2px dashed var(--primary);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--primary);font-weight:700;text-align:center;margin-bottom:16px}
+
 .color-palette{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .palette-color{aspect-ratio:1;border-radius:10px;cursor:pointer;border:3px solid transparent;transition:.3s}
 .palette-color.active{border-color:#fff;transform:scale(1.08)}
@@ -124,7 +128,7 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
 <div id="home" class="screen active">
   <div class="hero">
     <h1>مرحباً بك في FAWORI</h1>
-    <p>دهانات تركية عالية الجودة بألوان تدوم طويلاً<br>اكتشف المنتجات وجرب الألوان على غرف حقيقية</p>
+    <p>دهانات تركية عالية الجودة بألوان تدوم طويلاً<br>اكتشف المنتجات ولوّن جدران غرفتك بضغطة واحدة</p>
     <div class="hero-buttons">
       <button class="hero-btn" onclick="showScreen('products',document.querySelectorAll('.nav-tab')[1])">تصفح المنتجات</button>
       <button class="hero-btn outline" onclick="openSimulator()">جرب المحاكي</button>
@@ -184,7 +188,7 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
 <!-- Modal المحاكي -->
 <div class="modal-overlay" id="simulatorModal">
   <div class="modal-content">
-    <div class="modal-header"><h2>🎨 محاكي الألوان</h2><button class="close-modal" onclick="closeModal('simulatorModal')">×</button></div>
+    <div class="modal-header"><h2>🎨 محاكي الألوان الذكي</h2><button class="close-modal" onclick="closeModal('simulatorModal')">×</button></div>
     <div class="modal-body">
       <div class="room-selector">
         <div class="room-option active" onclick="changeRoom('living',this)"><span class="icon">🛋️</span><span>الصالون</span></div>
@@ -192,14 +196,21 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
         <div class="room-option" onclick="changeRoom('kitchen',this)"><span class="icon">🍳</span><span>المطبخ</span></div>
         <div class="room-option" onclick="changeRoom('bathroom',this)"><span class="icon">🚿</span><span>الحمام</span></div>
       </div>
-      <div class="room-preview">
+
+      <div class="tap-hint">👆 اضغط على أي جدار في الصورة ليتم تحديده وتلوينه تلقائياً — يمكنك تلوين أكثر من جدار</div>
+
+      <div class="room-preview" id="roomPreview">
         <img id="roomPhoto" src="" alt="" style="display:none">
         <div id="roomSvg"></div>
-        <div class="wall-overlay" id="wallOverlay"></div>
-        <button class="switch-photo" id="switchBtn" onclick="nextPhoto()">🔄 تغيير المشهد</button>
+        <canvas id="paintCanvas"></canvas>
+        <div class="preview-btns">
+          <button onclick="nextPhoto()">🔄 تغيير المشهد</button>
+          <button onclick="clearPaint()">🧹 مسح الطلاء</button>
+        </div>
       </div>
-      <div class="modal-section"><h3>اختر اللون:</h3><div class="color-palette" id="palette"></div></div>
-      <button class="modal-action" onclick="applyWallColor('#EFEAE2')">🔄 إعادة تعيين الجدار</button>
+
+      <div class="modal-section"><h3>اختر اللون ثم اضغط على الجدار:</h3><div class="color-palette" id="palette"></div></div>
+      <button class="modal-action" onclick="clearPaint()">🧹 إعادة تعيين الغرفة</button>
     </div>
   </div>
 </div>
@@ -221,28 +232,31 @@ body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:
 </div>
 
 <script>
-/* ============ الصور الحقيقية المرفوعة في المستودع ============ */
-const roomPhotos = {
-  living:  ['IMG_3663.webp','IMG_3664.jpeg'],   // صور الصالة
-  bedroom: ['IMG_3662.png','IMG_3661.jpeg'],    // صور غرفة النوم
-  kitchen: [],                                   // رسمة مدمجة
-  bathroom: []                                   // رسمة مدمجة
+/* ========== الصور المرفوعة ========== */
+const roomPhotos={
+  living:['IMG_3663.webp','IMG_3664.jpeg'],
+  bedroom:['IMG_3662.png','IMG_3661.jpeg'],
+  kitchen:[],bathroom:[]
+};
+/* نقاط بداية تلقائية لتلوين الجدران عند فتح الصورة */
+const autoSeeds={
+  living:[[0.52,0.15],[0.86,0.25],[0.62,0.30]],
+  bedroom:[[0.50,0.20],[0.30,0.30],[0.70,0.30]]
 };
 
-/* ============ رسومات SVG مدمجة (احتياطية للمطبخ والحمام) ============ */
-const roomSVGs = {
-kitchen: ()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect class="svg-wall" width="800" height="360" fill="#B9BCBE"/><rect y="360" width="800" height="140" fill="#CFD2D4"/><rect x="40" y="60" width="300" height="90" rx="6" fill="#8f9498"/><rect x="40" y="230" width="320" height="30" fill="#E8E8E8"/><rect x="40" y="260" width="320" height="100" fill="#7d8286"/><rect x="600" y="80" width="140" height="280" rx="8" fill="#a8adb1"/><rect x="250" y="330" width="330" height="120" rx="8" fill="#E9E9E9"/><rect x="380" y="345" width="90" height="8" rx="4" fill="#111"/><circle cx="200" cy="60" r="22" fill="#e8c76a"/><circle cx="400" cy="50" r="26" fill="#e8c76a"/><circle cx="560" cy="60" r="22" fill="#e8c76a"/><path d="M200 0 V40 M400 0 V26 M560 0 V40" stroke="#666" stroke-width="3"/></svg>',
-bathroom: ()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect class="svg-wall" width="800" height="380" fill="#EDEDED"/><path d="M100 0 q40 120 -20 380 M300 0 q60 150 10 380 M550 0 q-50 160 0 380 M700 0 q30 140 -10 380" stroke="#cfcfcf" stroke-width="4" fill="none"/><rect y="380" width="800" height="120" fill="#B9BCBE"/><rect x="300" y="70" width="220" height="150" fill="#f8fbff" stroke="#fff" stroke-width="8"/><rect x="60" y="230" width="220" height="60" rx="8" fill="#fff"/><ellipse cx="430" cy="330" rx="160" ry="60" fill="#141414"/><rect x="620" y="60" width="130" height="260" fill="#EAF6FC" stroke="#333" stroke-width="5"/><rect x="640" y="340" width="90" height="45" rx="6" fill="#b98a5a"/></svg>'
+/* ========== رسومات SVG احتياطية ========== */
+const roomSVGs={
+kitchen:()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect class="svg-wall" width="800" height="360" fill="#B9BCBE"/><rect y="360" width="800" height="140" fill="#CFD2D4"/><rect x="40" y="60" width="300" height="90" rx="6" fill="#8f9498"/><rect x="40" y="230" width="320" height="30" fill="#E8E8E8"/><rect x="40" y="260" width="320" height="100" fill="#7d8286"/><rect x="600" y="80" width="140" height="280" rx="8" fill="#a8adb1"/><rect x="250" y="330" width="330" height="120" rx="8" fill="#E9E9E9"/><rect x="380" y="345" width="90" height="8" rx="4" fill="#111"/><circle cx="200" cy="60" r="22" fill="#e8c76a"/><circle cx="400" cy="50" r="26" fill="#e8c76a"/><circle cx="560" cy="60" r="22" fill="#e8c76a"/><path d="M200 0 V40 M400 0 V26 M560 0 V40" stroke="#666" stroke-width="3"/></svg>',
+bathroom:()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect class="svg-wall" width="800" height="380" fill="#EDEDED"/><path d="M100 0 q40 120 -20 380 M300 0 q60 150 10 380 M550 0 q-50 160 0 380 M700 0 q30 140 -10 380" stroke="#cfcfcf" stroke-width="4" fill="none"/><rect y="380" width="800" height="120" fill="#B9BCBE"/><rect x="300" y="70" width="220" height="150" fill="#f8fbff" stroke="#fff" stroke-width="8"/><rect x="60" y="230" width="220" height="60" rx="8" fill="#fff"/><ellipse cx="430" cy="330" rx="160" ry="60" fill="#141414"/><rect x="620" y="60" width="130" height="260" fill="#EAF6FC" stroke="#333" stroke-width="5"/><rect x="640" y="340" width="90" height="45" rx="6" fill="#b98a5a"/></svg>'
 };
 
-/* ============ رسمة عبوة الدهان ============ */
-function bucketSVG(label, brand){
-  brand = brand || 'FAWORI';
+function bucketSVG(label,brand){
+  brand=brand||'FAWORI';
   return '<svg viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg"><path d="M35 62 Q100 16 165 62" stroke="#E8651A" stroke-width="7" fill="none" stroke-linecap="round"/><ellipse cx="100" cy="57" rx="72" ry="16" fill="#E8651A"/><rect x="28" y="55" width="144" height="14" rx="4" fill="#E8651A"/><path d="M32 69 L42 172 Q100 184 158 172 L168 69 Z" fill="#161616"/><path d="M32 69 L42 172 Q70 178 100 179 L100 69 Z" fill="#242424"/><text x="100" y="116" font-family="Arial" font-size="25" font-weight="900" fill="#fff" text-anchor="middle" letter-spacing="2">'+brand+'</text><rect x="50" y="130" width="100" height="26" rx="5" fill="#fff"/><text x="100" y="147" font-family="Arial" font-size="12" font-weight="bold" fill="#333" text-anchor="middle">'+label+'</text></svg>';
 }
 
-/* ============ بيانات المنتجات ============ */
-const products = [
+/* ========== المنتجات ========== */
+const products=[
  {id:1,name:'Silikonlu Mat',brand:'FAWORI',category:'interior',badge:'الأكثر مبيعاً',desc:'دهان سيلكون مات داخلي فاخر، مقاومة عالية للرطوبة والبقع، لمسة مات أنيقة وتغطية ممتازة.',coverage:'8-10 م²/ل',drying:'2-4 ساعات',warranty:'5 سنوات',usage:['نظّف السطح وأزل الأتربة','طبّق البرايمر وانتظر الجفاف','طبّق الطبقة الأولى','انتظر 4-6 ساعات','طبّق الطبقة الثانية']},
  {id:2,name:'Premium Astar',brand:'FAWORI',category:'primer',badge:'أساس',desc:'برايمر أساسي عالي الجودة يجهّز السطح ويزيد التصاق الدهان النهائي ويوحّد الامتصاص.',coverage:'10-12 م²/ل',drying:'1-2 ساعات',warranty:'10 سنوات',usage:['نظّف السطح من الغبار','خفّف البرايمر حسب التعليمات','طبّق طبقة متساوية','انتظر الجفاف الكامل','طبّق الدهان النهائي']},
  {id:3,name:'Elyafli Su-Sav',brand:'FAWORI',category:'special',badge:'عازل',desc:'عازل مائي مدعّم بالألياف لحماية قصوى ضد تسرب المياه، مرونة عالية ومقاومة للتشققات.',coverage:'5-7 م²/ل',drying:'4-6 ساعات',warranty:'7 سنوات',usage:['جفّف السطح تماماً','أصلح الشقوق','طبّق الطبقة الأولى','انتظر 4-6 ساعات','طبّق طبقة ثانية متقاطعة']},
@@ -258,9 +272,12 @@ const products = [
 const paletteColors=['#E8651A','#4169E1','#228B22','#808080','#F5DEB3','#FFFFFF','#191970','#C1440E','#8B4513','#FFD700','#DDA0DD','#2F4F4F'];
 const swatchColors=['#C1440E','#8B4513','#F5DEB3','#E8D5B7','#191970','#A9A9A9','#FFFFFF','#2F4F4F'];
 const sizes=['2L','3L','5L','10L','20L'];
-let currentCategory='all', currentRoom='living', photoIndex=0, photoLoaded=false, currentColor='#E8651A';
+let currentCategory='all',currentRoom='living',photoIndex=0,photoLoaded=false,currentColor='#E8651A';
 
-/* ============ المنتجات ============ */
+/* ========== متغيرات تقنية التلوين الذكي ========== */
+let W=0,H=0,imgData=null,mask=null;
+
+/* ========== المنتجات ========== */
 function createCard(p){
   const cats={interior:'داخلي',exterior:'خارجي',primer:'برايمر',special:'عازل'};
   const badge=p.badge?'<div class="product-badge">'+p.badge+'</div>':'';
@@ -275,7 +292,7 @@ function filterProducts(){
 }
 function filterByCategory(c,btn){currentCategory=c;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');filterProducts();}
 
-/* ============ التنقل والمودالات ============ */
+/* ========== التنقل ========== */
 function showScreen(id,btn){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -287,7 +304,7 @@ function openModal(id){document.getElementById(id).classList.add('active');docum
 function closeModal(id){document.getElementById(id).classList.remove('active');document.body.style.overflow='auto';}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeModal(o.id);}));
 
-/* ============ تفاصيل المنتج ============ */
+/* ========== تفاصيل المنتج ========== */
 function openProduct(id){
   const p=products.find(x=>x.id===id);if(!p)return;
   document.getElementById('m-name').textContent=p.name+' | '+p.brand;
@@ -303,7 +320,7 @@ function openProduct(id){
 }
 function pick(el){el.parentElement.querySelectorAll('.active').forEach(a=>a.classList.remove('active'));el.classList.add('active');}
 
-/* ============ المحاكي ============ */
+/* ========== المحاكي ========== */
 function openSimulator(){
   openModal('simulatorModal');
   document.getElementById('palette').innerHTML=paletteColors.map((c,i)=>'<div class="palette-color'+(i===0?' active':'')+'" style="background:'+c+'" onclick="chooseColor(\''+c+'\',this)"></div>').join('');
@@ -317,38 +334,108 @@ function changeRoom(room,btn){
 }
 function loadRoomPhoto(){
   const img=document.getElementById('roomPhoto'),svgBox=document.getElementById('roomSvg'),photos=roomPhotos[currentRoom];
-  photoLoaded=false;
-  document.getElementById('switchBtn').style.display=photos.length>1?'block':'none';
-  if(!photos.length){showSvgRoom();return;}
-  img.onload=()=>{photoLoaded=true;img.style.display='block';svgBox.style.display='none';applyWallColor(currentColor);};
-  img.onerror=()=>{if(photoIndex<photos.length-1){photoIndex++;loadRoomPhoto();}else showSvgRoom();};
+  photoLoaded=false;imgData=null;mask=null;
+  const ctx=document.getElementById('paintCanvas').getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  if(!photos.length){
+    img.style.display='none';svgBox.style.display='block';
+    svgBox.innerHTML=roomSVGs[currentRoom]();
+    return;
+  }
+  svgBox.style.display='none';svgBox.innerHTML='';
+  img.onload=()=>{photoLoaded=true;img.style.display='block';setupCanvas();autoPaint();};
+  img.onerror=()=>{if(photoIndex<photos.length-1){photoIndex++;loadRoomPhoto();}else{img.style.display='none';svgBox.style.display='block';svgBox.innerHTML=roomSVGs[currentRoom]();}};
   img.src=photos[photoIndex];
-}
-function showSvgRoom(){
-  const img=document.getElementById('roomPhoto'),svgBox=document.getElementById('roomSvg');
-  img.style.display='none';svgBox.style.display='block';
-  svgBox.innerHTML=roomSVGs[currentRoom]();
-  applyWallColor(currentColor);
 }
 function nextPhoto(){
   const photos=roomPhotos[currentRoom];
   if(photos.length>1){photoIndex=(photoIndex+1)%photos.length;loadRoomPhoto();}
 }
+
+/* ========== تقنية Flood Fill لكشف الجدار ========== */
+function setupCanvas(){
+  const img=document.getElementById('roomPhoto'),c=document.getElementById('paintCanvas');
+  const scale=Math.min(1,700/img.naturalWidth);
+  W=c.width=Math.round(img.naturalWidth*scale);
+  H=c.height=Math.round(img.naturalHeight*scale);
+  const ctx=c.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(img,0,0,W,H);
+  imgData=ctx.getImageData(0,0,W,H);
+  mask=new Uint8Array(W*H);
+  ctx.clearRect(0,0,W,H);
+}
+function floodFrom(sx,sy){
+  if(!imgData)return false;
+  const d=imgData.data;
+  const x0=Math.max(0,Math.min(W-1,sx|0)),y0=Math.max(0,Math.min(H-1,sy|0));
+  const si=(y0*W+x0)*4;
+  const sr=d[si],sg=d[si+1],sb=d[si+2];
+  const local=new Uint8Array(W*H);
+  const stack=[x0,y0];
+  let count=0;const maxArea=W*H*0.45,T_SEED=100;
+  while(stack.length){
+    const y=stack.pop(),x=stack.pop();
+    const idx=y*W+x;
+    if(local[idx]||mask[idx])continue;
+    const i=idx*4;
+    const dS=Math.abs(d[i]-sr)+Math.abs(d[i+1]-sg)+Math.abs(d[i+2]-sb);
+    if(dS>T_SEED)continue;
+    local[idx]=1;count++;
+    if(count>maxArea)return false;
+    if(x+1<W)stack.push(x+1,y);
+    if(x>0)stack.push(x-1,y);
+    if(y+1<H)stack.push(x,y+1);
+    if(y>0)stack.push(x,y-1);
+  }
+  if(count>400){for(let i=0;i<local.length;i++)if(local[i])mask[i]=1;return true;}
+  return false;
+}
+function hexToRgb(h){h=h.replace('#','');return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];}
+function renderPaint(){
+  if(!imgData||!mask)return;
+  const c=document.getElementById('paintCanvas'),ctx=c.getContext('2d');
+  const out=ctx.createImageData(W,H),d=imgData.data,o=out.data;
+  const [r,g,b]=hexToRgb(currentColor);
+  for(let i=0,p=0;i<mask.length;i++,p+=4){
+    if(!mask[i])continue;
+    const lum=(0.299*d[p]+0.587*d[p+1]+0.114*d[p+2])/255;
+    const f=0.25+0.85*lum;
+    o[p]=Math.min(255,r*f);o[p+1]=Math.min(255,g*f);o[p+2]=Math.min(255,b*f);o[p+3]=235;
+  }
+  ctx.putImageData(out,0,0);
+}
+function autoPaint(){
+  const seeds=autoSeeds[currentRoom]||[];
+  let painted=false;
+  seeds.forEach(s=>{if(floodFrom(s[0]*W,s[1]*H))painted=true;});
+  if(painted)renderPaint();
+}
+function clearPaint(){
+  if(mask){mask.fill(0);}
+  const c=document.getElementById('paintCanvas'),ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  document.querySelectorAll('#roomSvg .svg-wall').forEach(w=>w.setAttribute('fill',w.dataset.orig||w.getAttribute('fill')));
+}
+
+/* النقر على الجدار */
+document.getElementById('roomPreview').addEventListener('click',function(e){
+  if(e.target.tagName==='BUTTON')return;
+  if(!photoLoaded){
+    document.querySelectorAll('#roomSvg .svg-wall').forEach(w=>w.setAttribute('fill',currentColor));
+    return;
+  }
+  const rect=this.getBoundingClientRect();
+  const x=(e.clientX-rect.left)/rect.width*W;
+  const y=(e.clientY-rect.top)/rect.height*H;
+  if(floodFrom(x,y))renderPaint();
+});
+
 function chooseColor(c,el){
   currentColor=c;
   document.querySelectorAll('.palette-color').forEach(b=>b.classList.remove('active'));
   if(el)el.classList.add('active');
-  applyWallColor(c);
-}
-function applyWallColor(c){
-  currentColor=c;
-  const ov=document.getElementById('wallOverlay');
-  if(photoLoaded){
-    ov.style.background=c;ov.style.opacity='.7';ov.style.mixBlendMode='multiply';
-  }else{
-    ov.style.background='transparent';
-    document.querySelectorAll('#roomSvg .svg-wall').forEach(w=>w.setAttribute('fill',c));
-  }
+  if(photoLoaded){renderPaint();}
+  else{document.querySelectorAll('#roomSvg .svg-wall').forEach(w=>w.setAttribute('fill',c));}
 }
 
 document.addEventListener('DOMContentLoaded',()=>{loadFeatured();filterProducts();loadBrands();});
