@@ -1,1382 +1,444 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FAWORI - كتالوج الدهانات الاحترافي</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            font-family: 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', sans-serif;
-        }
-
-        :root {
-            --primary: #E8651A;
-            --primary-dark: #C5541A;
-            --dark: #1a1a1a;
-            --darker: #0a0a0a;
-            --gray: #2a2a2a;
-            --light-gray: #3a3a3a;
-            --text: #ffffff;
-            --text-muted: #aaaaaa;
-            --border: #333333;
-            --success: #22c55e;
-            --shadow: rgba(0, 0, 0, 0.4);
-        }
-
-        body {
-            background: var(--darker);
-            color: var(--text);
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding-bottom: 80px;
-        }
-
-        /* ===== Fixed Header ===== */
-        .header {
-            background: linear-gradient(135deg, var(--dark) 0%, var(--gray) 100%);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid var(--primary);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 20px rgba(232, 101, 26, 0.3);
-        }
-
-        .logo {
-            font-size: 28px;
-            font-weight: 900;
-            color: white;
-            letter-spacing: 2px;
-            cursor: pointer;
-        }
-
-        .logo span {
-            color: var(--primary);
-        }
-
-        .header-btn {
-            background: var(--gray);
-            border: 2px solid var(--primary);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 600;
-        }
-
-        .header-btn:hover {
-            background: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        /* ===== Fixed Navigation Tabs ===== */
-        .nav-tabs {
-            background: var(--dark);
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px;
-            border-bottom: 2px solid var(--border);
-            position: fixed;
-            top: 70px;
-            left: 0;
-            right: 0;
-            z-index: 999;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .nav-tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .nav-tab {
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
-            padding: 12px 20px;
-            border-radius: 25px;
-            transition: all 0.3s;
-            border: 2px solid transparent;
-            cursor: pointer;
-            background: var(--gray);
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .nav-tab.active, .nav-tab:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        /* ===== Main Content ===== */
-        .screen {
-            display: none;
-            padding: 140px 15px 30px;
-            max-width: 1200px;
-            margin: 0 auto;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .screen.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ===== Hero Section ===== */
-        .hero {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border-radius: 16px;
-            padding: 35px 25px;
-            margin-bottom: 30px;
-            text-align: center;
-            box-shadow: 0 8px 30px rgba(232, 101, 26, 0.4);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 300px;
-            height: 300px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-        }
-
-        .hero h1 {
-            font-size: 32px;
-            margin-bottom: 12px;
-            color: white;
-            font-weight: 900;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero p {
-            color: rgba(255,255,255,0.95);
-            font-size: 16px;
-            line-height: 1.6;
-            max-width: 600px;
-            margin: 0 auto 20px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-btn {
-            padding: 12px 28px;
-            background: white;
-            color: var(--primary);
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 700;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-
-        .hero-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 18px rgba(0,0,0,0.3);
-        }
-
-        .hero-btn.outline {
-            background: transparent;
-            color: white;
-            border: 2px solid white;
-        }
-
-        /* ===== Section Title ===== */
-        .section-title {
-            font-size: 24px;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 3px solid var(--primary);
-            display: inline-block;
-            color: white;
-            font-weight: 800;
-        }
-
-        /* ===== Search Bar ===== */
-        .search-container {
-            margin-bottom: 25px;
-            position: sticky;
-            top: 140px;
-            z-index: 100;
-            background: var(--darker);
-            padding: 10px 0;
-        }
-
-        .search-bar {
-            width: 100%;
-            padding: 15px 20px;
-            background: var(--gray);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            color: white;
-            font-size: 15px;
-            outline: none;
-            transition: all 0.3s;
-        }
-
-        .search-bar:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(232, 101, 26, 0.2);
-        }
-
-        /* ===== Category Filters ===== */
-        .category-filters {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 5px;
-        }
-
-        .category-filters::-webkit-scrollbar {
-            display: none;
-        }
-
-        .filter-btn {
-            padding: 10px 20px;
-            background: var(--gray);
-            border: 2px solid var(--border);
-            color: white;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.3s;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .filter-btn.active, .filter-btn:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        /* ===== Products Grid ===== */
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 15px;
-            margin-top: 10px;
-        }
-
-        .product-card {
-            background: var(--dark);
-            border-radius: 12px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 2px solid var(--border);
-            box-shadow: 0 3px 12px var(--shadow);
-        }
-
-        .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(232, 101, 26, 0.3);
-            border-color: var(--primary);
-        }
-
-        .product-image {
-            height: 140px;
-            background: linear-gradient(135deg, var(--gray), var(--light-gray));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .product-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s;
-        }
-
-        .product-card:hover .product-image img {
-            transform: scale(1.08);
-        }
-
-        .product-badge {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: var(--primary);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        .product-info {
-            padding: 12px;
-        }
-
-        .product-info h3 {
-            font-size: 15px;
-            margin-bottom: 6px;
-            color: white;
-            font-weight: 700;
-        }
-
-        .product-info p {
-            color: var(--text-muted);
-            font-size: 12px;
-            line-height: 1.5;
-            margin-bottom: 10px;
-        }
-
-        .product-category {
-            display: inline-block;
-            padding: 4px 10px;
-            background: var(--primary);
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        /* ===== Modal ===== */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.85);
-            z-index: 2000;
-            display: none;
-            align-items: flex-end;
-            justify-content: center;
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-overlay.active {
-            display: flex;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-content {
-            background: var(--dark);
-            border-radius: 20px 20px 0 0;
-            width: 100%;
-            max-height: 85vh;
-            overflow-y: auto;
-            border-top: 3px solid var(--primary);
-            animation: slideUp 0.3s ease;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        .modal-header {
-            padding: 20px;
-            border-bottom: 2px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            background: var(--dark);
-            z-index: 10;
-        }
-
-        .modal-header h2 {
-            font-size: 22px;
-            color: white;
-            font-weight: 800;
-        }
-
-        .close-modal {
-            background: var(--gray);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-
-        .close-modal:hover {
-            background: var(--primary);
-            transform: rotate(90deg);
-        }
-
-        .modal-body {
-            padding: 20px;
-        }
-
-        .modal-image {
-            width: 100%;
-            height: 250px;
-            background: linear-gradient(135deg, var(--gray), var(--light-gray));
-            border-radius: 12px;
-            margin-bottom: 20px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .modal-section {
-            margin-bottom: 25px;
-        }
-
-        .modal-section h3 {
-            font-size: 18px;
-            color: var(--primary);
-            margin-bottom: 12px;
-            font-weight: 700;
-        }
-
-        .modal-section p, .modal-section li {
-            color: var(--text-muted);
-            font-size: 14px;
-            line-height: 1.8;
-        }
-
-        .modal-section ul, .modal-section ol {
-            padding-right: 20px;
-        }
-
-        .modal-section li {
-            margin-bottom: 8px;
-        }
-
-        .specs-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin: 15px 0;
-        }
-
-        .spec-item {
-            background: var(--gray);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            border: 2px solid var(--border);
-        }
-
-        .spec-item .icon {
-            font-size: 28px;
-            margin-bottom: 8px;
-        }
-
-        .spec-item h4 {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-
-        .spec-item p {
-            font-size: 15px;
-            font-weight: 700;
-            color: white;
-        }
-
-        .size-options {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin: 12px 0;
-        }
-
-        .size-option {
-            padding: 10px 20px;
-            background: var(--gray);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 700;
-            transition: all 0.3s;
-        }
-
-        .size-option.active, .size-option:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .color-options {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin: 12px 0;
-        }
-
-        .color-option {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: all 0.3s;
-        }
-
-        .color-option.active, .color-option:hover {
-            border-color: white;
-            transform: scale(1.15);
-        }
-
-        .modal-action {
-            width: 100%;
-            padding: 16px;
-            background: var(--primary);
-            border: none;
-            color: white;
-            font-size: 16px;
-            font-weight: 700;
-            border-radius: 12px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(232, 101, 26, 0.4);
-        }
-
-        .modal-action:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-        }
-
-        /* ===== Simulator ===== */
-        .simulator-container {
-            background: var(--dark);
-            border-radius: 16px;
-            padding: 20px;
-            border: 2px solid var(--border);
-        }
-
-        .room-selector {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .room-option {
-            background: var(--gray);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .room-option.active, .room-option:hover {
-            border-color: var(--primary);
-            background: var(--light-gray);
-            transform: translateY(-3px);
-        }
-
-        .room-option .icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .room-option span {
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .room-preview {
-            position: relative;
-            width: 100%;
-            height: 300px;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-
-        .room-preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .wall-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            pointer-events: none;
-            transition: all 0.5s;
-        }
-
-        .color-palette {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .palette-color {
-            aspect-ratio: 1;
-            border-radius: 10px;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: all 0.3s;
-        }
-
-        .palette-color.active, .palette-color:hover {
-            border-color: white;
-            transform: scale(1.1);
-        }
-
-        /* ===== About Section ===== */
-        .about-container {
-            background: var(--dark);
-            border-radius: 16px;
-            padding: 30px 20px;
-            text-align: center;
-            border: 2px solid var(--border);
-        }
-
-        .about-container h2 {
-            font-size: 28px;
-            margin-bottom: 20px;
-            color: var(--primary);
-            font-weight: 800;
-        }
-
-        .about-container p {
-            font-size: 15px;
-            line-height: 1.9;
-            color: var(--text-muted);
-            margin-bottom: 15px;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-top: 25px;
-        }
-
-        .feature-item {
-            background: var(--gray);
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            border: 2px solid var(--border);
-        }
-
-        .feature-item .icon {
-            font-size: 40px;
-            margin-bottom: 12px;
-        }
-
-        .feature-item h3 {
-            font-size: 16px;
-            margin-bottom: 8px;
-            color: white;
-        }
-
-        .feature-item p {
-            font-size: 12px;
-            margin: 0;
-        }
-
-        /* ===== Loading ===== */
-        .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9);
-            padding: 25px 40px;
-            border-radius: 12px;
-            z-index: 3000;
-            display: none;
-            text-align: center;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .loading .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--gray);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* ===== Responsive ===== */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 26px;
-            }
-
-            .hero p {
-                font-size: 14px;
-            }
-
-            .products-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .specs-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .color-palette {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        @media (min-width: 769px) {
-            .products-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .products-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAWORI - كتالوج الدهانات الاحترافي</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:'Segoe UI',Tahoma,sans-serif}
+:root{--primary:#E8651A;--primary-dark:#C5541A;--dark:#1a1a1a;--darker:#0f0f0f;--gray:#2a2a2a;--light-gray:#3a3a3a;--text:#fff;--muted:#aaa;--border:#333}
+body{background:var(--darker);color:var(--text);min-height:100vh;padding-bottom:40px}
+
+/* ===== Header ثابت ===== */
+.header{background:linear-gradient(135deg,var(--dark),var(--gray));padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid var(--primary);position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 4px 20px rgba(232,101,26,.3)}
+.logo{font-size:26px;font-weight:900;letter-spacing:2px;cursor:pointer}
+.logo span{color:var(--primary)}
+.header-btn{background:var(--gray);border:2px solid var(--primary);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:.3s}
+.header-btn:hover{background:var(--primary)}
+
+/* ===== Tabs ثابتة ===== */
+.nav-tabs{background:var(--dark);display:flex;gap:8px;padding:10px 12px;border-bottom:2px solid var(--border);position:fixed;top:62px;left:0;right:0;z-index:999;overflow-x:auto;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{color:#fff;font-weight:700;padding:10px 18px;border-radius:22px;border:2px solid transparent;cursor:pointer;background:var(--gray);font-size:13px;white-space:nowrap;transition:.3s}
+.nav-tab.active{background:var(--primary);border-color:var(--primary)}
+
+.screen{display:none;padding:130px 14px 30px;max-width:1200px;margin:0 auto;animation:fadeIn .4s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== Hero ===== */
+.hero{background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:16px;padding:32px 22px;margin-bottom:28px;text-align:center;box-shadow:0 8px 30px rgba(232,101,26,.4);position:relative;overflow:hidden}
+.hero h1{font-size:30px;margin-bottom:10px;font-weight:900}
+.hero p{color:rgba(255,255,255,.95);font-size:15px;line-height:1.7;margin-bottom:18px}
+.hero-buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.hero-btn{padding:12px 26px;background:#fff;color:var(--primary);border:none;border-radius:25px;cursor:pointer;font-size:14px;font-weight:700;transition:.3s}
+.hero-btn.outline{background:transparent;color:#fff;border:2px solid #fff}
+.hero-btn:hover{transform:translateY(-3px)}
+
+.section-title{font-size:22px;margin-bottom:18px;padding-bottom:10px;border-bottom:3px solid var(--primary);display:inline-block;font-weight:800}
+
+/* ===== بحث وفلاتر ===== */
+.search-bar{width:100%;padding:14px 18px;background:var(--gray);border:2px solid var(--border);border-radius:12px;color:#fff;font-size:15px;outline:none;margin-bottom:14px}
+.search-bar:focus{border-color:var(--primary)}
+.category-filters{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.category-filters::-webkit-scrollbar{display:none}
+.filter-btn{padding:9px 18px;background:var(--gray);border:2px solid var(--border);color:#fff;border-radius:18px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:.3s}
+.filter-btn.active{background:var(--primary);border-color:var(--primary)}
+
+/* ===== شبكة المنتجات ===== */
+.products-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(min-width:768px){.products-grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1024px){.products-grid{grid-template-columns:repeat(4,1fr)}}
+.product-card{background:var(--dark);border-radius:12px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:.3s}
+.product-card:hover{transform:translateY(-5px);border-color:var(--primary);box-shadow:0 8px 25px rgba(232,101,26,.3)}
+.product-image{height:150px;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:8px}
+.product-image img,.product-image svg{width:100%;height:100%;object-fit:contain}
+.product-badge{position:absolute;top:8px;right:8px;background:var(--primary);color:#fff;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;z-index:2}
+.product-info{padding:12px}
+.product-info h3{font-size:15px;margin-bottom:5px;font-weight:700}
+.product-info p{color:var(--muted);font-size:11px;line-height:1.5;margin-bottom:8px}
+.product-category{display:inline-block;padding:3px 10px;background:var(--primary);border-radius:10px;font-size:10px;font-weight:700}
+.brand-tag{display:inline-block;padding:3px 10px;background:var(--gray);border:1px solid var(--border);border-radius:10px;font-size:10px;margin-right:5px}
+
+/* ===== Modal ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(5px)}
+.modal-overlay.active{display:flex}
+.modal-content{background:var(--dark);border-radius:20px 20px 0 0;width:100%;max-height:88vh;overflow-y:auto;border-top:3px solid var(--primary);animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-header{padding:16px 20px;border-bottom:2px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--dark);z-index:10}
+.modal-header h2{font-size:20px;font-weight:800}
+.close-modal{background:var(--gray);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px}
+.close-modal:hover{background:var(--primary)}
+.modal-body{padding:20px}
+.modal-image{width:100%;height:230px;background:linear-gradient(135deg,#f5f5f5,#e0e0e0);border-radius:12px;margin-bottom:18px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px}
+.modal-image img,.modal-image svg{width:100%;height:100%;object-fit:contain}
+.modal-section{margin-bottom:22px}
+.modal-section h3{font-size:16px;color:var(--primary);margin-bottom:10px;font-weight:700}
+.modal-section p,.modal-section li{color:var(--muted);font-size:14px;line-height:1.8}
+.modal-section ol{padding-right:20px}
+.modal-section li{margin-bottom:6px}
+.specs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:480px){.specs-grid{grid-template-columns:1fr}}
+.spec-item{background:var(--gray);padding:14px;border-radius:10px;text-align:center;border:2px solid var(--border)}
+.spec-item .icon{font-size:26px;margin-bottom:6px}
+.spec-item h4{font-size:11px;color:var(--muted);margin-bottom:5px}
+.spec-item p{font-size:14px;font-weight:700;color:#fff}
+.size-options,.color-options{display:flex;gap:10px;flex-wrap:wrap}
+.size-option{padding:10px 20px;background:var(--gray);border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;transition:.3s}
+.size-option.active{background:var(--primary);border-color:var(--primary)}
+.color-option{width:42px;height:42px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:.3s}
+.color-option.active,.color-option:hover{border-color:#fff;transform:scale(1.12)}
+.modal-action{width:100%;padding:15px;background:var(--primary);border:none;color:#fff;font-size:15px;font-weight:700;border-radius:12px;cursor:pointer;margin-top:15px}
+.modal-action:hover{background:var(--primary-dark)}
+
+/* ===== المحاكي ===== */
+.room-selector{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.room-option{background:var(--gray);border:2px solid var(--border);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.3s}
+.room-option.active{border-color:var(--primary);background:var(--light-gray)}
+.room-option .icon{font-size:32px;display:block;margin-bottom:6px}
+.room-option span{font-size:13px;font-weight:600}
+.room-preview{position:relative;width:100%;height:280px;background:#000;border-radius:12px;overflow:hidden;margin-bottom:16px}
+.room-preview img,.room-preview svg{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.wall-overlay{position:absolute;inset:0;pointer-events:none;transition:background .5s}
+.color-palette{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.palette-color{aspect-ratio:1;border-radius:10px;cursor:pointer;border:3px solid transparent;transition:.3s}
+.palette-color.active{border-color:#fff;transform:scale(1.08)}
+
+/* ===== ميزات ===== */
+.features-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.feature-item{background:var(--gray);padding:18px;border-radius:12px;text-align:center;border:2px solid var(--border)}
+.feature-item .icon{font-size:34px;margin-bottom:10px}
+.feature-item h3{font-size:15px;margin-bottom:6px}
+.feature-item p{font-size:11px;color:var(--muted)}
+</style>
 </head>
 <body>
-    <!-- Fixed Header -->
-    <div class="header">
-        <button class="header-btn" onclick="showModal('about')">
-            <span>ℹ️</span>
-            <span>عن الشركة</span>
-        </button>
-        <div class="logo" onclick="showScreen('home')">FA<span>WO</span>RI</div>
-        <button class="header-btn" onclick="showModal('simulator')">
-            <span>🎨</span>
-            <span>المحاكي</span>
-        </button>
-    </div>
 
-    <!-- Fixed Navigation Tabs -->
-    <div class="nav-tabs">
-        <button class="nav-tab active" onclick="showScreen('home')">🏠 الرئيسية</button>
-        <button class="nav-tab" onclick="showScreen('products')">📦 المنتجات</button>
-        <button class="nav-tab" onclick="showModal('simulator')">🎨 المحاكي</button>
-        <button class="nav-tab" onclick="showScreen('brands')">️ العلامات</button>
-    </div>
+<div class="header">
+  <button class="header-btn" onclick="openModal('aboutModal')">ℹ️ عن الشركة</button>
+  <div class="logo" onclick="showScreen('home',this)">FA<span>WO</span>RI</div>
+  <button class="header-btn" onclick="openSimulator()">🎨 المحاكي</button>
+</div>
 
-    <!-- Home Screen -->
-    <div id="home" class="screen active">
-        <div class="hero">
-            <h1>مرحباً بك في FAWORI</h1>
-            <p>اكتشف مجموعتنا الواسعة من الدهانات عالية الجودة<br>تصميم تركي احترافي بألوان تدوم طويلاً</p>
-            <div class="hero-buttons">
-                <button class="hero-btn" onclick="showScreen('products')">تصفح المنتجات</button>
-                <button class="hero-btn outline" onclick="showModal('simulator')">جرب المحاكي</button>
-            </div>
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showScreen('home',this)">🏠 الرئيسية</button>
+  <button class="nav-tab" onclick="showScreen('products',this)">📦 المنتجات</button>
+  <button class="nav-tab" onclick="showScreen('brands',this)">🏷️ العلامات</button>
+  <button class="nav-tab" onclick="openSimulator()">🎨 المحاكي</button>
+</div>
+
+<!-- الرئيسية -->
+<div id="home" class="screen active">
+  <div class="hero">
+    <h1>مرحباً بك في FAWORI</h1>
+    <p>دهانات تركية عالية الجودة بألوان تدوم طويلاً<br>اكتشف المنتجات وجرب الألوان على غرف حقيقية</p>
+    <div class="hero-buttons">
+      <button class="hero-btn" onclick="showScreen('products',document.querySelectorAll('.nav-tab')[1])">تصفح المنتجات</button>
+      <button class="hero-btn outline" onclick="openSimulator()">جرب المحاكي</button>
+    </div>
+  </div>
+  <h2 class="section-title">⭐ المنتجات المميزة</h2>
+  <div class="products-grid" id="featured-products"></div>
+  <h2 class="section-title" style="margin-top:30px">لماذا FAWORI؟</h2>
+  <div class="features-grid">
+    <div class="feature-item"><div class="icon">🏆</div><h3>جودة عالمية</h3><p>شهادات ISO الأوروبية</p></div>
+    <div class="feature-item"><div class="icon">🎨</div><h3>+200 لون</h3><p>تشكيلة واسعة</p></div>
+    <div class="feature-item"><div class="icon">💪</div><h3>متانة عالية</h3><p>مقاومة للرطوبة والطقس</p></div>
+    <div class="feature-item"><div class="icon">🌍</div><h3>+20 دولة</h3><p>توزيع عالمي</p></div>
+  </div>
+</div>
+
+<!-- المنتجات -->
+<div id="products" class="screen">
+  <h2 class="section-title">جميع المنتجات</h2>
+  <input type="text" class="search-bar" id="searchInput" placeholder="🔍 ابحث عن منتج..." oninput="filterProducts()">
+  <div class="category-filters">
+    <button class="filter-btn active" onclick="filterByCategory('all',this)">الكل</button>
+    <button class="filter-btn" onclick="filterByCategory('interior',this)">داخلية</button>
+    <button class="filter-btn" onclick="filterByCategory('exterior',this)">خارجية</button>
+    <button class="filter-btn" onclick="filterByCategory('primer',this)">برايمر</button>
+    <button class="filter-btn" onclick="filterByCategory('special',this)">عوازل</button>
+  </div>
+  <div class="products-grid" id="all-products"></div>
+</div>
+
+<!-- العلامات -->
+<div id="brands" class="screen">
+  <h2 class="section-title">العلامات التجارية</h2>
+  <div class="products-grid" id="brands-products"></div>
+</div>
+
+<!-- Modal تفاصيل المنتج -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-content">
+    <div class="modal-header"><h2 id="m-name"></h2><button class="close-modal" onclick="closeModal('productModal')">×</button></div>
+    <div class="modal-body">
+      <div class="modal-image" id="m-image"></div>
+      <div class="modal-section"><h3>📋 الوصف</h3><p id="m-desc"></p></div>
+      <div class="modal-section"><h3>📊 المواصفات</h3>
+        <div class="specs-grid">
+          <div class="spec-item"><div class="icon">📐</div><h4>التغطية</h4><p id="m-coverage"></p></div>
+          <div class="spec-item"><div class="icon">⏱️</div><h4>الجفاف</h4><p id="m-drying"></p></div>
+          <div class="spec-item"><div class="icon">✅</div><h4>الضمان</h4><p id="m-warranty"></p></div>
         </div>
-
-        <h2 class="section-title">المنتجات المميزة</h2>
-        <div class="products-grid" id="featured-products"></div>
-
-        <h2 class="section-title" style="margin-top: 35px;">لماذا FAWORI؟</h2>
-        <div class="features-grid">
-            <div class="feature-item">
-                <div class="icon">🏆</div>
-                <h3>جودة عالمية</h3>
-                <p>شهادات جودة أوروبية</p>
-            </div>
-            <div class="feature-item">
-                <div class="icon"></div>
-                <h3>200+ لون</h3>
-                <p>ألوان متنوعة</p>
-            </div>
-            <div class="feature-item">
-                <div class="icon">💪</div>
-                <h3>متانة عالية</h3>
-                <p>مقاومة للعوامل الجوية</p>
-            </div>
-            <div class="feature-item">
-                <div class="icon">🌍</div>
-                <h3>20+ دولة</h3>
-                <p>توزيع عالمي واسع</p>
-            </div>
-        </div>
+      </div>
+      <div class="modal-section"><h3>📏 الأحجام المتاحة</h3>
+        <div class="size-options" id="m-sizes"></div>
+      </div>
+      <div class="modal-section"><h3>🎨 الألوان المتاحة</h3>
+        <div class="color-options" id="m-colors"></div>
+      </div>
+      <div class="modal-section"><h3>🛠️ طريقة الاستخدام</h3><ol id="m-usage"></ol></div>
+      <button class="modal-action" onclick="closeModal('productModal');openSimulator()">🎨 جرب اللون في المحاكي</button>
     </div>
+  </div>
+</div>
 
-    <!-- Products Screen -->
-    <div id="products" class="screen">
-        <h2 class="section-title">جميع المنتجات</h2>
-        
-        <div class="search-container">
-            <input type="text" class="search-bar" id="searchInput" placeholder="🔍 ابحث عن منتج..." oninput="filterProducts()">
-        </div>
-
-        <div class="category-filters">
-            <button class="filter-btn active" onclick="filterByCategory('all', this)">الكل</button>
-            <button class="filter-btn" onclick="filterByCategory('interior', this)">داخلية</button>
-            <button class="filter-btn" onclick="filterByCategory('exterior', this)">خارجية</button>
-            <button class="filter-btn" onclick="filterByCategory('primer', this)">برايمر</button>
-            <button class="filter-btn" onclick="filterByCategory('wood', this)">خشب</button>
-            <button class="filter-btn" onclick="filterByCategory('special', this)">خاصة</button>
-        </div>
-
-        <div class="products-grid" id="all-products"></div>
+<!-- Modal المحاكي -->
+<div class="modal-overlay" id="simulatorModal">
+  <div class="modal-content">
+    <div class="modal-header"><h2>🎨 محاكي الألوان</h2><button class="close-modal" onclick="closeModal('simulatorModal')">×</button></div>
+    <div class="modal-body">
+      <div class="room-selector">
+        <div class="room-option active" onclick="changeRoom('living',this)"><span class="icon">🛋️</span><span>غرفة معيشة</span></div>
+        <div class="room-option" onclick="changeRoom('bedroom',this)"><span class="icon">🛏️</span><span>غرفة نوم</span></div>
+        <div class="room-option" onclick="changeRoom('kitchen',this)"><span class="icon">🍳</span><span>مطبخ</span></div>
+        <div class="room-option" onclick="changeRoom('bathroom',this)"><span class="icon">🚿</span><span>حمام</span></div>
+      </div>
+      <div class="room-preview" id="roomPreview">
+        <img id="roomPhoto" src="" alt="" style="display:none">
+        <div id="roomSvg" style="position:absolute;inset:0"></div>
+        <div class="wall-overlay" id="wallOverlay"></div>
+      </div>
+      <div class="modal-section"><h3>اختر اللون:</h3>
+        <div class="color-palette" id="palette"></div>
+      </div>
+      <button class="modal-action" onclick="applyWallColor('#EFEAE2')">🔄 إعادة تعيين الجدار</button>
     </div>
+  </div>
+</div>
 
-    <!-- Brands Screen -->
-    <div id="brands" class="screen">
-        <h2 class="section-title">العلامات التجارية</h2>
-        <div class="products-grid" id="brands-products"></div>
+<!-- Modal عن الشركة -->
+<div class="modal-overlay" id="aboutModal">
+  <div class="modal-content">
+    <div class="modal-header"><h2>عن FAWORI</h2><button class="close-modal" onclick="closeModal('aboutModal')">×</button></div>
+    <div class="modal-body">
+      <div class="modal-section"><p>شركة FAWORI التركية الرائدة في صناعة الدهانات والطلاءات — دهانات داخلية وخارجية، برايمرات، عوازل، أصباغ خشب، ولاكات بمعايير جودة عالمية.</p></div>
+      <div class="features-grid">
+        <div class="feature-item"><div class="icon">🏆</div><h3>جودة ISO</h3><p>شهادات عالمية</p></div>
+        <div class="feature-item"><div class="icon">🎨</div><h3>+200 لون</h3><p>تشكيلة كاملة</p></div>
+        <div class="feature-item"><div class="icon">💪</div><h3>متانة</h3><p>مقاومة عالية</p></div>
+        <div class="feature-item"><div class="icon">🌍</div><h3>+20 دولة</h3><p>توزيع عالمي</p></div>
+      </div>
     </div>
+  </div>
+</div>
 
-    <!-- Product Detail Modal -->
-    <div class="modal-overlay" id="productModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-product-name">اسم المنتج</h2>
-                <button class="close-modal" onclick="closeModal('productModal')">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-image" id="modal-product-image"></div>
-                
-                <div class="modal-section">
-                    <h3>📋 الوصف</h3>
-                    <p id="modal-product-description">وصف المنتج</p>
-                </div>
+<script>
+/* ============================================================
+   الصور: يحاول الكود تحميل الصور الحقيقية من مجلد images/
+   وإن لم توجد ⇒ يعرض تلقائياً رسومات SVG مدمجة (لا تفشل أبداً)
+============================================================ */
 
-                <div class="modal-section">
-                    <h3>📊 المواصفات</h3>
-                    <div class="specs-grid">
-                        <div class="spec-item">
-                            <div class="icon">📐</div>
-                            <h4>التغطية</h4>
-                            <p id="modal-coverage">8-10 م²/لتر</p>
-                        </div>
-                        <div class="spec-item">
-                            <div class="icon">⏱️</div>
-                            <h4>الجفاف</h4>
-                            <p id="modal-drying">2-4 ساعات</p>
-                        </div>
-                        <div class="spec-item">
-                            <div class="icon">✓</div>
-                            <h4>الضمان</h4>
-                            <p id="modal-warranty">5 سنوات</p>
-                        </div>
-                    </div>
-                </div>
+// رسمة عبوة الدهان (SVG مدمج)
+function bucketSVG(label, brand){
+  brand = brand || 'FAWORI';
+  return '<svg viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg">'
+  +'<path d="M35 62 Q100 16 165 62" stroke="#E8651A" stroke-width="7" fill="none" stroke-linecap="round"/>'
+  +'<ellipse cx="100" cy="57" rx="72" ry="16" fill="#E8651A"/>'
+  +'<rect x="28" y="55" width="144" height="14" rx="4" fill="#E8651A"/>'
+  +'<path d="M32 69 L42 172 Q100 184 158 172 L168 69 Z" fill="#161616"/>'
+  +'<path d="M32 69 L42 172 Q70 178 100 179 L100 69 Z" fill="#242424"/>'
+  +'<text x="100" y="116" font-family="Arial" font-size="25" font-weight="900" fill="#fff" text-anchor="middle" letter-spacing="2">'+brand+'</text>'
+  +'<rect x="50" y="130" width="100" height="26" rx="5" fill="#fff"/>'
+  +'<text x="100" y="147" font-family="Arial" font-size="12" font-weight="bold" fill="#333" text-anchor="middle">'+label+'</text></svg>';
+}
 
-                <div class="modal-section">
-                    <h3>📏 الأحجام المتاحة</h3>
-                    <div class="size-options">
-                        <div class="size-option">2L</div>
-                        <div class="size-option active">3L</div>
-                        <div class="size-option">5L</div>
-                        <div class="size-option">10L</div>
-                        <div class="size-option">20L</div>
-                    </div>
-                </div>
+// رسومات الغرف (SVG مدمج) — الجدار يحمل class="svg-wall" ليتلون
+const roomSVGs = {
+living: ()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+ +'<rect class="svg-wall" width="800" height="360" fill="#EFEAE2"/>'
+ +'<rect y="360" width="800" height="140" fill="#D8D3CC"/>'
+ +'<path d="M0 400 H800 M0 440 H800 M0 470 H800" stroke="#c4beb6" stroke-width="2"/>'
+ +'<rect x="55" y="55" width="210" height="250" fill="#EAF6FC" stroke="#8a8a8a" stroke-width="6"/>'
+ +'<path d="M160 55 V305 M55 180 H265" stroke="#8a8a8a" stroke-width="4"/>'
+ +'<rect x="20" y="40" width="45" height="290" fill="#9b9b9b" opacity=".7"/>'
+ +'<rect x="255" y="40" width="45" height="290" fill="#9b9b9b" opacity=".7"/>'
+ +'<rect x="470" y="105" width="190" height="110" rx="5" fill="#0c0c0c"/>'
+ +'<rect x="450" y="235" width="230" height="48" rx="8" fill="#8B5A33"/>'
+ +'<rect x="690" y="250" width="90" height="70" fill="#111"/><path d="M710 300 q10 -25 15 0 q8 -20 12 0 q8 -18 12 0" stroke="#ff8c1a" stroke-width="5" fill="none"/>'
+ +'<ellipse cx="400" cy="440" rx="230" ry="40" fill="#cfc8bd"/>'
+ +'<rect x="250" y="300" width="310" height="55" rx="18" fill="#D6D1C8"/>'
+ +'<rect x="265" y="265" width="135" height="50" rx="14" fill="#C9C4BB"/>'
+ +'<rect x="410" y="265" width="135" height="50" rx="14" fill="#C9C4BB"/>'
+ +'<circle cx="620" cy="120" r="4" fill="#fff"/></svg>',
+bedroom: ()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+ +'<rect class="svg-wall" width="800" height="370" fill="#F2E8D8"/>'
+ +'<rect y="370" width="800" height="130" fill="#E4DCCE"/>'
+ +'<path d="M0 370 H800" stroke="#d4c9b4" stroke-width="3"/>'
+ +'<rect x="30" y="60" width="120" height="290" fill="#EAF6FC" stroke="#b09a6a" stroke-width="6"/>'
+ +'<rect x="650" y="60" width="120" height="290" fill="#EAF6FC" stroke="#b09a6a" stroke-width="6"/>'
+ +'<circle cx="400" cy="70" r="10" fill="#ffd700"/><path d="M370 90 q30 25 60 0 M360 105 q40 30 80 0" stroke="#e6c34c" stroke-width="4" fill="none"/>'
+ +'<rect x="270" y="170" width="260" height="90" rx="20" fill="#C9A227"/>'
+ +'<rect x="250" y="250" width="300" height="80" rx="12" fill="#EFE6D8"/>'
+ +'<rect x="290" y="215" width="70" height="45" rx="10" fill="#D9C6A5"/>'
+ +'<rect x="370" y="215" width="70" height="45" rx="10" fill="#D9C6A5"/>'
+ +'<rect x="450" y="215" width="70" height="45" rx="10" fill="#D9C6A5"/>'
+ +'<rect x="240" y="325" width="320" height="25" rx="8" fill="#C9A227"/></svg>',
+kitchen: ()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+ +'<rect class="svg-wall" width="800" height="360" fill="#B9BCBE"/>'
+ +'<rect y="360" width="800" height="140" fill="#CFD2D4"/>'
+ +'<rect x="40" y="60" width="300" height="90" rx="6" fill="#8f9498"/>'
+ +'<rect x="40" y="230" width="320" height="30" fill="#E8E8E8"/>'
+ +'<rect x="40" y="260" width="320" height="100" fill="#7d8286"/>'
+ +'<rect x="600" y="80" width="140" height="280" rx="8" fill="#a8adb1"/>'
+ +'<rect x="250" y="330" width="330" height="120" rx="8" fill="#E9E9E9"/>'
+ +'<rect x="250" y="330" width="330" height="18" fill="#dcdcdc"/>'
+ +'<rect x="380" y="345" width="90" height="8" rx="4" fill="#111"/>'
+ +'<circle cx="200" cy="60" r="22" fill="#e8c76a"/><circle cx="400" cy="50" r="26" fill="#e8c76a"/><circle cx="560" cy="60" r="22" fill="#e8c76a"/>'
+ +'<path d="M200 0 V40 M400 0 V26 M560 0 V40" stroke="#666" stroke-width="3"/></svg>',
+bathroom: ()=>'<svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'
+ +'<rect class="svg-wall" width="800" height="380" fill="#EDEDED"/>'
+ +'<path d="M100 0 q40 120 -20 380 M300 0 q60 150 10 380 M550 0 q-50 160 0 380 M700 0 q30 140 -10 380" stroke="#cfcfcf" stroke-width="4" fill="none"/>'
+ +'<rect y="380" width="800" height="120" fill="#B9BCBE"/>'
+ +'<rect x="300" y="70" width="220" height="150" fill="#f8fbff" stroke="#fff" stroke-width="8"/>'
+ +'<rect x="60" y="230" width="220" height="60" rx="8" fill="#fff"/>'
+ +'<ellipse cx="430" cy="330" rx="160" ry="60" fill="#141414"/>'
+ +'<rect x="620" y="60" width="130" height="260" fill="#EAF6FC" stroke="#333" stroke-width="5"/>'
+ +'<rect x="640" y="340" width="90" height="45" rx="6" fill="#b98a5a"/></svg>'
+};
 
-                <div class="modal-section">
-                    <h3>🎨 الألوان المتاحة</h3>
-                    <div class="color-options">
-                        <div class="color-option" style="background: #C1440E;" title="ترأكوتا"></div>
-                        <div class="color-option" style="background: #8B4513;" title="بني"></div>
-                        <div class="color-option" style="background: #F5DEB3;" title="بيج"></div>
-                        <div class="color-option" style="background: #E8D5B7;" title="كريمي"></div>
-                        <div class="color-option" style="background: #191970;" title="كحلي"></div>
-                        <div class="color-option" style="background: #A9A9A9;" title="رمادي"></div>
-                        <div class="color-option" style="background: #FFFFFF; border: 1px solid #ccc;" title="أبيض"></div>
-                        <div class="color-option" style="background: #2F4F4F;" title="فحمي"></div>
-                    </div>
-                </div>
+// الصور الحقيقية (اختيارية): ارفع الصور المولدة لمجلد images بنفس الأسماء
+const roomPhotos = {living:'images/living.jpg',bedroom:'images/bedroom.jpg',kitchen:'images/kitchen.jpg',bathroom:'images/bathroom.jpg'};
 
-                <div class="modal-section">
-                    <h3> طريقة الاستخدام</h3>
-                    <ol id="modal-usage">
-                        <li>تنظيف السطح جيداً</li>
-                        <li>تطبيق البرايمر</li>
-                        <li>انتظار الجفاف</li>
-                        <li>تطبيق الطبقة الأولى</li>
-                        <li>تطبيق الطبقة الثانية</li>
-                    </ol>
-                </div>
+/* ===== بيانات المنتجات ===== */
+const products = [
+ {id:1,name:'Silikonlu Mat',brand:'FAWORI',category:'interior',badge:'الأكثر مبيعاً',img:'images/silikonlu-mat.jpg',
+  desc:'دهان سيلكون مات داخلي فاخر، مقاومة عالية للرطوبة والبقع، لمسة مات أنيقة وتغطية ممتازة.',coverage:'8-10 م²/ل',drying:'2-4 ساعات',warranty:'5 سنوات',
+  usage:['نظّف السطح وأزل الأتربة','طبّق البرايمر وانتظر الجفاف','طبّق الطبقة الأولى','انتظر 4-6 ساعات','طبّق الطبقة الثانية']},
+ {id:2,name:'Premium Astar',brand:'FAWORI',category:'primer',badge:'أساس',img:'images/premium-astar.jpg',
+  desc:'برايمر أساسي عالي الجودة يجهّز السطح ويزيد التصاق الدهان النهائي ويوحّد الامتصاص.',coverage:'10-12 م²/ل',drying:'1-2 ساعات',warranty:'10 سنوات',
+  usage:['نظّف السطح من الغبار','خفّف البرايمر حسب التعليمات','طبّق طبقة متساوية','انتظر الجفاف الكامل','طبّق الدهان النهائي']},
+ {id:3,name:'Elyafli Su-Sav',brand:'FAWORI',category:'special',badge:'عازل',img:'images/elyafli-su-sav.jpg',
+  desc:'عازل مائي مدعّم بالألياف لحماية قصوى ضد تسرب المياه، مرونة عالية ومقاومة للتشققات.',coverage:'5-7 م²/ل',drying:'4-6 ساعات',warranty:'7 سنوات',
+  usage:['جفّف السطح تماماً','أصلح الشقوق','طبّق الطبقة الأولى','انتظر 4-6 ساعات','طبّق طبقة ثانية متقاطعة']},
+ {id:4,name:'Fenomen',brand:'FAWORI',category:'exterior',badge:'خارجي',img:'images/fenomen.jpg',
+  desc:'دهان خارجي متطور مقاوم للأشعة فوق البنفسجية والعوامل الجوية، يحافظ على لونه لسنوات.',coverage:'7-9 م²/ل',drying:'3-5 ساعات',warranty:'8 سنوات',
+  usage:['جهّز السطح الخارجي','طبّق البرايمر','طبّق الطبقة الأولى','انتظر 6 ساعات','طبّق الطبقة الثانية']},
+ {id:5,name:'Silikonlu Grenli',brand:'FAWORI',category:'exterior',img:'',
+  desc:'دهان سيلكون محبّب خارجي يعطي ملمساً مميزاً وحماية عالية ضد الطقس.',coverage:'6-8 م²/ل',drying:'4-6 ساعات',warranty:'6 سنوات',
+  usage:['جهّز السطح','طبّق البرايمر','طبّق الدهان المحبّب','انتظر الجفاف']},
+ {id:6,name:'Ultra Soft Mat',brand:'FAWORI',category:'interior',badge:'فاخر',img:'',
+  desc:'دهان مات ناعم فائق، لمسة حريرية فاخرة، سهل التنظيف ومقاوم للبقع.',coverage:'9-11 م²/ل',drying:'2-3 ساعات',warranty:'5 سنوات',
+  usage:['نظّف السطح','طبّق البرايمر','طبّق طبقتين مع الجفاف بينهما']},
+ {id:7,name:'BY Interior Silk',brand:'BY',category:'interior',badge:'شائع',img:'',
+  desc:'دهان حريري داخلي من BY بلمعة ناعمة ومقاومة عالية للغسيل.',coverage:'10-12 م²/ل',drying:'2-3 ساعات',warranty:'5 سنوات',
+  usage:['نظّف السطح','طبّق البرايمر','طبّق طبقتين']},
+ {id:8,name:'BY Exterior Shield',brand:'BY',category:'exterior',img:'',
+  desc:'دهان خارجي من BY بحماية طويلة الأمد ضد العوامل الجوية.',coverage:'8-10 م²/ل',drying:'3-4 ساعات',warranty:'7 سنوات',
+  usage:['جهّز السطح','طبّق البرايمر','طبّق طبقتين']},
+ {id:9,name:'Yaqoot Premium',brand:'Yaqoot',category:'interior',badge:'مميز',img:'',
+  desc:'دهان يعقوب بريميوم بألوان ثابتة وثبات لوني ممتاز.',coverage:'9-11 م²/ل',drying:'2-4 ساعات',warranty:'6 سنوات',
+  usage:['نظّف السطح','طبّق البرايمر','طبّق طبقتين']},
+ {id:10,name:'Sidra Classic',brand:'Sidra',category:'interior',img:'',
+  desc:'دهان سدرة الكلاسيكي بجودة موثوقة وتغطية جيدة.',coverage:'8-10 م²/ل',drying:'2-3 ساعات',warranty:'4 سنوات',
+  usage:['نظّف السطح','طبّق البرايمر','طبّق طبقتين']}
+];
 
-                <button class="modal-action" onclick="showModal('simulator')">
-                     جرب اللون في المحاكي
-                </button>
-            </div>
-        </div>
-    </div>
+const paletteColors = ['#E8651A','#4169E1','#228B22','#808080','#F5DEB3','#FFFFFF','#191970','#C1440E','#8B4513','#FFD700','#DDA0DD','#2F4F4F'];
+const swatchColors = ['#C1440E','#8B4513','#F5DEB3','#E8D5B7','#191970','#A9A9A9','#FFFFFF','#2F4F4F'];
+const sizes = ['2L','3L','5L','10L','20L'];
+let currentCategory='all', currentRoom='living', photoLoaded=false;
 
-    <!-- Simulator Modal -->
-    <div class="modal-overlay" id="simulatorModal">
-        <div class="modal-content" style="max-height: 90vh;">
-            <div class="modal-header">
-                <h2> محاكي الألوان</h2>
-                <button class="close-modal" onclick="closeModal('simulatorModal')">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="room-selector">
-                    <div class="room-option active" onclick="changeRoom('living', this)">
-                        <span class="icon">️</span>
-                        <span>غرفة معيشة</span>
-                    </div>
-                    <div class="room-option" onclick="changeRoom('bedroom', this)">
-                        <span class="icon">🛏️</span>
-                        <span>غرفة نوم</span>
-                    </div>
-                    <div class="room-option" onclick="changeRoom('kitchen', this)">
-                        <span class="icon">🍳</span>
-                        <span>مطبخ</span>
-                    </div>
-                    <div class="room-option" onclick="changeRoom('bathroom', this)">
-                        <span class="icon">🚿</span>
-                        <span>حمام</span>
-                    </div>
-                </div>
+/* ===== عرض صورة المنتج مع SVG احتياطي ===== */
+function productImageHTML(p){
+  const badge = p.badge ? '<div class="product-badge">'+p.badge+'</div>' : '';
+  const svg = bucketSVG(p.name, p.brand);
+  if(!p.img) return badge + svg;
+  return badge + '<img src="'+p.img+'" alt="'+p.name+'" onerror="this.outerHTML=decodeURIComponent(\''+encodeURIComponent(svg)+'\')">';
+}
 
-                <div class="room-preview">
-                    <img src="" alt="Room" id="simulator-room-image">
-                    <div class="wall-overlay" id="wall-overlay"></div>
-                </div>
+function createCard(p){
+  const cats={interior:'داخلي',exterior:'خارجي',primer:'برايمر',special:'عازل'};
+  return '<div class="product-card" onclick="openProduct('+p.id+')">'
+   +'<div class="product-image">'+productImageHTML(p)+'</div>'
+   +'<div class="product-info"><h3>'+p.name+'</h3><p>'+p.desc.substring(0,55)+'...</p>'
+   +'<span class="product-category">'+cats[p.category]+'</span><span class="brand-tag">'+p.brand+'</span></div></div>';
+}
 
-                <h3 style="margin-bottom: 12px; font-size: 16px;">اختر اللون:</h3>
-                <div class="color-palette" id="simulator-palette">
-                    <div class="palette-color" style="background: #E8651A;" onclick="applySimulatorColor('#E8651A', this)"></div>
-                    <div class="palette-color" style="background: #4169E1;" onclick="applySimulatorColor('#4169E1', this)"></div>
-                    <div class="palette-color" style="background: #228B22;" onclick="applySimulatorColor('#228B22', this)"></div>
-                    <div class="palette-color" style="background: #808080;" onclick="applySimulatorColor('#808080', this)"></div>
-                    <div class="palette-color" style="background: #F5DEB3;" onclick="applySimulatorColor('#F5DEB3', this)"></div>
-                    <div class="palette-color" style="background: #FFFFFF; border: 1px solid #ccc;" onclick="applySimulatorColor('#FFFFFF', this)"></div>
-                    <div class="palette-color" style="background: #191970;" onclick="applySimulatorColor('#191970', this)"></div>
-                    <div class="palette-color" style="background: #C1440E;" onclick="applySimulatorColor('#C1440E', this)"></div>
-                    <div class="palette-color" style="background: #8B4513;" onclick="applySimulatorColor('#8B4513', this)"></div>
-                    <div class="palette-color" style="background: #FFD700;" onclick="applySimulatorColor('#FFD700', this)"></div>
-                    <div class="palette-color" style="background: #DDA0DD;" onclick="applySimulatorColor('#DDA0DD', this)"></div>
-                    <div class="palette-color" style="background: #2F4F4F;" onclick="applySimulatorColor('#2F4F4F', this)"></div>
-                </div>
+function loadFeatured(){ document.getElementById('featured-products').innerHTML = products.slice(0,4).map(createCard).join(''); }
+function loadBrands(){ document.getElementById('brands-products').innerHTML = products.filter(p=>p.brand!=='FAWORI').map(createCard).join(''); }
+function filterProducts(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const list=products.filter(p=>(currentCategory==='all'||p.category===currentCategory)&&(p.name.toLowerCase().includes(q)||p.desc.includes(q)));
+  document.getElementById('all-products').innerHTML = list.map(createCard).join('') || '<p style="grid-column:1/-1;text-align:center;color:#888;padding:40px">لا توجد نتائج 🔍</p>';
+}
+function filterByCategory(c,btn){ currentCategory=c; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); filterProducts(); }
 
-                <button class="modal-action" onclick="resetSimulator()"> إعادة تعيين</button>
-            </div>
-        </div>
-    </div>
+/* ===== التنقل ===== */
+function showScreen(id,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  if(btn&&btn.classList.contains('nav-tab')) btn.classList.add('active');
+  window.scrollTo(0,0);
+}
+function openModal(id){ document.getElementById(id).classList.add('active'); document.body.style.overflow='hidden'; }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); document.body.style.overflow='auto'; }
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) closeModal(o.id); }));
 
-    <!-- About Modal -->
-    <div class="modal-overlay" id="aboutModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>عن FAWORI</h2>
-                <button class="close-modal" onclick="closeModal('aboutModal')">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="about-container" style="border: none; padding: 0;">
-                    <p>شركة FAWORI التركية الرائدة في مجال الدهانات والطلاءات، نقدم منتجات عالية الجودة بمعايير عالمية.</p>
-                    <p>نفتخر بتقديم مجموعة واسعة من الدهانات الداخلية والخارجية والمنتجات الخاصة.</p>
-                    
-                    <div class="features-grid" style="margin-top: 25px;">
-                        <div class="feature-item">
-                            <div class="icon"></div>
-                            <h3>جودة ISO</h3>
-                            <p>شهادات عالمية</p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="icon"></div>
-                            <h3>200+ لون</h3>
-                            <p>تنوع واسع</p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="icon">💪</div>
-                            <h3>متانة</h3>
-                            <p>مقاومة عالية</p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="icon"></div>
-                            <h3>20+ دولة</h3>
-                            <p>توزيع عالمي</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+/* ===== تفاصيل المنتج ===== */
+function openProduct(id){
+  const p=products.find(x=>x.id===id); if(!p)return;
+  document.getElementById('m-name').textContent=p.name+' | '+p.brand;
+  document.getElementById('m-desc').textContent=p.desc;
+  document.getElementById('m-coverage').textContent=p.coverage;
+  document.getElementById('m-drying').textContent=p.drying;
+  document.getElementById('m-warranty').textContent=p.warranty;
+  document.getElementById('m-usage').innerHTML=p.usage.map(u=>'<li>'+u+'</li>').join('');
+  document.getElementById('m-sizes').innerHTML=sizes.map((s,i)=>'<div class="size-option'+(i===1?' active':'')+'" onclick="pick(this)">'+s+'</div>').join('');
+  document.getElementById('m-colors').innerHTML=swatchColors.map((c,i)=>'<div class="color-option'+(i===0?' active':'')+'" style="background:'+c+';'+(c==='#FFFFFF'?'border-color:#ccc;':'')+'" onclick="pick(this)"></div>').join('');
+  const imgBox=document.getElementById('m-image');
+  imgBox.innerHTML = productImageHTML(p);
+  openModal('productModal');
+}
+function pick(el){ el.parentElement.querySelectorAll('.active').forEach(a=>a.classList.remove('active')); el.classList.add('active'); }
 
-    <!-- Loading Indicator -->
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div>جاري التحميل...</div>
-    </div>
+/* ===== المحاكي ===== */
+function openSimulator(){
+  openModal('simulatorModal');
+  document.getElementById('palette').innerHTML = paletteColors.map((c,i)=>'<div class="palette-color'+(i===0?' active':'')+'" style="background:'+c+'" onclick="chooseColor(\''+c+'\',this)"></div>').join('');
+  changeRoom(currentRoom, document.querySelector('.room-option.active'));
+}
+function changeRoom(room,btn){
+  currentRoom=room;
+  document.querySelectorAll('.room-option').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const img=document.getElementById('roomPhoto'), svgBox=document.getElementById('roomSvg');
+  photoLoaded=false;
+  img.onload=()=>{ photoLoaded=true; img.style.display='block'; svgBox.style.display='none'; };
+  img.onerror=()=>{ photoLoaded=false; img.style.display='none'; svgBox.style.display='block'; svgBox.innerHTML=roomSVGs[room](); };
+  img.src=roomPhotos[room];
+  // احتياط: إن لم تُحمّل الصورة خلال ثانيتين اعرض SVG
+  setTimeout(()=>{ if(!photoLoaded && img.style.display!=='block'){ svgBox.style.display='block'; svgBox.innerHTML=roomSVGs[room](); } },1500);
+}
+function chooseColor(c,el){
+  document.querySelectorAll('.palette-color').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  applyWallColor(c);
+}
+function applyWallColor(c){
+  if(photoLoaded){
+    const ov=document.getElementById('wallOverlay');
+    ov.style.background=c; ov.style.opacity='.75'; ov.style.mixBlendMode='multiply';
+  } else {
+    document.querySelectorAll('#roomSvg .svg-wall').forEach(w=>w.setAttribute('fill',c));
+    document.getElementById('wallOverlay').style.background='transparent';
+  }
+}
 
-    <script>
-        // ===== Product Database =====
-        const products = [
-            // FAWORI Products
-            {
-                id: 1,
-                name: 'Silikonlu Mat',
-                brand: 'FAWORI',
-                category: 'interior',
-                badge: 'الأكثر مبيعاً',
-                description: 'دهان سيلكون مات عالي الجودة للاستخدام الداخلي. يتميز بمقاومة عالية للرطوبة والبقع مع لمسة نهائية مات أنيقة.',
-                coverage: '8-10 م²/لتر',
-                drying: '2-4 ساعات',
-                warranty: '5 سنوات',
-                usage: ['تنظيف السطح جيداً', 'تطبيق البرايمر', 'انتظار الجفاف 2-4 ساعات', 'تطبيق الطبقة الأولى', 'تطبيق الطبقة الثانية بعد 6 ساعات'],
-                image: 'https://images.unsplash.com/photo-1589939705386-95c1b0f8e8f0?w=400'
-            },
-            {
-                id: 2,
-                name: 'Premium Astar',
-                brand: 'FAWORI',
-                category: 'primer',
-                badge: 'جديد',
-                description: 'برايمر أساسي عالي الجودة يحضر السطح بشكل مثالي قبل الدهان النهائي. يزيد من التصاق الدهان.',
-                coverage: '10-12 م²/لتر',
-                drying: '1-2 ساعات',
-                warranty: '10 سنوات',
-                usage: ['تنظيف السطح', 'تخفيف حسب التعليمات', 'تطبيق طبقة متساوية', 'الانتظار حتى الجفاف', 'تطبيق الدهان النهائي'],
-                image: 'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=400'
-            },
-            {
-                id: 3,
-                name: 'Elyafli Su-Sav',
-                brand: 'FAWORI',
-                category: 'special',
-                badge: 'مميز',
-                description: 'عازل مائي بالألياف يوفر حماية قصوى ضد تسرب المياه. مثالي للأسطح والحمامات.',
-                coverage: '5-7 م²/لتر',
-                drying: '4-6 ساعات',
-                warranty: '7 سنوات',
-                usage: ['تنظيف وتجفيف السطح', 'إصلاح الشقوق', 'تطبيق الطبقة الأولى', 'انتظار 4-6 ساعات', 'تطبيق الطبقة الثانية'],
-                image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'
-            },
-            {
-                id: 4,
-                name: 'Fenomen',
-                brand: 'FAWORI',
-                category: 'exterior',
-                badge: 'خارجي',
-                description: 'دهان خارجي مقاوم للعوامل الجوية والأشعة فوق البنفسجية. يحافظ على لونه لسنوات.',
-                coverage: '7-9 م²/لتر',
-                drying: '3-5 ساعات',
-                warranty: '8 سنوات',
-                usage: ['تحضير السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق الطبقة الأولى', 'تطبيق الطبقة الثانية'],
-                image: 'https://images.unsplash.com/photo-1572454591674-2739f30d8c40?w=400'
-            },
-            {
-                id: 5,
-                name: 'Silikonlu Grenli',
-                brand: 'FAWORI',
-                category: 'exterior',
-                badge: null,
-                description: 'دهان سيلكون محبب للاستخدام الخارجي يعطي ملمساً مميزاً مع حماية عالية.',
-                coverage: '6-8 م²/لتر',
-                drying: '4-6 ساعات',
-                warranty: '6 سنوات',
-                usage: ['تحضير السطح', 'تطبيق البرايمر', 'تطبيق الدهان المحبب', 'الانتظار حتى الجفاف'],
-                image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400'
-            },
-            {
-                id: 6,
-                name: 'Ultra Soft Mat',
-                brand: 'FAWORI',
-                category: 'interior',
-                badge: 'فاخر',
-                description: 'دهان مات ناعم فائق الجودة يعطي لمسة نهائية فاخرة. سهل التنظيف ومقاوم للبقع.',
-                coverage: '9-11 م²/لتر',
-                drying: '2-3 ساعات',
-                warranty: '5 سنوات',
-                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق طبقتين'],
-                image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400'
-            },
-            // BY Products
-            {
-                id: 7,
-                name: 'BY Interior Silk',
-                brand: 'BY',
-                category: 'interior',
-                badge: 'شائع',
-                description: 'دهان حريري داخلي من BY بلمعة حريرية جميلة ومقاومة عالية.',
-                coverage: '10-12 م²/لتر',
-                drying: '2-3 ساعات',
-                warranty: '5 سنوات',
-                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق طبقتين'],
-                image: 'https://images.unsplash.com/photo-1588854337221-4cf9fa96059c?w=400'
-            },
-            {
-                id: 8,
-                name: 'BY Exterior',
-                brand: 'BY',
-                category: 'exterior',
-                badge: null,
-                description: 'دهان خارجي من BY مقاوم للعوامل الجوية مع حماية طويلة الأمد.',
-                coverage: '8-10 م²/لتر',
-                drying: '3-4 ساعات',
-                warranty: '7 سنوات',
-                usage: ['تحضير السطح', 'تطبيق البرايمر', 'تطبيق طبقتين'],
-                image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400'
-            },
-            // Yaqoot Products
-            {
-                id: 9,
-                name: 'Yaqoot Premium',
-                brand: 'Yaqoot',
-                category: 'interior',
-                badge: 'مميز',
-                description: 'دهان بريميوم من يعقوب بجودة عالية وألوان ثابتة.',
-                coverage: '9-11 م²/لتر',
-                drying: '2-4 ساعات',
-                warranty: '6 سنوات',
-                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق طبقتين'],
-                image: 'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=400'
-            },
-            // Sidra Products
-            {
-                id: 10,
-                name: 'Sidra Classic',
-                brand: 'Sidra',
-                category: 'interior',
-                badge: null,
-                description: 'دهان كلاسيكي من سدرة بجودة ممتازة وسعر مناسب.',
-                coverage: '8-10 م²/لتر',
-                drying: '2-3 ساعات',
-                warranty: '4 سنوات',
-                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'تطبيق طبقتين'],
-                image: 'https://images.unsplash.com/photo-1589939705386-95c1b0f8e8f0?w=400'
-            }
-        ];
-
-        // Room Images
-        const roomImages = {
-            living: 'https://images.unsplash.com/photo-1600210492486-7d4fe5e9ff5d?w=800',
-            bedroom: 'https://images.unsplash.com/photo-1616594039964-40891a909d99?w=800',
-            kitchen: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800',
-            bathroom: 'https://images.unsplash.com/photo-1620626012053-1c9c0f0a1e1f?w=800'
-        };
-
-        let currentCategory = 'all';
-        let currentRoom = 'living';
-        let currentSimulatorColor = '#E8651A';
-
-        // ===== Initialize =====
-        document.addEventListener('DOMContentLoaded', function() {
-            loadFeaturedProducts();
-            loadAllProducts();
-            loadBrandsProducts();
-        });
-
-        // ===== Navigation =====
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
-            
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            window.scrollTo(0, 0);
-        }
-
-        // ===== Modal Functions =====
-        function showModal(modalId) {
-            document.getElementById(modalId + 'Modal').classList.add('active');
-            document.body.style.overflow = 'hidden';
-            
-            if (modalId === 'simulator') {
-                loadSimulatorRoom('living');
-            }
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-            document.body.style.overflow = 'auto';
-        }
-
-        // ===== Product Functions =====
-        function loadFeaturedProducts() {
-            const container = document.getElementById('featured-products');
-            const featured = products.slice(0, 4);
-            container.innerHTML = featured.map(p => createProductCard(p)).join('');
-        }
-
-        function loadAllProducts() {
-            filterProducts();
-        }
-
-        function loadBrandsProducts() {
-            const container = document.getElementById('brands-products');
-            const byProducts = products.filter(p => p.brand !== 'FAWORI');
-            container.innerHTML = byProducts.map(p => createProductCard(p)).join('');
-        }
-
-        function createProductCard(product) {
-            const categories = {
-                'interior': 'داخلية',
-                'exterior': 'خارجية',
-                'primer': 'برايمر',
-                'wood': 'خشب',
-                'special': 'خاصة'
-            };
-            
-            const badgeHTML = product.badge ? `<div class="product-badge">${product.badge}</div>` : '';
-            
-            return `
-                <div class="product-card" onclick="showProductDetail(${product.id})">
-                    <div class="product-image">
-                        ${badgeHTML}
-                        <img src="${product.image}" alt="${product.name}" onerror="this.parentElement.innerHTML='${badgeHTML}';">
-                    </div>
-                    <div class="product-info">
-                        <h3>${product.name}</h3>
-                        <p>${product.description.substring(0, 60)}...</p>
-                        <span class="product-category">${categories[product.category]}</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        function showProductDetail(productId) {
-            const product = products.find(p => p.id === productId);
-            if (!product) return;
-
-            document.getElementById('modal-product-name').textContent = product.name;
-            document.getElementById('modal-product-description').textContent = product.description;
-            document.getElementById('modal-coverage').textContent = product.coverage;
-            document.getElementById('modal-drying').textContent = product.drying;
-            document.getElementById('modal-warranty').textContent = product.warranty;
-            
-            const usageList = document.getElementById('modal-usage');
-            usageList.innerHTML = product.usage.map(step => `<li>${step}</li>`).join('');
-
-            const imageDiv = document.getElementById('modal-product-image');
-            imageDiv.innerHTML = `<img src="${product.image}" alt="${product.name}" onerror="this.parentElement.innerHTML='🪣';">`;
-
-            showModal('product');
-        }
-
-        function filterByCategory(category, btn) {
-            currentCategory = category;
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            filterProducts();
-        }
-
-        function filterProducts() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const container = document.getElementById('all-products');
-
-            const filtered = products.filter(product => {
-                const matchesSearch = product.name.toLowerCase().includes(searchTerm) || 
-                                     product.description.toLowerCase().includes(searchTerm);
-                const matchesCategory = currentCategory === 'all' || product.category === currentCategory;
-                return matchesSearch && matchesCategory;
-            });
-
-            container.innerHTML = filtered.map(p => createProductCard(p)).join('');
-        }
-
-        // ===== Simulator Functions =====
-        function loadSimulatorRoom(roomType) {
-            const img = document.getElementById('simulator-room-image');
-            const overlay = document.getElementById('wall-overlay');
-            
-            img.src = roomImages[roomType];
-            overlay.className = 'wall-overlay';
-            
-            setTimeout(() => {
-                applySimulatorColor(currentSimulatorColor, document.querySelector('.palette-color.active') || document.querySelector('.palette-color'));
-            }, 300);
-        }
-
-        function changeRoom(roomType, btn) {
-            currentRoom = roomType;
-            document.querySelectorAll('.room-option').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            loadSimulatorRoom(roomType);
-        }
-
-        function applySimulatorColor(color, btn) {
-            currentSimulatorColor = color;
-            const overlay = document.getElementById('wall-overlay');
-            
-            document.querySelectorAll('.palette-color').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            overlay.style.background = color;
-            overlay.style.opacity = '0.85';
-            overlay.style.mixBlendMode = 'multiply';
-        }
-
-        function resetSimulator() {
-            document.getElementById('wall-overlay').style.background = 'transparent';
-            document.querySelectorAll('.palette-color').forEach(b => b.classList.remove('active'));
-            currentSimulatorColor = '#E8651A';
-        }
-
-        // Close modal on overlay click
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.classList.remove('active');
-                    document.body.style.overflow = 'auto';
-                }
-            });
-        });
-    </script>
+/* ===== تشغيل ===== */
+document.addEventListener('DOMContentLoaded',()=>{ loadFeatured(); filterProducts(); loadBrands(); });
+</script>
 </body>
 </html>
