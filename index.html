@@ -2,14 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FAWORI - كتالوج الدهانات الاحترافي</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', sans-serif;
         }
 
         :root {
@@ -21,8 +22,9 @@
             --light-gray: #3a3a3a;
             --text: #ffffff;
             --text-muted: #aaaaaa;
-            --success: #22c55e;
             --border: #333333;
+            --success: #22c55e;
+            --shadow: rgba(0, 0, 0, 0.4);
         }
 
         body {
@@ -30,9 +32,10 @@
             color: var(--text);
             min-height: 100vh;
             overflow-x: hidden;
+            padding-bottom: 80px;
         }
 
-        /* ===== Header ===== */
+        /* ===== Fixed Header ===== */
         .header {
             background: linear-gradient(135deg, var(--dark) 0%, var(--gray) 100%);
             padding: 15px 20px;
@@ -40,17 +43,19 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 3px solid var(--primary);
-            position: sticky;
+            position: fixed;
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 1000;
             box-shadow: 0 4px 20px rgba(232, 101, 26, 0.3);
         }
 
         .logo {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 900;
             color: white;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             cursor: pointer;
         }
 
@@ -58,71 +63,74 @@
             color: var(--primary);
         }
 
-        .header-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .icon-btn {
+        .header-btn {
             background: var(--gray);
             border: 2px solid var(--primary);
             color: white;
-            padding: 10px 18px;
+            padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.3s;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             font-weight: 600;
         }
 
-        .icon-btn:hover {
+        .header-btn:hover {
             background: var(--primary);
             transform: translateY(-2px);
         }
 
-        /* ===== Navigation ===== */
-        .nav {
+        /* ===== Fixed Navigation Tabs ===== */
+        .nav-tabs {
             background: var(--dark);
             display: flex;
             justify-content: center;
-            gap: 5px;
-            padding: 15px;
-            border-bottom: 1px solid var(--border);
-            position: sticky;
+            gap: 8px;
+            padding: 12px;
+            border-bottom: 2px solid var(--border);
+            position: fixed;
             top: 70px;
+            left: 0;
+            right: 0;
             z-index: 999;
-            flex-wrap: wrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
-        .nav-btn {
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tab {
             color: white;
             text-decoration: none;
-            font-weight: 600;
-            padding: 12px 24px;
+            font-weight: 700;
+            padding: 12px 20px;
             border-radius: 25px;
             transition: all 0.3s;
             border: 2px solid transparent;
             cursor: pointer;
             background: var(--gray);
-            font-size: 15px;
+            font-size: 14px;
+            white-space: nowrap;
         }
 
-        .nav-btn.active, .nav-btn:hover {
+        .nav-tab.active, .nav-tab:hover {
             background: var(--primary);
             border-color: var(--primary);
             transform: translateY(-2px);
         }
 
-        /* ===== Screens ===== */
+        /* ===== Main Content ===== */
         .screen {
             display: none;
-            padding: 30px 20px;
-            max-width: 1400px;
+            padding: 140px 15px 30px;
+            max-width: 1200px;
             margin: 0 auto;
-            animation: fadeIn 0.5s ease;
+            animation: fadeIn 0.4s ease;
         }
 
         .screen.active {
@@ -130,18 +138,18 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         /* ===== Hero Section ===== */
         .hero {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border-radius: 20px;
-            padding: 50px 40px;
-            margin-bottom: 40px;
+            border-radius: 16px;
+            padding: 35px 25px;
+            margin-bottom: 30px;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(232, 101, 26, 0.4);
+            box-shadow: 0 8px 30px rgba(232, 101, 26, 0.4);
             position: relative;
             overflow: hidden;
         }
@@ -151,15 +159,15 @@
             position: absolute;
             top: -50%;
             right: -20%;
-            width: 400px;
-            height: 400px;
+            width: 300px;
+            height: 300px;
             background: rgba(255,255,255,0.1);
             border-radius: 50%;
         }
 
         .hero h1 {
-            font-size: 42px;
-            margin-bottom: 15px;
+            font-size: 32px;
+            margin-bottom: 12px;
             color: white;
             font-weight: 900;
             position: relative;
@@ -168,39 +176,39 @@
 
         .hero p {
             color: rgba(255,255,255,0.95);
-            font-size: 20px;
+            font-size: 16px;
             line-height: 1.6;
-            max-width: 700px;
-            margin: 0 auto 25px;
+            max-width: 600px;
+            margin: 0 auto 20px;
             position: relative;
             z-index: 1;
         }
 
         .hero-buttons {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             justify-content: center;
-            margin-top: 30px;
+            flex-wrap: wrap;
             position: relative;
             z-index: 1;
         }
 
         .hero-btn {
-            padding: 15px 35px;
+            padding: 12px 28px;
             background: white;
             color: var(--primary);
             border: none;
-            border-radius: 30px;
+            border-radius: 25px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
             transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .hero-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.3);
         }
 
         .hero-btn.outline {
@@ -211,31 +219,35 @@
 
         /* ===== Section Title ===== */
         .section-title {
-            font-size: 28px;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
+            font-size: 24px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
             border-bottom: 3px solid var(--primary);
             display: inline-block;
             color: white;
             font-weight: 800;
         }
 
-        /* ===== Search & Filters ===== */
-        .search-filters {
-            margin-bottom: 30px;
+        /* ===== Search Bar ===== */
+        .search-container {
+            margin-bottom: 25px;
+            position: sticky;
+            top: 140px;
+            z-index: 100;
+            background: var(--darker);
+            padding: 10px 0;
         }
 
         .search-bar {
             width: 100%;
-            padding: 18px 25px;
+            padding: 15px 20px;
             background: var(--gray);
             border: 2px solid var(--border);
             border-radius: 12px;
             color: white;
-            font-size: 16px;
+            font-size: 15px;
             outline: none;
             transition: all 0.3s;
-            margin-bottom: 20px;
         }
 
         .search-bar:focus {
@@ -243,22 +255,31 @@
             box-shadow: 0 0 0 3px rgba(232, 101, 26, 0.2);
         }
 
-        .filters {
+        /* ===== Category Filters ===== */
+        .category-filters {
             display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 25px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 5px;
+        }
+
+        .category-filters::-webkit-scrollbar {
+            display: none;
         }
 
         .filter-btn {
-            padding: 12px 24px;
+            padding: 10px 20px;
             background: var(--gray);
             border: 2px solid var(--border);
             color: white;
-            border-radius: 25px;
+            border-radius: 20px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.3s;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .filter-btn.active, .filter-btn:hover {
@@ -270,29 +291,29 @@
         /* ===== Products Grid ===== */
         .products-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
         }
 
         .product-card {
             background: var(--dark);
-            border-radius: 15px;
+            border-radius: 12px;
             overflow: hidden;
             cursor: pointer;
             transition: all 0.3s;
             border: 2px solid var(--border);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 3px 12px var(--shadow);
         }
 
         .product-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 35px rgba(232, 101, 26, 0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(232, 101, 26, 0.3);
             border-color: var(--primary);
         }
 
         .product-image {
-            height: 240px;
+            height: 140px;
             background: linear-gradient(135deg, var(--gray), var(--light-gray));
             display: flex;
             align-items: center;
@@ -309,319 +330,320 @@
         }
 
         .product-card:hover .product-image img {
-            transform: scale(1.05);
+            transform: scale(1.08);
         }
 
         .product-badge {
             position: absolute;
-            top: 15px;
-            right: 15px;
+            top: 8px;
+            right: 8px;
             background: var(--primary);
             color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
             font-weight: 700;
         }
 
         .product-info {
-            padding: 20px;
+            padding: 12px;
         }
 
         .product-info h3 {
-            font-size: 22px;
-            margin-bottom: 10px;
+            font-size: 15px;
+            margin-bottom: 6px;
             color: white;
             font-weight: 700;
         }
 
         .product-info p {
             color: var(--text-muted);
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 15px;
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 10px;
         }
 
         .product-category {
             display: inline-block;
-            padding: 6px 14px;
+            padding: 4px 10px;
             background: var(--primary);
-            border-radius: 15px;
-            font-size: 12px;
+            border-radius: 10px;
+            font-size: 11px;
             font-weight: 700;
         }
 
-        /* ===== Product Detail ===== */
-        .back-btn {
+        /* ===== Modal ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--dark);
+            border-radius: 20px 20px 0 0;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border-top: 3px solid var(--primary);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--dark);
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            font-size: 22px;
+            color: white;
+            font-weight: 800;
+        }
+
+        .close-modal {
             background: var(--gray);
             border: none;
-            color: var(--primary);
-            font-size: 16px;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
             cursor: pointer;
-            margin-bottom: 25px;
-            padding: 12px 25px;
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-
-        .back-btn:hover {
-            background: var(--light-gray);
-            transform: translateX(-5px);
-        }
-
-        .product-detail {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            background: var(--dark);
-            border-radius: 20px;
-            padding: 35px;
-            border: 2px solid var(--border);
-        }
-
-        .product-gallery {
-            background: linear-gradient(135deg, var(--gray), var(--light-gray));
-            border-radius: 15px;
-            height: 450px;
+            font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            position: relative;
+            transition: all 0.3s;
         }
 
-        .product-gallery img {
+        .close-modal:hover {
+            background: var(--primary);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, var(--gray), var(--light-gray));
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .product-details h2 {
-            font-size: 32px;
-            margin-bottom: 12px;
-            color: white;
-            font-weight: 800;
-        }
-
-        .rating {
-            color: #FFD700;
-            font-size: 20px;
+        .modal-section {
             margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
-        .rating span {
+        .modal-section h3 {
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .modal-section p, .modal-section li {
             color: var(--text-muted);
             font-size: 14px;
+            line-height: 1.8;
         }
 
-        .tabs {
-            display: flex;
-            gap: 5px;
-            margin: 25px 0;
-            border-bottom: 2px solid var(--border);
+        .modal-section ul, .modal-section ol {
+            padding-right: 20px;
         }
 
-        .tab {
-            padding: 14px 25px;
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 16px;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-
-        .tab.active {
-            border-bottom-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .tab-content {
-            display: none;
-            padding: 25px 0;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .tab-content p, .tab-content li {
-            line-height: 1.9;
-            color: var(--text-muted);
-            font-size: 15px;
-        }
-
-        .tab-content ol, .tab-content ul {
-            padding-right: 25px;
-        }
-
-        .tab-content li {
-            margin-bottom: 10px;
+        .modal-section li {
+            margin-bottom: 8px;
         }
 
         .specs-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
-            margin: 25px 0;
+            gap: 12px;
+            margin: 15px 0;
         }
 
-        .spec-card {
+        .spec-item {
             background: var(--gray);
-            padding: 22px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
             border: 2px solid var(--border);
-            transition: all 0.3s;
         }
 
-        .spec-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-3px);
+        .spec-item .icon {
+            font-size: 28px;
+            margin-bottom: 8px;
         }
 
-        .spec-card .icon {
-            font-size: 36px;
-            margin-bottom: 12px;
-        }
-
-        .spec-card h4 {
-            font-size: 14px;
+        .spec-item h4 {
+            font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
-        .spec-card p {
-            font-size: 18px;
+        .spec-item p {
+            font-size: 15px;
             font-weight: 700;
             color: white;
         }
 
-        .size-selector {
+        .size-options {
             display: flex;
-            gap: 15px;
-            margin: 25px 0;
+            gap: 10px;
             flex-wrap: wrap;
+            margin: 12px 0;
         }
 
-        .size-btn {
-            padding: 14px 30px;
+        .size-option {
+            padding: 10px 20px;
             background: var(--gray);
             border: 2px solid var(--border);
-            color: white;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 17px;
-            transition: all 0.3s;
+            font-size: 14px;
             font-weight: 700;
+            transition: all 0.3s;
         }
 
-        .size-btn.active, .size-btn:hover {
+        .size-option.active, .size-option:hover {
             background: var(--primary);
             border-color: var(--primary);
-            transform: translateY(-2px);
         }
 
-        .color-swatches {
+        .color-options {
             display: flex;
-            gap: 15px;
-            margin: 25px 0;
+            gap: 10px;
             flex-wrap: wrap;
+            margin: 12px 0;
         }
 
-        .swatch-container {
-            text-align: center;
-        }
-
-        .swatch {
-            width: 55px;
-            height: 55px;
+        .color-option {
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
             cursor: pointer;
             border: 3px solid transparent;
             transition: all 0.3s;
-            margin-bottom: 8px;
         }
 
-        .swatch:hover, .swatch.active {
+        .color-option.active, .color-option:hover {
             border-color: white;
             transform: scale(1.15);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
 
-        .color-name {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .action-button {
+        .modal-action {
             width: 100%;
-            padding: 18px;
+            padding: 16px;
             background: var(--primary);
             border: none;
             color: white;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             border-radius: 12px;
             cursor: pointer;
-            margin-top: 25px;
+            margin-top: 20px;
             transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(232, 101, 26, 0.4);
+            box-shadow: 0 4px 12px rgba(232, 101, 26, 0.4);
         }
 
-        .action-button:hover {
+        .modal-action:hover {
             background: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(232, 101, 26, 0.5);
         }
 
-        /* ===== Color Simulator ===== */
+        /* ===== Simulator ===== */
         .simulator-container {
             background: var(--dark);
-            border-radius: 20px;
-            padding: 35px;
+            border-radius: 16px;
+            padding: 20px;
             border: 2px solid var(--border);
         }
 
-        .simulator-grid {
+        .room-selector {
             display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 30px;
-            margin-top: 25px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .room-option {
+            background: var(--gray);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .room-option.active, .room-option:hover {
+            border-color: var(--primary);
+            background: var(--light-gray);
+            transform: translateY(-3px);
+        }
+
+        .room-option .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .room-option span {
+            font-size: 14px;
+            font-weight: 600;
         }
 
         .room-preview {
             position: relative;
-            border-radius: 15px;
-            overflow: hidden;
-            background: #000;
-            height: 550px;
-        }
-
-        .room-image-container {
-            position: relative;
             width: 100%;
-            height: 100%;
+            height: 300px;
+            background: #000;
+            border-radius: 12px;
             overflow: hidden;
+            margin-bottom: 20px;
         }
 
-        .room-base-image {
+        .room-preview img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
         }
 
         .wall-overlay {
@@ -630,339 +652,173 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
+            background: transparent;
             pointer-events: none;
-            transition: all 0.5s ease;
-        }
-
-        .controls-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .control-section {
-            background: var(--gray);
-            padding: 22px;
-            border-radius: 12px;
-            border: 2px solid var(--border);
-        }
-
-        .control-section h3 {
-            font-size: 18px;
-            margin-bottom: 18px;
-            color: var(--primary);
-            font-weight: 700;
-        }
-
-        .room-types {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .room-type-btn {
-            padding: 16px;
-            background: var(--dark);
-            border: 2px solid transparent;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-            font-size: 14px;
-            color: white;
-            font-weight: 600;
-        }
-
-        .room-type-btn .icon {
-            font-size: 32px;
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        .room-type-btn.active, .room-type-btn:hover {
-            border-color: var(--primary);
-            background: var(--light-gray);
-            transform: translateY(-2px);
+            transition: all 0.5s;
         }
 
         .color-palette {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
-            max-height: 300px;
-            overflow-y: auto;
+            margin-bottom: 20px;
         }
 
-        .color-btn {
-            padding: 15px 10px;
+        .palette-color {
+            aspect-ratio: 1;
             border-radius: 10px;
             cursor: pointer;
             border: 3px solid transparent;
             transition: all 0.3s;
-            font-weight: bold;
-            font-size: 13px;
-            color: white;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.7);
         }
 
-        .color-btn.active {
+        .palette-color.active, .palette-color:hover {
             border-color: white;
-            transform: scale(1.08);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            transform: scale(1.1);
         }
 
-        .slider-control {
-            margin-bottom: 20px;
-        }
-
-        .slider-control label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 14px;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .slider-control input[type="range"] {
-            width: 100%;
-            height: 8px;
-            background: var(--dark);
-            border-radius: 4px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        .slider-control input[type="range"]::-webkit-slider-thumb {
-            width: 22px;
-            height: 22px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            -webkit-appearance: none;
-            box-shadow: 0 2px 8px rgba(232, 101, 26, 0.5);
-        }
-
-        .slider-value {
-            text-align: left;
-            font-size: 13px;
-            color: var(--primary);
-            margin-top: 5px;
-            font-weight: 600;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .action-btn-small {
-            flex: 1;
-            padding: 12px;
-            background: var(--dark);
-            border: 2px solid var(--primary);
-            color: white;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-
-        .action-btn-small:hover {
-            background: var(--primary);
-        }
-
-        /* ===== About Page ===== */
+        /* ===== About Section ===== */
         .about-container {
             background: var(--dark);
-            border-radius: 20px;
-            padding: 50px 40px;
+            border-radius: 16px;
+            padding: 30px 20px;
             text-align: center;
             border: 2px solid var(--border);
         }
 
         .about-container h2 {
-            font-size: 36px;
-            margin-bottom: 25px;
+            font-size: 28px;
+            margin-bottom: 20px;
             color: var(--primary);
             font-weight: 800;
         }
 
         .about-container p {
-            font-size: 18px;
+            font-size: 15px;
             line-height: 1.9;
             color: var(--text-muted);
-            margin-bottom: 18px;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
+            margin-bottom: 15px;
         }
 
-        .about-features {
+        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 25px;
-            margin-top: 40px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 25px;
         }
 
-        .about-feature {
+        .feature-item {
             background: var(--gray);
-            padding: 30px 25px;
-            border-radius: 15px;
+            padding: 20px;
+            border-radius: 12px;
             text-align: center;
             border: 2px solid var(--border);
-            transition: all 0.3s;
         }
 
-        .about-feature:hover {
-            border-color: var(--primary);
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(232, 101, 26, 0.3);
-        }
-
-        .about-feature .icon {
-            font-size: 48px;
-            margin-bottom: 18px;
-        }
-
-        .about-feature h3 {
-            font-size: 20px;
+        .feature-item .icon {
+            font-size: 40px;
             margin-bottom: 12px;
+        }
+
+        .feature-item h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
             color: white;
         }
 
-        .about-feature p {
-            font-size: 14px;
+        .feature-item p {
+            font-size: 12px;
             margin: 0;
         }
 
-        /* ===== No Results ===== */
-        .no-results {
+        /* ===== Loading ===== */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 25px 40px;
+            border-radius: 12px;
+            z-index: 3000;
+            display: none;
             text-align: center;
-            padding: 80px 20px;
-            color: var(--text-muted);
         }
 
-        .no-results .icon {
-            font-size: 80px;
-            margin-bottom: 25px;
-            opacity: 0.5;
+        .loading.active {
+            display: block;
         }
 
-        .no-results h3 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: white;
+        .loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--gray);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         /* ===== Responsive ===== */
-        @media (max-width: 1024px) {
-            .product-detail, .simulator-grid {
-                grid-template-columns: 1fr;
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 26px;
+            }
+
+            .hero p {
+                font-size: 14px;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .specs-grid {
                 grid-template-columns: 1fr;
             }
 
-            .hero h1 {
-                font-size: 32px;
-            }
-
-            .hero p {
-                font-size: 18px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .nav {
-                top: 65px;
-            }
-
-            .nav-btn {
-                padding: 10px 18px;
-                font-size: 14px;
-            }
-
-            .products-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .room-preview {
-                height: 350px;
-            }
-
             .color-palette {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .hero {
-                padding: 35px 25px;
-            }
-
-            .hero h1 {
-                font-size: 28px;
+                grid-template-columns: repeat(3, 1fr);
             }
         }
 
-        /* ===== Scrollbar ===== */
-        ::-webkit-scrollbar {
-            width: 10px;
+        @media (min-width: 769px) {
+            .products-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
-        ::-webkit-scrollbar-track {
-            background: var(--dark);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 5px;
-        }
-
-        /* ===== Loading ===== */
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 24px;
-            color: var(--primary);
-            z-index: 10;
-            display: none;
-            background: rgba(0,0,0,0.9);
-            padding: 25px 50px;
-            border-radius: 12px;
-        }
-
-        .loading.active {
-            display: block;
+        @media (min-width: 1024px) {
+            .products-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
+    <!-- Fixed Header -->
     <div class="header">
+        <button class="header-btn" onclick="showModal('about')">
+            <span>ℹ️</span>
+            <span>عن الشركة</span>
+        </button>
         <div class="logo" onclick="showScreen('home')">FA<span>WO</span>RI</div>
-        <div class="header-buttons">
-            <button class="icon-btn" onclick="showScreen('simulator')">
-                <span>🎨</span>
-                <span>المحاكي</span>
-            </button>
-            <button class="icon-btn" onclick="showScreen('about')">
-                <span>ℹ️</span>
-                <span>عن الشركة</span>
-            </button>
-        </div>
+        <button class="header-btn" onclick="showModal('simulator')">
+            <span>🎨</span>
+            <span>المحاكي</span>
+        </button>
     </div>
 
-    <!-- Navigation -->
-    <div class="nav">
-        <button class="nav-btn active" onclick="showScreen('home')">🏠 الرئيسية</button>
-        <button class="nav-btn" onclick="showScreen('products')">📦 المنتجات</button>
-        <button class="nav-btn" onclick="showScreen('simulator')">🎨 محاكي الألوان</button>
-        <button class="nav-btn" onclick="showScreen('about')"> من نحن</button>
+    <!-- Fixed Navigation Tabs -->
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showScreen('home')">🏠 الرئيسية</button>
+        <button class="nav-tab" onclick="showScreen('products')">📦 المنتجات</button>
+        <button class="nav-tab" onclick="showModal('simulator')">🎨 المحاكي</button>
+        <button class="nav-tab" onclick="showScreen('brands')">️ العلامات</button>
     </div>
 
     <!-- Home Screen -->
@@ -972,34 +828,34 @@
             <p>اكتشف مجموعتنا الواسعة من الدهانات عالية الجودة<br>تصميم تركي احترافي بألوان تدوم طويلاً</p>
             <div class="hero-buttons">
                 <button class="hero-btn" onclick="showScreen('products')">تصفح المنتجات</button>
-                <button class="hero-btn outline" onclick="showScreen('simulator')">جرب المحاكي</button>
+                <button class="hero-btn outline" onclick="showModal('simulator')">جرب المحاكي</button>
             </div>
         </div>
 
         <h2 class="section-title">المنتجات المميزة</h2>
         <div class="products-grid" id="featured-products"></div>
 
-        <h2 class="section-title" style="margin-top: 50px;">لماذا تختار FAWORI؟</h2>
-        <div class="about-features">
-            <div class="about-feature">
+        <h2 class="section-title" style="margin-top: 35px;">لماذا FAWORI؟</h2>
+        <div class="features-grid">
+            <div class="feature-item">
                 <div class="icon">🏆</div>
                 <h3>جودة عالمية</h3>
-                <p>منتجات حاصلة على شهادات الجودة الأوروبية</p>
+                <p>شهادات جودة أوروبية</p>
             </div>
-            <div class="about-feature">
+            <div class="feature-item">
                 <div class="icon"></div>
-                <h3>ألوان متنوعة</h3>
-                <p>أكثر من 200 لون لتناسب جميع الأذواق</p>
+                <h3>200+ لون</h3>
+                <p>ألوان متنوعة</p>
             </div>
-            <div class="about-feature">
+            <div class="feature-item">
                 <div class="icon">💪</div>
                 <h3>متانة عالية</h3>
-                <p>مقاومة للعوامل الجوية والرطوبة</p>
+                <p>مقاومة للعوامل الجوية</p>
             </div>
-            <div class="about-feature">
+            <div class="feature-item">
                 <div class="icon">🌍</div>
-                <h3>توزيع واسع</h3>
-                <p>متوفرة في أكثر من 20 دولة</p>
+                <h3>20+ دولة</h3>
+                <p>توزيع عالمي واسع</p>
             </div>
         </div>
     </div>
@@ -1008,387 +864,413 @@
     <div id="products" class="screen">
         <h2 class="section-title">جميع المنتجات</h2>
         
-        <div class="search-filters">
+        <div class="search-container">
             <input type="text" class="search-bar" id="searchInput" placeholder="🔍 ابحث عن منتج..." oninput="filterProducts()">
-            
-            <div class="filters">
-                <button class="filter-btn active" onclick="filterByCategory('all', this)">الكل</button>
-                <button class="filter-btn" onclick="filterByCategory('interior', this)">دهانات داخلية</button>
-                <button class="filter-btn" onclick="filterByCategory('exterior', this)">دهانات خارجية</button>
-                <button class="filter-btn" onclick="filterByCategory('primer', this)">برايمر</button>
-                <button class="filter-btn" onclick="filterByCategory('special', this)">منتجات خاصة</button>
-            </div>
+        </div>
+
+        <div class="category-filters">
+            <button class="filter-btn active" onclick="filterByCategory('all', this)">الكل</button>
+            <button class="filter-btn" onclick="filterByCategory('interior', this)">داخلية</button>
+            <button class="filter-btn" onclick="filterByCategory('exterior', this)">خارجية</button>
+            <button class="filter-btn" onclick="filterByCategory('primer', this)">برايمر</button>
+            <button class="filter-btn" onclick="filterByCategory('wood', this)">خشب</button>
+            <button class="filter-btn" onclick="filterByCategory('special', this)">خاصة</button>
         </div>
 
         <div class="products-grid" id="all-products"></div>
-        <div id="no-results" class="no-results" style="display: none;">
-            <div class="icon">🔍</div>
-            <h3>لا توجد نتائج</h3>
-            <p>جرب البحث بكلمات أخرى</p>
-        </div>
     </div>
 
-    <!-- Product Detail Screen -->
-    <div id="product-detail" class="screen">
-        <button class="back-btn" onclick="showScreen('products')">
-            <span>←</span>
-            <span>العودة للمنتجات</span>
-        </button>
-        
-        <div class="product-detail">
-            <div class="product-gallery" id="detail-image"></div>
-            
-            <div class="product-details">
-                <h2 id="product-name">اسم المنتج</h2>
-                <div class="rating" id="product-rating">★★★★★ <span>(4.8)</span></div>
+    <!-- Brands Screen -->
+    <div id="brands" class="screen">
+        <h2 class="section-title">العلامات التجارية</h2>
+        <div class="products-grid" id="brands-products"></div>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-product-name">اسم المنتج</h2>
+                <button class="close-modal" onclick="closeModal('productModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-image" id="modal-product-image"></div>
                 
-                <div class="tabs">
-                    <button class="tab active" onclick="showTab('description', this)">الوصف</button>
-                    <button class="tab" onclick="showTab('specs', this)">المواصفات</button>
-                    <button class="tab" onclick="showTab('usage', this)">طريقة الاستخدام</button>
+                <div class="modal-section">
+                    <h3>📋 الوصف</h3>
+                    <p id="modal-product-description">وصف المنتج</p>
                 </div>
 
-                <div id="description" class="tab-content active">
-                    <p id="product-description">وصف المنتج</p>
-                </div>
-
-                <div id="specs" class="tab-content">
+                <div class="modal-section">
+                    <h3>📊 المواصفات</h3>
                     <div class="specs-grid">
-                        <div class="spec-card">
+                        <div class="spec-item">
                             <div class="icon">📐</div>
-                            <h4>مساحة التغطية</h4>
-                            <p id="spec-coverage">8-10 م²/لتر</p>
+                            <h4>التغطية</h4>
+                            <p id="modal-coverage">8-10 م²/لتر</p>
                         </div>
-                        <div class="spec-card">
+                        <div class="spec-item">
                             <div class="icon">⏱️</div>
-                            <h4>وقت الجفاف</h4>
-                            <p id="spec-drying">2-4 ساعات</p>
+                            <h4>الجفاف</h4>
+                            <p id="modal-drying">2-4 ساعات</p>
                         </div>
-                        <div class="spec-card">
+                        <div class="spec-item">
                             <div class="icon">✓</div>
                             <h4>الضمان</h4>
-                            <p id="spec-warranty">5 سنوات</p>
+                            <p id="modal-warranty">5 سنوات</p>
                         </div>
                     </div>
                 </div>
 
-                <div id="usage" class="tab-content">
-                    <ol id="product-usage">
-                        <li>تنظيف السطح جيداً وإزالة الأتربة</li>
-                        <li>تطبيق طبقة البرايمر الأساسية</li>
-                        <li>انتظار 2-4 ساعات حتى الجفاف</li>
-                        <li>تطبيق الطبقة الأولى من الدهان</li>
-                        <li>انتظار 4-6 ساعات ثم تطبيق الطبقة الثانية</li>
+                <div class="modal-section">
+                    <h3>📏 الأحجام المتاحة</h3>
+                    <div class="size-options">
+                        <div class="size-option">2L</div>
+                        <div class="size-option active">3L</div>
+                        <div class="size-option">5L</div>
+                        <div class="size-option">10L</div>
+                        <div class="size-option">20L</div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <h3>🎨 الألوان المتاحة</h3>
+                    <div class="color-options">
+                        <div class="color-option" style="background: #C1440E;" title="ترأكوتا"></div>
+                        <div class="color-option" style="background: #8B4513;" title="بني"></div>
+                        <div class="color-option" style="background: #F5DEB3;" title="بيج"></div>
+                        <div class="color-option" style="background: #E8D5B7;" title="كريمي"></div>
+                        <div class="color-option" style="background: #191970;" title="كحلي"></div>
+                        <div class="color-option" style="background: #A9A9A9;" title="رمادي"></div>
+                        <div class="color-option" style="background: #FFFFFF; border: 1px solid #ccc;" title="أبيض"></div>
+                        <div class="color-option" style="background: #2F4F4F;" title="فحمي"></div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <h3> طريقة الاستخدام</h3>
+                    <ol id="modal-usage">
+                        <li>تنظيف السطح جيداً</li>
+                        <li>تطبيق البرايمر</li>
+                        <li>انتظار الجفاف</li>
+                        <li>تطبيق الطبقة الأولى</li>
+                        <li>تطبيق الطبقة الثانية</li>
                     </ol>
                 </div>
 
-                <h3 style="margin-top: 30px; margin-bottom: 15px; font-size: 20px;">اختر الحجم:</h3>
-                <div class="size-selector">
-                    <button class="size-btn" onclick="selectSize(this)">2L</button>
-                    <button class="size-btn active" onclick="selectSize(this)">3L</button>
-                    <button class="size-btn" onclick="selectSize(this)">5L</button>
-                    <button class="size-btn" onclick="selectSize(this)">10L</button>
-                </div>
-
-                <h3 style="margin-bottom: 15px; font-size: 20px;">اختر اللون:</h3>
-                <div class="color-swatches" id="color-swatches">
-                    <div class="swatch-container">
-                        <div class="swatch active" style="background: #C1440E;" onclick="selectSwatch(this)"></div>
-                        <div class="color-name">ترأكوتا</div>
-                    </div>
-                    <div class="swatch-container">
-                        <div class="swatch" style="background: #8B4513;" onclick="selectSwatch(this)"></div>
-                        <div class="color-name">بني</div>
-                    </div>
-                    <div class="swatch-container">
-                        <div class="swatch" style="background: #F5DEB3;" onclick="selectSwatch(this)"></div>
-                        <div class="color-name">بيج</div>
-                    </div>
-                    <div class="swatch-container">
-                        <div class="swatch" style="background: #E8D5B7;" onclick="selectSwatch(this)"></div>
-                        <div class="color-name">كريمي</div>
-                    </div>
-                    <div class="swatch-container">
-                        <div class="swatch" style="background: #191970;" onclick="selectSwatch(this)"></div>
-                        <div class="color-name">كحلي</div>
-                    </div>
-                    <div class="swatch-container">
-                        <div class="swatch" style="background: #A9A9A9;" onclick="selectSwatch(this)"></div>
-                        <div class="color-name">رمادي</div>
-                    </div>
-                </div>
-
-                <button class="action-button" onclick="showScreen('simulator')">
-                     جرب هذا اللون في المحاكي
+                <button class="modal-action" onclick="showModal('simulator')">
+                     جرب اللون في المحاكي
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Color Simulator Screen -->
-    <div id="simulator" class="screen">
-        <div class="simulator-container">
-            <h2 class="section-title" style="text-align: center; margin-bottom: 10px;">🎨 محاكي الألوان الاحترافي</h2>
-            <p style="text-align: center; color: var(--text-muted); margin-bottom: 30px;">جرب ألوان FAWORI على غرف حقيقية قبل الشراء</p>
-            
-            <div class="simulator-grid">
-                <div class="room-preview">
-                    <div class="room-image-container" id="roomContainer">
-                        <img src="" alt="Room" class="room-base-image" id="roomImage">
-                        <div class="wall-overlay living-room" id="wallOverlay"></div>
+    <!-- Simulator Modal -->
+    <div class="modal-overlay" id="simulatorModal">
+        <div class="modal-content" style="max-height: 90vh;">
+            <div class="modal-header">
+                <h2> محاكي الألوان</h2>
+                <button class="close-modal" onclick="closeModal('simulatorModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="room-selector">
+                    <div class="room-option active" onclick="changeRoom('living', this)">
+                        <span class="icon">️</span>
+                        <span>غرفة معيشة</span>
                     </div>
-                    <div class="loading" id="loading">جاري التحميل...</div>
+                    <div class="room-option" onclick="changeRoom('bedroom', this)">
+                        <span class="icon">🛏️</span>
+                        <span>غرفة نوم</span>
+                    </div>
+                    <div class="room-option" onclick="changeRoom('kitchen', this)">
+                        <span class="icon">🍳</span>
+                        <span>مطبخ</span>
+                    </div>
+                    <div class="room-option" onclick="changeRoom('bathroom', this)">
+                        <span class="icon">🚿</span>
+                        <span>حمام</span>
+                    </div>
                 </div>
 
-                <div class="controls-panel">
-                    <div class="control-section">
-                        <h3>🏠 اختر نوع الغرفة</h3>
-                        <div class="room-types">
-                            <button class="room-type-btn active" onclick="changeRoomType('living', this)">
-                                <span class="icon">🛋️</span>
-                                غرفة معيشة
-                            </button>
-                            <button class="room-type-btn" onclick="changeRoomType('bedroom', this)">
-                                <span class="icon">🛏️</span>
-                                غرفة نوم
-                            </button>
-                            <button class="room-type-btn" onclick="changeRoomType('kitchen', this)">
-                                <span class="icon">🍳</span>
-                                مطبخ
-                            </button>
-                            <button class="room-type-btn" onclick="changeRoomType('bathroom', this)">
-                                <span class="icon">🚿</span>
-                                حمام
-                            </button>
-                        </div>
-                    </div>
+                <div class="room-preview">
+                    <img src="" alt="Room" id="simulator-room-image">
+                    <div class="wall-overlay" id="wall-overlay"></div>
+                </div>
 
-                    <div class="control-section">
-                        <h3>🎨 اختر اللون</h3>
-                        <div class="color-palette" id="colorPalette">
-                            <button class="color-btn active" style="background: #E8651A;" onclick="applyColor('#E8651A', this)" data-color="برتقالي دافئ">برتقالي</button>
-                            <button class="color-btn" style="background: #4169E1;" onclick="applyColor('#4169E1', this)" data-color="أزرق ملكي">أزرق</button>
-                            <button class="color-btn" style="background: #228B22;" onclick="applyColor('#228B22', this)" data-color="أخضر طبيعي">أخضر</button>
-                            <button class="color-btn" style="background: #808080;" onclick="applyColor('#808080', this)" data-color="رمادي عصري">رمادي</button>
-                            <button class="color-btn" style="background: #F5DEB3; color: #333;" onclick="applyColor('#F5DEB3', this)" data-color="بيج دافئ">بيج</button>
-                            <button class="color-btn" style="background: #FFFFFF; color: #333;" onclick="applyColor('#FFFFFF', this)" data-color="أبيض ناصع">أبيض</button>
-                            <button class="color-btn" style="background: #191970;" onclick="applyColor('#191970', this)" data-color="كحلي فاخر">كحلي</button>
-                            <button class="color-btn" style="background: #C1440E;" onclick="applyColor('#C1440E', this)" data-color="ترأكوتا">ترأكوتا</button>
-                            <button class="color-btn" style="background: #8B4513;" onclick="applyColor('#8B4513', this)" data-color="بني دافئ">بني</button>
-                            <button class="color-btn" style="background: #FFD700; color: #333;" onclick="applyColor('#FFD700', this)" data-color="ذهبي">ذهبي</button>
-                            <button class="color-btn" style="background: #DDA0DD;" onclick="applyColor('#DDA0DD', this)" data-color="وردي فاتح">وردي</button>
-                            <button class="color-btn" style="background: #2F4F4F;" onclick="applyColor('#2F4F4F', this)" data-color="رمادي غامق">فحمي</button>
-                        </div>
-                    </div>
+                <h3 style="margin-bottom: 12px; font-size: 16px;">اختر اللون:</h3>
+                <div class="color-palette" id="simulator-palette">
+                    <div class="palette-color" style="background: #E8651A;" onclick="applySimulatorColor('#E8651A', this)"></div>
+                    <div class="palette-color" style="background: #4169E1;" onclick="applySimulatorColor('#4169E1', this)"></div>
+                    <div class="palette-color" style="background: #228B22;" onclick="applySimulatorColor('#228B22', this)"></div>
+                    <div class="palette-color" style="background: #808080;" onclick="applySimulatorColor('#808080', this)"></div>
+                    <div class="palette-color" style="background: #F5DEB3;" onclick="applySimulatorColor('#F5DEB3', this)"></div>
+                    <div class="palette-color" style="background: #FFFFFF; border: 1px solid #ccc;" onclick="applySimulatorColor('#FFFFFF', this)"></div>
+                    <div class="palette-color" style="background: #191970;" onclick="applySimulatorColor('#191970', this)"></div>
+                    <div class="palette-color" style="background: #C1440E;" onclick="applySimulatorColor('#C1440E', this)"></div>
+                    <div class="palette-color" style="background: #8B4513;" onclick="applySimulatorColor('#8B4513', this)"></div>
+                    <div class="palette-color" style="background: #FFD700;" onclick="applySimulatorColor('#FFD700', this)"></div>
+                    <div class="palette-color" style="background: #DDA0DD;" onclick="applySimulatorColor('#DDA0DD', this)"></div>
+                    <div class="palette-color" style="background: #2F4F4F;" onclick="applySimulatorColor('#2F4F4F', this)"></div>
+                </div>
 
-                    <div class="control-section">
-                        <h3>⚙️ إعدادات متقدمة</h3>
-                        
-                        <div class="slider-control">
-                            <label>شدة اللون:</label>
-                            <input type="range" min="0" max="100" value="70" id="intensitySlider" oninput="updateIntensity(this.value)">
-                            <div class="slider-value" id="intensityValue">70%</div>
-                        </div>
+                <button class="modal-action" onclick="resetSimulator()"> إعادة تعيين</button>
+            </div>
+        </div>
+    </div>
 
-                        <div class="slider-control">
-                            <label>الشفافية:</label>
-                            <input type="range" min="0" max="100" value="85" id="opacitySlider" oninput="updateOpacity(this.value)">
-                            <div class="slider-value" id="opacityValue">85%</div>
+    <!-- About Modal -->
+    <div class="modal-overlay" id="aboutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>عن FAWORI</h2>
+                <button class="close-modal" onclick="closeModal('aboutModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="about-container" style="border: none; padding: 0;">
+                    <p>شركة FAWORI التركية الرائدة في مجال الدهانات والطلاءات، نقدم منتجات عالية الجودة بمعايير عالمية.</p>
+                    <p>نفتخر بتقديم مجموعة واسعة من الدهانات الداخلية والخارجية والمنتجات الخاصة.</p>
+                    
+                    <div class="features-grid" style="margin-top: 25px;">
+                        <div class="feature-item">
+                            <div class="icon"></div>
+                            <h3>جودة ISO</h3>
+                            <p>شهادات عالمية</p>
                         </div>
-
-                        <div class="slider-control">
-                            <label>الإضاءة:</label>
-                            <input type="range" min="50" max="150" value="100" id="brightnessSlider" oninput="updateBrightness(this.value)">
-                            <div class="slider-value" id="brightnessValue">100%</div>
+                        <div class="feature-item">
+                            <div class="icon"></div>
+                            <h3>200+ لون</h3>
+                            <p>تنوع واسع</p>
                         </div>
-
-                        <div class="action-buttons">
-                            <button class="action-btn-small" onclick="resetSettings()">🔄 إعادة</button>
-                            <button class="action-btn-small" onclick="saveColor()">💾 حفظ</button>
+                        <div class="feature-item">
+                            <div class="icon">💪</div>
+                            <h3>متانة</h3>
+                            <p>مقاومة عالية</p>
                         </div>
-                    </div>
-
-                    <div class="control-section">
-                        <h4 style="color: var(--primary); margin-bottom: 10px;">اللون الحالي:</h4>
-                        <p id="colorName" style="color: white; font-weight: 600;">برتقالي دافئ - FAWORI Orange</p>
+                        <div class="feature-item">
+                            <div class="icon"></div>
+                            <h3>20+ دولة</h3>
+                            <p>توزيع عالمي</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- About Screen -->
-    <div id="about" class="screen">
-        <div class="about-container">
-            <h2>من نحن - FAWORI</h2>
-            <p>شركة FAWORI هي شركة تركية رائدة في مجال الدهانات والطلاءات، تأسست بهدف تقديم منتجات عالية الجودة تلبي احتياجات السوق المحلي والعالمي.</p>
-            <p>نفتخر بتقديم مجموعة واسعة من الدهانات الداخلية والخارجية بمعايير جودة عالمية وأسعار تنافسية.</p>
-            
-            <div class="about-features">
-                <div class="about-feature">
-                    <div class="icon">🏆</div>
-                    <h3>جودة عالية</h3>
-                    <p>منتجاتنا حاصلة على شهادات الجودة العالمية ISO</p>
-                </div>
-                <div class="about-feature">
-                    <div class="icon">🎨</div>
-                    <h3>ألوان متعددة</h3>
-                    <p>مجموعة واسعة من الألوان تناسب جميع الأذواق</p>
-                </div>
-                <div class="about-feature">
-                    <div class="icon">💪</div>
-                    <h3>متانة عالية</h3>
-                    <p>دهانات مقاومة للعوامل الجوية والرطوبة</p>
-                </div>
-                <div class="about-feature">
-                    <div class="icon">🌍</div>
-                    <h3>توزيع عالمي</h3>
-                    <p>نوصل منتجاتنا لأكثر من 20 دولة حول العالم</p>
-                </div>
-            </div>
-        </div>
+    <!-- Loading Indicator -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>جاري التحميل...</div>
     </div>
 
     <script>
-        // ===== Product Data =====
+        // ===== Product Database =====
         const products = [
+            // FAWORI Products
             {
                 id: 1,
                 name: 'Silikonlu Mat',
+                brand: 'FAWORI',
                 category: 'interior',
                 badge: 'الأكثر مبيعاً',
-                description: 'دهان سيلكون مات عالي الجودة من FAWORI، مصمم خصيصاً للاستخدام الداخلي. يتميز بمقاومة عالية للرطوبة والبقع، مع لمسة نهائية مات أنيقة. سهل التطبيق ويوفر تغطية ممتازة.',
-                rating: 4.8,
+                description: 'دهان سيلكون مات عالي الجودة للاستخدام الداخلي. يتميز بمقاومة عالية للرطوبة والبقع مع لمسة نهائية مات أنيقة.',
                 coverage: '8-10 م²/لتر',
                 drying: '2-4 ساعات',
                 warranty: '5 سنوات',
-                usage: ['تنظيف السطح جيداً وإزالة الأتربة', 'تطبيق طبقة البرايمر الأساسية', 'انتظار 2-4 ساعات حتى الجفاف', 'تطبيق الطبقة الأولى من الدهان', 'انتظار 4-6 ساعات ثم تطبيق الطبقة الثانية'],
-                image: 'https://images.unsplash.com/photo-1589939705386-95c1b0f8e8f0?w=600'
+                usage: ['تنظيف السطح جيداً', 'تطبيق البرايمر', 'انتظار الجفاف 2-4 ساعات', 'تطبيق الطبقة الأولى', 'تطبيق الطبقة الثانية بعد 6 ساعات'],
+                image: 'https://images.unsplash.com/photo-1589939705386-95c1b0f8e8f0?w=400'
             },
             {
                 id: 2,
                 name: 'Premium Astar',
+                brand: 'FAWORI',
                 category: 'primer',
                 badge: 'جديد',
-                description: 'برايمر أساسي عالي الجودة من FAWORI، يحضر السطح بشكل مثالي قبل تطبيق الدهان النهائي. يزيد من التصاق الدهان ويوفر تغطية متساوية.',
-                rating: 4.9,
+                description: 'برايمر أساسي عالي الجودة يحضر السطح بشكل مثالي قبل الدهان النهائي. يزيد من التصاق الدهان.',
                 coverage: '10-12 م²/لتر',
                 drying: '1-2 ساعات',
                 warranty: '10 سنوات',
-                usage: ['تنظيف السطح من الغبار والأتربة', 'تخفيف البرايمر حسب التعليمات', 'تطبيق طبقة متساوية على السطح', 'الانتظار حتى الجفاف الكامل', 'تطبيق الدهان النهائي'],
-                image: 'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=600'
+                usage: ['تنظيف السطح', 'تخفيف حسب التعليمات', 'تطبيق طبقة متساوية', 'الانتظار حتى الجفاف', 'تطبيق الدهان النهائي'],
+                image: 'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=400'
             },
             {
                 id: 3,
                 name: 'Elyafli Su-Sav',
+                brand: 'FAWORI',
                 category: 'special',
                 badge: 'مميز',
-                description: 'عازل مائي بالألياف من FAWORI، يوفر حماية قصوى ضد تسرب المياه. مثالي للأسطح الخارجية والحمامات والمطابخ. مرونة عالية ومقاومة للتشققات.',
-                rating: 4.7,
+                description: 'عازل مائي بالألياف يوفر حماية قصوى ضد تسرب المياه. مثالي للأسطح والحمامات.',
                 coverage: '5-7 م²/لتر',
                 drying: '4-6 ساعات',
                 warranty: '7 سنوات',
-                usage: ['تنظيف السطح وتجفيفه تماماً', 'إصلاح الشقوق والفجوات', 'تطبيق الطبقة الأولى بالعازل', 'انتظار 4-6 ساعات', 'تطبيق الطبقة الثانية بشكل متقاطع'],
-                image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=600'
+                usage: ['تنظيف وتجفيف السطح', 'إصلاح الشقوق', 'تطبيق الطبقة الأولى', 'انتظار 4-6 ساعات', 'تطبيق الطبقة الثانية'],
+                image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'
             },
             {
                 id: 4,
                 name: 'Fenomen',
+                brand: 'FAWORI',
                 category: 'exterior',
                 badge: 'خارجي',
-                description: 'دهان خارجي مميز من FAWORI بتقنية متطورة، مقاوم للعوامل الجوية والأشعة فوق البنفسجية. يحافظ على لونه وجماله لسنوات طويلة.',
-                rating: 4.9,
+                description: 'دهان خارجي مقاوم للعوامل الجوية والأشعة فوق البنفسجية. يحافظ على لونه لسنوات.',
                 coverage: '7-9 م²/لتر',
                 drying: '3-5 ساعات',
                 warranty: '8 سنوات',
-                usage: ['تحضير السطح الخارجي', 'تطبيق طبقة البرايمر', 'انتظار الجفاف', 'تطبيق الطبقة الأولى من Fenomen', 'تطبيق الطبقة الثانية بعد 6 ساعات'],
-                image: 'https://images.unsplash.com/photo-1572454591674-2739f30d8c40?w=600'
+                usage: ['تحضير السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق الطبقة الأولى', 'تطبيق الطبقة الثانية'],
+                image: 'https://images.unsplash.com/photo-1572454591674-2739f30d8c40?w=400'
             },
             {
                 id: 5,
                 name: 'Silikonlu Grenli',
+                brand: 'FAWORI',
                 category: 'exterior',
                 badge: null,
-                description: 'دهان سيلكون محبب للاستخدام الخارجي، يعطي ملمساً مميزاً للجدران مع حماية عالية ضد العوامل الجوية.',
-                rating: 4.6,
+                description: 'دهان سيلكون محبب للاستخدام الخارجي يعطي ملمساً مميزاً مع حماية عالية.',
                 coverage: '6-8 م²/لتر',
                 drying: '4-6 ساعات',
                 warranty: '6 سنوات',
-                usage: ['تحضير السطح الخارجي', 'تطبيق البرايمر المناسب', 'تطبيق الدهان المحبب', 'الانتظار حتى الجفاف', 'تقييم النتيجة وتطبيق طبقة ثانية إذا لزم الأمر'],
-                image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600'
+                usage: ['تحضير السطح', 'تطبيق البرايمر', 'تطبيق الدهان المحبب', 'الانتظار حتى الجفاف'],
+                image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400'
             },
             {
                 id: 6,
                 name: 'Ultra Soft Mat',
+                brand: 'FAWORI',
                 category: 'interior',
                 badge: 'فاخر',
-                description: 'دهان مات ناعم فائق الجودة، يعطي لمسة نهائية فاخرة للجدران الداخلية. سهل التنظيف ومقاوم للبقع.',
-                rating: 4.8,
+                description: 'دهان مات ناعم فائق الجودة يعطي لمسة نهائية فاخرة. سهل التنظيف ومقاوم للبقع.',
                 coverage: '9-11 م²/لتر',
                 drying: '2-3 ساعات',
                 warranty: '5 سنوات',
-                usage: ['تنظيف السطح جيداً', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق الطبقة الأولى', 'تطبيق الطبقة الثانية'],
-                image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=600'
+                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق طبقتين'],
+                image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400'
+            },
+            // BY Products
+            {
+                id: 7,
+                name: 'BY Interior Silk',
+                brand: 'BY',
+                category: 'interior',
+                badge: 'شائع',
+                description: 'دهان حريري داخلي من BY بلمعة حريرية جميلة ومقاومة عالية.',
+                coverage: '10-12 م²/لتر',
+                drying: '2-3 ساعات',
+                warranty: '5 سنوات',
+                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق طبقتين'],
+                image: 'https://images.unsplash.com/photo-1588854337221-4cf9fa96059c?w=400'
+            },
+            {
+                id: 8,
+                name: 'BY Exterior',
+                brand: 'BY',
+                category: 'exterior',
+                badge: null,
+                description: 'دهان خارجي من BY مقاوم للعوامل الجوية مع حماية طويلة الأمد.',
+                coverage: '8-10 م²/لتر',
+                drying: '3-4 ساعات',
+                warranty: '7 سنوات',
+                usage: ['تحضير السطح', 'تطبيق البرايمر', 'تطبيق طبقتين'],
+                image: 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400'
+            },
+            // Yaqoot Products
+            {
+                id: 9,
+                name: 'Yaqoot Premium',
+                brand: 'Yaqoot',
+                category: 'interior',
+                badge: 'مميز',
+                description: 'دهان بريميوم من يعقوب بجودة عالية وألوان ثابتة.',
+                coverage: '9-11 م²/لتر',
+                drying: '2-4 ساعات',
+                warranty: '6 سنوات',
+                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'انتظار الجفاف', 'تطبيق طبقتين'],
+                image: 'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=400'
+            },
+            // Sidra Products
+            {
+                id: 10,
+                name: 'Sidra Classic',
+                brand: 'Sidra',
+                category: 'interior',
+                badge: null,
+                description: 'دهان كلاسيكي من سدرة بجودة ممتازة وسعر مناسب.',
+                coverage: '8-10 م²/لتر',
+                drying: '2-3 ساعات',
+                warranty: '4 سنوات',
+                usage: ['تنظيف السطح', 'تطبيق البرايمر', 'تطبيق طبقتين'],
+                image: 'https://images.unsplash.com/photo-1589939705386-95c1b0f8e8f0?w=400'
             }
         ];
 
         // Room Images
         const roomImages = {
-            living: 'https://images.unsplash.com/photo-1600210492486-7d4fe5e9ff5d?w=1200',
-            bedroom: 'https://images.unsplash.com/photo-1616594039964-40891a909d99?w=1200',
-            kitchen: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=1200',
-            bathroom: 'https://images.unsplash.com/photo-1620626012053-1c9c0f0a1e1f?w=1200'
+            living: 'https://images.unsplash.com/photo-1600210492486-7d4fe5e9ff5d?w=800',
+            bedroom: 'https://images.unsplash.com/photo-1616594039964-40891a909d99?w=800',
+            kitchen: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800',
+            bathroom: 'https://images.unsplash.com/photo-1620626012053-1c9c0f0a1e1f?w=800'
         };
 
-        let currentRoom = 'living';
-        let currentColor = '#E8651A';
-        let savedColors = [];
         let currentCategory = 'all';
+        let currentRoom = 'living';
+        let currentSimulatorColor = '#E8651A';
+
+        // ===== Initialize =====
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFeaturedProducts();
+            loadAllProducts();
+            loadBrandsProducts();
+        });
 
         // ===== Navigation =====
         function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.remove('active');
-            });
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
             
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            const navMap = { 'home': 0, 'products': 1, 'simulator': 2, 'about': 3 };
-            if (navMap[screenId] !== undefined) {
-                document.querySelectorAll('.nav-btn')[navMap[screenId]].classList.add('active');
-            }
-
-            if (screenId === 'home') loadFeaturedProducts();
-            if (screenId === 'products') loadAllProducts();
-            if (screenId === 'simulator') {
-                setTimeout(() => {
-                    loadRoomImage('living');
-                }, 100);
-            }
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
             
             window.scrollTo(0, 0);
         }
 
-        // ===== Load Products =====
+        // ===== Modal Functions =====
+        function showModal(modalId) {
+            document.getElementById(modalId + 'Modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            if (modalId === 'simulator') {
+                loadSimulatorRoom('living');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // ===== Product Functions =====
         function loadFeaturedProducts() {
             const container = document.getElementById('featured-products');
-            const featured = products.slice(0, 3);
-            container.innerHTML = featured.map(product => createProductCard(product)).join('');
+            const featured = products.slice(0, 4);
+            container.innerHTML = featured.map(p => createProductCard(p)).join('');
         }
 
         function loadAllProducts() {
             filterProducts();
         }
 
+        function loadBrandsProducts() {
+            const container = document.getElementById('brands-products');
+            const byProducts = products.filter(p => p.brand !== 'FAWORI');
+            container.innerHTML = byProducts.map(p => createProductCard(p)).join('');
+        }
+
         function createProductCard(product) {
-            const categoryNames = {
-                'interior': 'دهان داخلي',
-                'exterior': 'دهان خارجي',
+            const categories = {
+                'interior': 'داخلية',
+                'exterior': 'خارجية',
                 'primer': 'برايمر',
-                'special': 'منتج خاص'
+                'wood': 'خشب',
+                'special': 'خاصة'
             };
             
             const badgeHTML = product.badge ? `<div class="product-badge">${product.badge}</div>` : '';
@@ -1397,39 +1279,36 @@
                 <div class="product-card" onclick="showProductDetail(${product.id})">
                     <div class="product-image">
                         ${badgeHTML}
-                        <img src="${product.image}" alt="${product.name}" onerror="this.style.display='none'; this.parentElement.innerHTML='${badgeHTML}🪣';">
+                        <img src="${product.image}" alt="${product.name}" onerror="this.parentElement.innerHTML='${badgeHTML}';">
                     </div>
                     <div class="product-info">
                         <h3>${product.name}</h3>
-                        <p>${product.description.substring(0, 100)}...</p>
-                        <span class="product-category">${categoryNames[product.category]}</span>
+                        <p>${product.description.substring(0, 60)}...</p>
+                        <span class="product-category">${categories[product.category]}</span>
                     </div>
                 </div>
             `;
         }
 
-        // ===== Product Detail =====
         function showProductDetail(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
 
-            document.getElementById('product-name').textContent = product.name;
-            document.getElementById('product-rating').innerHTML = `★★★★★ <span>(${product.rating})</span>`;
-            document.getElementById('product-description').textContent = product.description;
-            document.getElementById('spec-coverage').textContent = product.coverage;
-            document.getElementById('spec-drying').textContent = product.drying;
-            document.getElementById('spec-warranty').textContent = product.warranty;
+            document.getElementById('modal-product-name').textContent = product.name;
+            document.getElementById('modal-product-description').textContent = product.description;
+            document.getElementById('modal-coverage').textContent = product.coverage;
+            document.getElementById('modal-drying').textContent = product.drying;
+            document.getElementById('modal-warranty').textContent = product.warranty;
             
-            const usageList = document.getElementById('product-usage');
+            const usageList = document.getElementById('modal-usage');
             usageList.innerHTML = product.usage.map(step => `<li>${step}</li>`).join('');
 
-            const gallery = document.getElementById('detail-image');
-            gallery.innerHTML = `<img src="${product.image}" alt="${product.name}" onerror="this.style.display='none'; this.parentElement.innerHTML='🪣';">`;
+            const imageDiv = document.getElementById('modal-product-image');
+            imageDiv.innerHTML = `<img src="${product.image}" alt="${product.name}" onerror="this.parentElement.innerHTML='🪣';">`;
 
-            showScreen('product-detail');
+            showModal('product');
         }
 
-        // ===== Filter Products =====
         function filterByCategory(category, btn) {
             currentCategory = category;
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -1440,7 +1319,6 @@
         function filterProducts() {
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const container = document.getElementById('all-products');
-            const noResults = document.getElementById('no-results');
 
             const filtered = products.filter(product => {
                 const matchesSearch = product.name.toLowerCase().includes(searchTerm) || 
@@ -1449,154 +1327,55 @@
                 return matchesSearch && matchesCategory;
             });
 
-            if (filtered.length === 0) {
-                container.innerHTML = '';
-                noResults.style.display = 'block';
-            } else {
-                container.innerHTML = filtered.map(product => createProductCard(product)).join('');
-                noResults.style.display = 'none';
-            }
+            container.innerHTML = filtered.map(p => createProductCard(p)).join('');
         }
 
-        // ===== Tabs =====
-        function showTab(tabId, btn) {
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            document.getElementById(tabId).classList.add('active');
-            btn.classList.add('active');
-        }
-
-        // ===== Size & Color Selection =====
-        function selectSize(btn) {
-            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
-        function selectSwatch(swatch) {
-            document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-            swatch.classList.add('active');
-        }
-
-        // ===== Color Simulator =====
-        function loadRoomImage(roomType) {
-            const img = document.getElementById('roomImage');
-            const overlay = document.getElementById('wallOverlay');
-            const loading = document.getElementById('loading');
-            
-            loading.classList.add('active');
+        // ===== Simulator Functions =====
+        function loadSimulatorRoom(roomType) {
+            const img = document.getElementById('simulator-room-image');
+            const overlay = document.getElementById('wall-overlay');
             
             img.src = roomImages[roomType];
-            overlay.className = 'wall-overlay ' + roomType + '-room';
+            overlay.className = 'wall-overlay';
             
-            img.onload = function() {
-                loading.classList.remove('active');
-            };
-
             setTimeout(() => {
-                const activeBtn = document.querySelector('.color-btn.active');
-                if (activeBtn) {
-                    applyColor(currentColor, activeBtn);
-                }
-            }, 500);
+                applySimulatorColor(currentSimulatorColor, document.querySelector('.palette-color.active') || document.querySelector('.palette-color'));
+            }, 300);
         }
 
-        function changeRoomType(roomType, btn) {
+        function changeRoom(roomType, btn) {
             currentRoom = roomType;
-            document.querySelectorAll('.room-type-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.room-option').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            loadRoomImage(roomType);
+            loadSimulatorRoom(roomType);
         }
 
-        function applyColor(color, btn) {
-            currentColor = color;
-            const overlay = document.getElementById('wallOverlay');
-            const intensity = document.getElementById('intensitySlider').value / 100;
-            const opacity = document.getElementById('opacitySlider').value / 100;
+        function applySimulatorColor(color, btn) {
+            currentSimulatorColor = color;
+            const overlay = document.getElementById('wall-overlay');
             
-            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.palette-color').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            
-            const colorName = btn.getAttribute('data-color') || 'لون مخصص';
-            document.getElementById('colorName').textContent = colorName;
             
             overlay.style.background = color;
-            overlay.style.opacity = opacity;
-            
-            if (intensity < 0.5) {
-                overlay.style.mixBlendMode = 'screen';
-            } else if (intensity > 0.7) {
-                overlay.style.mixBlendMode = 'multiply';
-            } else {
-                overlay.style.mixBlendMode = 'overlay';
-            }
+            overlay.style.opacity = '0.85';
+            overlay.style.mixBlendMode = 'multiply';
         }
 
-        function updateOpacity(value) {
-            document.getElementById('opacityValue').textContent = value + '%';
-            document.getElementById('wallOverlay').style.opacity = value / 100;
+        function resetSimulator() {
+            document.getElementById('wall-overlay').style.background = 'transparent';
+            document.querySelectorAll('.palette-color').forEach(b => b.classList.remove('active'));
+            currentSimulatorColor = '#E8651A';
         }
 
-        function updateIntensity(value) {
-            document.getElementById('intensityValue').textContent = value + '%';
-            const overlay = document.getElementById('wallOverlay');
-            
-            if (value < 50) {
-                overlay.style.mixBlendMode = 'screen';
-            } else if (value > 70) {
-                overlay.style.mixBlendMode = 'multiply';
-            } else {
-                overlay.style.mixBlendMode = 'overlay';
-            }
-        }
-
-        function updateBrightness(value) {
-            document.getElementById('brightnessValue').textContent = value + '%';
-            document.getElementById('roomImage').style.filter = `brightness(${value}%)`;
-        }
-
-        function resetSettings() {
-            document.getElementById('opacitySlider').value = 85;
-            document.getElementById('intensitySlider').value = 70;
-            document.getElementById('brightnessSlider').value = 100;
-            
-            updateOpacity(85);
-            updateIntensity(70);
-            updateBrightness(100);
-            
-            const activeBtn = document.querySelector('.color-btn.active');
-            if (activeBtn) {
-                applyColor(currentColor, activeBtn);
-            }
-        }
-
-        function saveColor() {
-            const colorName = document.getElementById('colorName').textContent;
-            savedColors.push({
-                color: currentColor,
-                name: colorName,
-                room: currentRoom,
-                date: new Date().toLocaleDateString('ar-SA')
+        // Close modal on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                }
             });
-            localStorage.setItem('fawori_saved_colors', JSON.stringify(savedColors));
-            alert('✅ تم حفظ اللون بنجاح!');
-        }
-
-        function loadSavedColors() {
-            const saved = localStorage.getItem('fawori_saved_colors');
-            if (saved) {
-                savedColors = JSON.parse(saved);
-            }
-        }
-
-        // ===== Initialize =====
-        document.addEventListener('DOMContentLoaded', function() {
-            loadFeaturedProducts();
-            loadSavedColors();
         });
     </script>
 </body>
