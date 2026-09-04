@@ -1,69 +1,177 @@
-class Strings {
-  static const Map<String, Map<String, String>> _data = {
-    'ar': {
-      'appName': 'شركة فاوري',
-      'appNameSub': 'شركة فاوري | Fawori Company',
-      'home': 'الرئيسية', 'products': 'المنتجات', 'wallet': 'المحفظة',
-      'favorites': 'المفضلة', 'settings': 'الإعدادات', 'gifts': 'الهدايا',
-      'quickAccess': 'الوصول السريع', 'certifiedAgents': 'وكلاء معتمدون',
-      'productsAndGifts': 'المنتجات والهدايا', 'searchProduct': 'ابحث باسم المنتج',
-      'all': 'الكل', 'primers': 'الاساسات', 'interior': 'طلائات داخلية',
-      'exterior': 'طلائات خارجية', 'noProducts': 'لا توجد منتجات',
-      'giftsSoon': 'قسم الهدايا — سيُبنى حسب شرحك لاحقاً',
-      'language': 'اللغة', 'darkMode': 'الوضع الداكن', 'about': 'حول التطبيق',
-      'logout': 'تسجيل خروج', 'version': 'الإصدار 1.0.0',
-      'aboutText': 'تطبيق شركة فاوري لعرض المنتجات والهدايا والوكلاء المعتمدين.',
-      'ok': 'حسناً', 'confirmLogout': 'هل أنت متأكد من أنك تريد تسجيل الخروج؟',
-      'yes': 'نعم', 'no': 'لا', 'noFavorites': 'لا توجد منتجات في المفضلة بعد',
-      'walletSoon': 'هذه الصفحة نبنيها حسب شرحك لاحقاً',
-      'accountType': 'نوع الحساب', 'agent': 'وكيل', 'tech': 'فني',
-      'phoneNumber': 'رقم الهاتف', 'password': 'كلمة المرور',
-      'login': 'تسجيل الدخول', 'noAccount': 'لا تملك حساباً؟', 'signUp': 'سجل الآن',
-      'brand_fawori': 'فاوري', 'brand_isomat': 'آيزومات',
-      'brand_cadence': 'كادينز', 'brand_sibax': 'سيباكس',
-      'createAccount': 'إنشاء حساب',
-      'contactAgentPart': 'يرجى التواصل مع الوكيل الخاص بك لإنشاء حساب، أو يمكنك المتابعة كـ',
-      'guest': 'ضيف', 'continueAsGuest': 'المتابعة كضيف', 'cancel': 'إلغاء',
-      'lockedTitle': 'ميزة مقفلة',
-      'lockedMsg': 'هذه الميزة متاحة للحسابات المسجلة فقط، تواصل مع الوكيل الخاص بك.',
-      'adminPanel': 'لوحة المدير', 'enterToken': 'أدخل توكن GitHub',
-      'tokenSaved': 'تم حفظ التوكن محلياً', 'changeToken': 'تغيير التوكن',
-      'save': 'حفظ', 'savedRebuild': 'تم الحفظ — سيُعاد بناء التطبيق تلقائياً خلال دقائق',
-      'loading': 'جارٍ التحميل...',
-    },
-    'en': {
-      'appName': 'Fawori Company',
-      'appNameSub': 'Fawori Company | شركة فاوري',
-      'home': 'Home', 'products': 'Products', 'wallet': 'Wallet',
-      'favorites': 'Favorites', 'settings': 'Settings', 'gifts': 'Gifts',
-      'quickAccess': 'Quick Access', 'certifiedAgents': 'Certified Agents',
-      'productsAndGifts': 'Products & Gifts', 'searchProduct': 'Search by product name',
-      'all': 'All', 'primers': 'Primers', 'interior': 'Interior Paints',
-      'exterior': 'Exterior Paints', 'noProducts': 'No products',
-      'giftsSoon': 'Gifts section — coming soon',
-      'language': 'Language', 'darkMode': 'Dark mode', 'about': 'About',
-      'logout': 'Logout', 'version': 'Version 1.0.0',
-      'aboutText': 'Fawori Company app for products, gifts and certified agents.',
-      'ok': 'OK', 'confirmLogout': 'Are you sure you want to log out?',
-      'yes': 'Yes', 'no': 'No', 'noFavorites': 'No favorites yet',
-      'walletSoon': 'This page is coming soon',
-      'accountType': 'Account type', 'agent': 'Agent', 'tech': 'Technician',
-      'phoneNumber': 'Phone number', 'password': 'Password',
-      'login': 'Login', 'noAccount': "Don't have an account?", 'signUp': 'Sign up now',
-      'brand_fawori': 'Fawori', 'brand_isomat': 'Isomat',
-      'brand_cadence': 'Cadence', 'brand_sibax': 'Sibax',
-      'createAccount': 'Create Account',
-      'contactAgentPart': 'Please contact your agent to create an account, or continue as a',
-      'guest': 'guest', 'continueAsGuest': 'Continue as guest', 'cancel': 'Cancel',
-      'lockedTitle': 'Locked Feature',
-      'lockedMsg': 'This feature is for registered accounts only. Contact your agent.',
-      'adminPanel': 'Admin Panel', 'enterToken': 'Enter GitHub token',
-      'tokenSaved': 'Token saved locally', 'changeToken': 'Change token',
-      'save': 'Save', 'savedRebuild': 'Saved — the app will rebuild automatically in minutes',
-      'loading': 'Loading...',
-    },
-  };
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
+import '../core/theme.dart';
 
-  static String get(bool arabic, String key) =>
-      _data[arabic ? 'ar' : 'en']?[key] ?? key;
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    final card = BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+    );
+
+    return Scaffold(
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(s.tr('settings'),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 20),
+            Container(
+              decoration: card,
+              child: Column(children: [
+                ListTile(
+                  leading: const Icon(Icons.language_rounded, color: AppColors.teal),
+                  title: Text(s.tr('language')),
+                  trailing: TextButton(
+                    onPressed: s.toggleLanguage,
+                    child: Text(s.isArabic ? 'English' : 'العربية',
+                        style: const TextStyle(
+                            color: AppColors.teal, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.nightlight_round, color: AppColors.orange),
+                  title: Text(s.tr('darkMode')),
+                  trailing: Switch(value: s.isDark, onChanged: (_) => s.toggleDark()),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: card,
+              child: Column(children: [
+                ListTile(
+                  leading: const Icon(Icons.info_outline_rounded, color: AppColors.teal),
+                  title: Text(s.tr('about')),
+                  trailing: const Icon(Icons.chevron_left_rounded),
+                  onTap: () => _about(context, s),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded, color: AppColors.red),
+                  title: Text(s.tr('logout'),
+                      style: const TextStyle(color: AppColors.red)),
+                  onTap: () => _logoutDialog(context, s),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 30),
+            Center(
+                child: Text(s.tr('version'),
+                    style: TextStyle(color: Colors.grey.shade500))),
+            const SizedBox(height: 8),
+            Center(
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                ShaderMask(
+                  shaderCallback: (r) => const LinearGradient(
+                          colors: [AppColors.orange, AppColors.teal])
+                      .createShader(r),
+                  child:
+                      const Icon(Icons.waves_rounded, size: 26, color: Colors.white),
+                ),
+                const SizedBox(width: 8),
+                Text(s.tr('appName'),
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _about(BuildContext context, AppSettings s) => showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(s.tr('about')),
+          content: Text(s.tr('aboutText')),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context), child: Text(s.tr('ok')))
+          ],
+        ),
+      );
+
+  void _logoutDialog(BuildContext context, AppSettings s) => showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 55),
+                padding: const EdgeInsets.fromLTRB(20, 70, 20, 24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(s.tr('confirmLogout'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF26B0F),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              s.logout();
+                            },
+                            child: Text(s.tr('yes')),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.teal,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(s.tr('no')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 110,
+                height: 110,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFFF26B0F),
+                ),
+                child: const Icon(Icons.question_mark_rounded,
+                    size: 70, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      );
 }
