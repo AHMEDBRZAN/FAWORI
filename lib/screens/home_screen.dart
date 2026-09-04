@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
@@ -13,6 +15,34 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _banner = 0;
+  final PageController _controller = PageController();
+  Timer? _timer;
+
+  static const _bannerImages = [
+    'assets/images/as1.png',
+    'assets/images/as2.png',
+    'assets/images/as3.png',
+    'assets/images/as4.png',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!_controller.hasClients) return;
+      final next = (_banner + 1) % _bannerImages.length;
+      _controller.animateToPage(next,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
 
   final List<_Category> _categories = const [
     _Category('brand_fawori', 'FAVORI', Color(0xFFE8A33D), Icons.format_paint_rounded, true),
@@ -90,17 +120,29 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _bannerView() => SizedBox(
         height: 230,
         child: PageView.builder(
-          itemCount: 4,
+          controller: _controller,
+          itemCount: _bannerImages.length,
           onPageChanged: (i) => setState(() => _banner = i),
           itemBuilder: (_, i) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                gradient: const LinearGradient(
-                    colors: [Color(0xFFEE6C2B), Color(0xFFF79A3E), Color(0xFFEE6C2B)]),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(26),
+              child: Image.asset(
+                _bannerImages[i],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorBuilder: (_, __, ___) => Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(26),
+                    gradient: const LinearGradient(colors: [
+                      Color(0xFFEE6C2B),
+                      Color(0xFFF79A3E),
+                      Color(0xFFEE6C2B)
+                    ]),
+                  ),
+                  child: const Center(child: FaworiLogo(size: 150)),
+                ),
               ),
-              child: const Center(child: FaworiLogo(size: 150)),
             ),
           ),
         ),
@@ -110,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.only(top: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(4, (i) => AnimatedContainer(
+          children: List.generate(_bannerImages.length, (i) => AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 margin: const EdgeInsets.symmetric(horizontal: 6),
                 width: 10, height: 10,
