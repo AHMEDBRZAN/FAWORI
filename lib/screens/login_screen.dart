@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
@@ -118,22 +120,20 @@ class _LoginScreenState extends State<LoginScreen>
             builder: (_, child) =>
                 Transform.scale(scale: 1 + _pulse.value * 0.03, child: child),
             child: Container(
-              width: 130, height: 130,
+              width: 140, height: 140,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: AppColors.orange.withAlpha(90), width: 1.5),
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(34),
+                border: Border.all(color: AppColors.orange.withAlpha(110), width: 2),
                 boxShadow: [
-                  BoxShadow(color: AppColors.orange.withAlpha(60), blurRadius: 40)
+                  BoxShadow(color: AppColors.orange.withAlpha(70), blurRadius: 45)
                 ],
               ),
               child: Center(
-                child: ShaderMask(
-                  shaderCallback: (r) => const LinearGradient(
-                          colors: [AppColors.orange, AppColors.teal])
-                      .createShader(r),
-                  child:
-                      const Icon(Icons.waves_rounded, size: 78, color: Colors.white),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: Image.asset('assets/images/logo.png',
+                      width: 122, height: 122, fit: BoxFit.cover),
                 ),
               ),
             ),
@@ -205,6 +205,8 @@ class _LoginScreenState extends State<LoginScreen>
                   onPressed: () {
                     if (_type == 'guest') {
                       s.loginAsGuest();
+                    } else if (_type == null) {
+                      _openTypePicker(s);
                     } else {
                       _accountDialog(s);
                     }
@@ -237,27 +239,119 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       );
 
-  Widget _accountType(AppSettings s) => Container(
-        height: 58,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade700),
+  Widget _typeIcon(String t, {double size = 22}) {
+    IconData ic;
+    Color c;
+    switch (t) {
+      case 'agent':
+        ic = Icons.storefront_rounded;
+        c = AppColors.orange;
+        break;
+      case 'tech':
+        ic = Icons.build_rounded;
+        c = AppColors.teal;
+        break;
+      default:
+        ic = Icons.person_outline_rounded;
+        c = Colors.grey.shade300;
+    }
+    return Container(
+      padding: EdgeInsets.all(size * 0.3),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: c.withAlpha(40)),
+      child: Icon(ic, color: c, size: size),
+    );
+  }
+
+  Widget _accountType(AppSettings s) => InkWell(
+        onTap: () => _openTypePicker(s),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: _type != null
+                    ? AppColors.orange.withAlpha(140)
+                    : Colors.grey.shade700),
+          ),
+          child: Row(children: [
+            if (_type != null) ...[
+              _typeIcon(_type!),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Text(
+                _type == null ? s.tr('accountType') : s.tr(_type!),
+                style: TextStyle(
+                  color: _type == null ? Colors.grey.shade400 : Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.teal),
+          ]),
         ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            isExpanded: true,
-            dropdownColor: Theme.of(context).colorScheme.surface,
-            value: _type,
-            hint: Text(s.tr('accountType'),
-                style: TextStyle(color: Colors.grey.shade400)),
-            items: ['agent', 'tech', 'guest']
-                .map((t) => DropdownMenuItem(value: t, child: Text(s.tr(t))))
-                .toList(),
-            onChanged: (v) => setState(() => _type = v),
+      );
+
+  void _openTypePicker(AppSettings s) => showDialog(
+        context: context,
+        builder: (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.orange.withAlpha(70)),
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(s.tr('accountType'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 14),
+              _typeOption(s, 'agent', s.isArabic ? 'وكيل معتمد' : 'Certified agent'),
+              const SizedBox(height: 10),
+              _typeOption(s, 'tech', s.isArabic ? 'فني صيانة' : 'Technician'),
+              const SizedBox(height: 10),
+              _typeOption(s, 'guest', s.isArabic ? 'تصفح بدون حساب' : 'Browse without account'),
+            ]),
           ),
         ),
       );
+
+  Widget _typeOption(AppSettings s, String t, String sub) {
+    final selected = _type == t;
+    return InkWell(
+      onTap: () {
+        setState(() => _type = t);
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: selected ? AppColors.orange.withAlpha(30) : Colors.transparent,
+          border: Border.all(
+              color: selected ? AppColors.orange : Colors.grey.shade700),
+        ),
+        child: Row(children: [
+          _typeIcon(t),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.tr(t),
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text(sub,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+            ]),
+          ),
+          if (selected)
+            const Icon(Icons.check_circle_rounded, color: AppColors.orange),
+        ]),
+      ),
+    );
+  }
 
   Widget _field(AppSettings s, TextEditingController c, String hintKey, IconData ic,
           {TextInputType? keyboard, int? maxLength, bool obscure = false, Widget? suffix}) =>
