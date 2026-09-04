@@ -5,7 +5,7 @@ import '../core/theme.dart';
 
 class BottomNav extends StatelessWidget {
   final int index;
-  final ValueChanged<int> onTap;
+  final Future<void> Function(int) onTap;
   const BottomNav({super.key, required this.index, required this.onTap});
 
   static const _icons = [
