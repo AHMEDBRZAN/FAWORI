@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/app_settings.dart';
 import 'core/favorites.dart';
 import 'core/theme.dart';
+import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 
 void main() => runApp(MultiProvider(
@@ -28,7 +29,9 @@ class FaworiApp extends StatelessWidget {
       themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      home: const MainScreen(),
+      home: Consumer<AppSettings>(
+        builder: (_, s, __) => s.isLoggedIn ? const MainScreen() : const LoginScreen(),
+      ),
     );
   }
 }
