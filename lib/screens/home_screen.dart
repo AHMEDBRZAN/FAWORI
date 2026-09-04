@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
 import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
 
@@ -13,16 +15,17 @@ class _HomeScreenState extends State<HomeScreen> {
   int _banner = 0;
 
   final List<_Category> _categories = const [
-    _Category('فاوري', 'FAVORI', Color(0xFFE8A33D), Icons.format_paint_rounded, true),
-    _Category('الهدايا', 'GIFTS', Color(0xFF3EC6C0), Icons.redeem_rounded, false),
-    _Category('آيزومات', 'isomat', Color(0xFFD93025), Icons.apartment_rounded, false),
-    _Category('كادينز', 'CADENCE', Color(0xFFEDEDED), Icons.palette_rounded, false),
-    _Category('سيباكس', 'SIBAX', Color(0xFFC9A227), Icons.build_rounded, false),
-    _Category('وكلاء معتمدون', 'AGENTS', Color(0xFF4C8DF5), Icons.people_alt_rounded, false),
+    _Category('brand_fawori', 'FAVORI', Color(0xFFE8A33D), Icons.format_paint_rounded, true),
+    _Category('gifts', 'GIFTS', Color(0xFF3EC6C0), Icons.redeem_rounded, false),
+    _Category('brand_isomat', 'isomat', Color(0xFFD93025), Icons.apartment_rounded, false),
+    _Category('brand_cadence', 'CADENCE', Color(0xFFEDEDED), Icons.palette_rounded, false),
+    _Category('brand_sibax', 'SIBAX', Color(0xFFC9A227), Icons.build_rounded, false),
+    _Category('certifiedAgents', 'AGENTS', Color(0xFF4C8DF5), Icons.people_alt_rounded, false),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -30,15 +33,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _header(),
+              _header(s),
               const SizedBox(height: 12),
               _bannerView(),
               _dots(),
               const SizedBox(height: 20),
-              _sectionTitle('الوصول السريع'),
-              _quickAccess(),
+              _sectionTitle(s.tr('quickAccess')),
+              _quickAccess(s),
               const SizedBox(height: 20),
-              _grid(),
+              _grid(s),
               const SizedBox(height: 16),
             ],
           ),
@@ -47,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _header() => Padding(
+  Widget _header(AppSettings s) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Row(
           children: [
@@ -66,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            Text('شركة فاوري',
+            Text(s.tr('appName'),
                 style: Theme.of(context)
                     .textTheme
                     .titleLarge
@@ -124,13 +127,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       );
 
-  Widget _quickAccess() => Padding(
+  Widget _quickAccess(AppSettings s) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            Expanded(child: _quickBtn('المنتجات', Icons.inventory_2_rounded, AppColors.orange, widget.onOpenProducts)),
+            Expanded(child: _quickBtn(s.tr('products'), Icons.inventory_2_rounded, AppColors.orange, widget.onOpenProducts)),
             const SizedBox(width: 12),
-            Expanded(child: _quickBtn('الهدايا', Icons.redeem_rounded, AppColors.teal, widget.onOpenProducts)),
+            Expanded(child: _quickBtn(s.tr('gifts'), Icons.redeem_rounded, AppColors.teal, widget.onOpenProducts)),
           ],
         ),
       );
@@ -154,23 +157,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _grid() => Padding(
+  Widget _grid(AppSettings s) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
+            crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14,
             childAspectRatio: 0.85,
           ),
           itemCount: _categories.length,
-          itemBuilder: (_, i) => _categoryCard(_categories[i]),
+          itemBuilder: (_, i) => _categoryCard(s, _categories[i]),
         ),
       );
 
-  Widget _categoryCard(_Category c) => Container(
+  Widget _categoryCard(AppSettings s, _Category c) => Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -197,7 +198,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(children: [
               Expanded(
                   child: Center(
-                      child: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)))),
+                      child: Text(s.tr(c.trKey),
+                          style: const TextStyle(fontWeight: FontWeight.w700)))),
               Icon(c.icon, color: Colors.grey.shade400, size: 20),
             ]),
           ],
@@ -206,9 +208,9 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _Category {
-  final String name, latin;
+  final String trKey, latin;
   final Color color;
   final IconData icon;
   final bool useLogo;
-  const _Category(this.name, this.latin, this.color, this.icon, this.useLogo);
+  const _Category(this.trKey, this.latin, this.color, this.icon, this.useLogo);
 }
