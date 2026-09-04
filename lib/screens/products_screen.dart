@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
 import '../core/favorites.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
@@ -13,56 +14,57 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   bool _productsTab = true;
-  String _brand = 'فاوري';
-  String _category = 'الكل';
+  String _brand = 'fawori';
+  String _category = 'all';
   String _query = '';
 
-  final List<String> _brands = ['فاوري', 'آيزومات', 'كادينز', 'سيباكس'];
-  final List<String> _cats = ['الكل', 'الاساسات', 'طلائات داخلية', 'طلائات خارجية'];
+  final List<String> _brands = ['fawori', 'isomat', 'cadence', 'sibax'];
+  final List<String> _cats = ['all', 'primers', 'interior', 'exterior'];
 
   List<Product> get _filtered => sampleProducts
       .where((p) =>
           p.brand == _brand &&
-          (_category == 'الكل' || p.category == _category) &&
+          (_category == 'all' || p.category == _category) &&
           p.name.contains(_query))
       .toList();
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
             const SizedBox(height: 16),
-            const Center(
-                child: Text('المنتجات والهدايا',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800))),
+            Center(
+                child: Text(s.tr('productsAndGifts'),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800))),
             const SizedBox(height: 16),
-            _segment(),
+            _segment(s),
             const SizedBox(height: 12),
-            _search(),
+            _search(s),
             const SizedBox(height: 12),
-            _brandChips(),
+            _brandChips(s),
             const SizedBox(height: 12),
-            _catRow(),
+            _catRow(s),
             const SizedBox(height: 12),
             Expanded(
                 child: _productsTab
                     ? _grid()
-                    : const Center(child: Text('قسم الهدايا — سيُبنى حسب شرحك لاحقاً'))),
+                    : Center(child: Text(s.tr('giftsSoon')))),
           ],
         ),
       ),
     );
   }
 
-  Widget _segment() => Padding(
+  Widget _segment(AppSettings s) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(children: [
-          Expanded(child: _segBtn('المنتجات', Icons.inventory_2_rounded, true)),
+          Expanded(child: _segBtn(s.tr('products'), Icons.inventory_2_rounded, true)),
           const SizedBox(width: 10),
-          Expanded(child: _segBtn('الهدايا', Icons.redeem_rounded, false)),
+          Expanded(child: _segBtn(s.tr('gifts'), Icons.redeem_rounded, false)),
         ]),
       );
 
@@ -89,7 +91,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Widget _search() => Padding(
+  Widget _search(AppSettings s) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Container(
           height: 56,
@@ -99,16 +101,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           child: TextField(
             onChanged: (v) => setState(() => _query = v),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               border: InputBorder.none,
-              hintText: 'ابحث باسم المنتج',
-              prefixIcon: Icon(Icons.search_rounded),
+              hintText: s.tr('searchProduct'),
+              prefixIcon: const Icon(Icons.search_rounded),
             ),
           ),
         ),
       );
 
-  Widget _brandChips() => SizedBox(
+  Widget _brandChips(AppSettings s) => SizedBox(
         height: 46,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
@@ -128,7 +130,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   color: active ? AppColors.orange : Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(b,
+                child: Text(s.tr('brand_$b'),
                     style: TextStyle(
                         color: active ? Colors.black : Colors.white,
                         fontWeight: FontWeight.w700)),
@@ -138,7 +140,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ),
       );
 
-  Widget _catRow() => SizedBox(
+  Widget _catRow(AppSettings s) => SizedBox(
         height: 120,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
@@ -167,12 +169,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                          c == 'الكل' ? Icons.grid_view_rounded : Icons.format_paint_rounded,
+                          c == 'all' ? Icons.grid_view_rounded : Icons.format_paint_rounded,
                           color: AppColors.orange),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(c, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(s.tr(c), style: const TextStyle(fontWeight: FontWeight.w700)),
                 ]),
               ),
             );
@@ -181,13 +183,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
       );
 
   Widget _grid() => _filtered.isEmpty
-      ? const Center(child: Text('لا توجد منتجات', style: TextStyle(color: Colors.grey)))
+      ? Center(
+          child: Text(context.watch<AppSettings>().tr('noProducts'),
+              style: const TextStyle(color: Colors.grey)))
       : GridView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
+            crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14,
             childAspectRatio: 0.72,
           ),
           itemCount: _filtered.length,
