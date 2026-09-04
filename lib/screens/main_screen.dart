@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
+import '../core/locked_dialog.dart';
 import '../widgets/bottom_nav.dart';
 import 'home_screen.dart';
 import 'products_screen.dart';
@@ -13,7 +16,15 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _index = 0;
-  void _go(int i) => setState(() => _index = i);
+
+  void _go(int i) {
+    final s = context.read<AppSettings>();
+    if (s.isGuest && (i == 2 || i == 3)) {
+      showLockedDialog(context, s);
+      return;
+    }
+    setState(() => _index = i);
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
