@@ -1,0 +1,51 @@
+class Strings {
+  static const Map<String, Map<String, String>> _data = {
+    'ar': {
+      'appName': 'شركة فاوري',
+      'appNameSub': 'شركة فاوري | Fawori Company',
+      'home': 'الرئيسية', 'products': 'المنتجات', 'wallet': 'المحفظة',
+      'favorites': 'المفضلة', 'settings': 'الإعدادات', 'gifts': 'الهدايا',
+      'quickAccess': 'الوصول السريع', 'certifiedAgents': 'وكلاء معتمدون',
+      'productsAndGifts': 'المنتجات والهدايا', 'searchProduct': 'ابحث باسم المنتج',
+      'all': 'الكل', 'primers': 'الاساسات', 'interior': 'طلائات داخلية',
+      'exterior': 'طلائات خارجية', 'noProducts': 'لا توجد منتجات',
+      'giftsSoon': 'قسم الهدايا — سيُبنى حسب شرحك لاحقاً',
+      'language': 'اللغة', 'darkMode': 'الوضع الداكن', 'about': 'حول التطبيق',
+      'logout': 'تسجيل خروج', 'version': 'الإصدار 1.0.0',
+      'aboutText': 'تطبيق شركة فاوري لعرض المنتجات والهدايا والوكلاء المعتمدين.',
+      'ok': 'حسناً', 'confirmLogout': 'هل أنت متأكد من أنك تريد تسجيل الخروج؟',
+      'yes': 'نعم', 'no': 'لا', 'noFavorites': 'لا توجد منتجات في المفضلة بعد',
+      'walletSoon': 'هذه الصفحة نبنيها حسب شرحك لاحقاً',
+      'accountType': 'نوع الحساب', 'customer': 'عميل', 'agent': 'وكيل معتمد',
+      'phoneNumber': 'رقم الهاتف', 'password': 'كلمة المرور',
+      'login': 'تسجيل الدخول', 'noAccount': 'لا تملك حساباً؟', 'signUp': 'سجل الآن',
+      'brand_fawori': 'فاوري', 'brand_isomat': 'آيزومات',
+      'brand_cadence': 'كادينز', 'brand_sibax': 'سيباكس',
+    },
+    'en': {
+      'appName': 'Fawori Company',
+      'appNameSub': 'Fawori Company | شركة فاوري',
+      'home': 'Home', 'products': 'Products', 'wallet': 'Wallet',
+      'favorites': 'Favorites', 'settings': 'Settings', 'gifts': 'Gifts',
+      'quickAccess': 'Quick Access', 'certifiedAgents': 'Certified Agents',
+      'productsAndGifts': 'Products & Gifts', 'searchProduct': 'Search by product name',
+      'all': 'All', 'primers': 'Primers', 'interior': 'Interior Paints',
+      'exterior': 'Exterior Paints', 'noProducts': 'No products',
+      'giftsSoon': 'Gifts section — coming soon',
+      'language': 'Language', 'darkMode': 'Dark mode', 'about': 'About',
+      'logout': 'Logout', 'version': 'Version 1.0.0',
+      'aboutText': 'Fawori Company app for products, gifts and certified agents.',
+      'ok': 'OK', 'confirmLogout': 'Are you sure you want to log out?',
+      'yes': 'Yes', 'no': 'No', 'noFavorites': 'No favorites yet',
+      'walletSoon': 'This page is coming soon',
+      'accountType': 'Account type', 'customer': 'Customer', 'agent': 'Certified agent',
+      'phoneNumber': 'Phone number', 'password': 'Password',
+      'login': 'Login', 'noAccount': "Don't have an account?", 'signUp': 'Sign up now',
+      'brand_fawori': 'Fawori', 'brand_isomat': 'Isomat',
+      'brand_cadence': 'Cadence', 'brand_sibax': 'Sibax',
+    },
+  };
+
+  static String get(bool arabic, String key) =>
+      _data[arabic ? 'ar' : 'en']?[key] ?? key;
+}
