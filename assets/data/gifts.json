@@ -1,11 +1,1 @@
-[
-  {
-    "id": "1",
-    "name": "دريل بوش الاحترافي",
-    "desc": "دريل بوش فحمات وسرعات",
-    "category": "أجهزة",
-    "image": "assets/images/as1.PNG",
-    "points": 366,
-    "price": 0
-  }
-]
+[{"id":"1","name":"دريل بوش الاحترافي","desc":"دريل بوش فحمات وسرعات","category":"أجهزة","image":"assets/images/as1.PNG","points":366,"price":0},{"id":"1788556167995","name":"دريل شحن","desc":"خوش دريل جربه واحجي","category":"أجهزه كهربائية","image":"assets/images/as1.PNG","points":35,"price":0}]
