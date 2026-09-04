@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _phone = TextEditingController();
   final _pass = TextEditingController();
+  final _scroll = ScrollController();
   bool _obscure = true;
   String? _type;
   late final AnimationController _pulse =
@@ -22,10 +23,19 @@ class _LoginScreenState extends State<LoginScreen>
         ..repeat(reverse: true);
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+    });
+  }
+
+  @override
   void dispose() {
     _pulse.dispose();
     _phone.dispose();
     _pass.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -39,6 +49,7 @@ class _LoginScreenState extends State<LoginScreen>
           _glow(const Color(0xFFE8A33D), Alignment.bottomRight),
           SafeArea(
             child: SingleChildScrollView(
+              controller: _scroll,
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,63 +163,58 @@ class _LoginScreenState extends State<LoginScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _accountType(s),
-            const SizedBox(height: 14),
-            _field(s, _phone, 'phoneNumber', Icons.person_rounded,
-                keyboard: TextInputType.phone, maxLength: 11),
-            const SizedBox(height: 14),
-            _field(s, _pass, 'password', Icons.lock_rounded,
-                obscure: _obscure,
-                suffix: IconButton(
-                  icon: Icon(
-                      _obscure
-                          ? Icons.visibility_off_rounded
-                          : Icons.visibility_rounded,
-                      color: Colors.white70),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                )),
+            if (_type != 'guest') ...[
+              const SizedBox(height: 14),
+              _field(s, _phone, 'phoneNumber', Icons.person_rounded,
+                  keyboard: TextInputType.phone, maxLength: 11),
+              const SizedBox(height: 14),
+              _field(s, _pass, 'password', Icons.lock_rounded,
+                  obscure: _obscure,
+                  suffix: IconButton(
+                    icon: Icon(
+                        _obscure
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        color: Colors.white70),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  )),
+            ],
             const SizedBox(height: 24),
-            Container(
+            SizedBox(
+              width: double.infinity,
               height: 58,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [Color(0xFFF26B0F), AppColors.orange]),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                      color: AppColors.orange.withAlpha(80),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8))
-                ],
-              ),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18)),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFFF26B0F), AppColors.orange]),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.orange.withAlpha(80),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8))
+                  ],
                 ),
-                onPressed: () {
-                  if (_type == 'guest') {
-                    s.loginAsGuest();
-                  } else {
-                    _accountDialog(s);
-                  }
-                },
-                child: Text(
-                    _type == 'guest' ? s.tr('continueAsGuest') : s.tr('login'),
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: TextButton.icon(
-                onPressed: s.loginAsGuest,
-                icon: const Icon(Icons.person_outline_rounded, size: 18),
-                label: Text(s.tr('continueAsGuest')),
-                style: TextButton.styleFrom(foregroundColor: AppColors.teal),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18)),
+                  ),
+                  onPressed: () {
+                    if (_type == 'guest') {
+                      s.loginAsGuest();
+                    } else {
+                      _accountDialog(s);
+                    }
+                  },
+                  child: Text(s.tr('login'),
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white)),
+                ),
               ),
             ),
           ],
