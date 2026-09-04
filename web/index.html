@@ -6,8 +6,81 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>شركة فاوري</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body { margin: 0; background: #141419; overflow: hidden; }
+    #splash {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #141419 0%, #1B1B21 100%);
+      z-index: 9999;
+      transition: opacity 0.6s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    .logo {
+      width: 140px; height: 140px;
+      background: #000;
+      border-radius: 28px;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: stretch;
+      padding: 12px;
+      box-shadow:
+        0 0 0 4px #F9A03F inset,
+        0 0 40px rgba(232, 163, 61, 0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 4px #F9A03F inset, 0 0 40px rgba(232,163,61,0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 0 4px #3EC6C0 inset, 0 0 60px rgba(62,198,192,0.5); }
+    }
+    .logo span {
+      color: #fff; font-weight: 900;
+      font-size: 28px; line-height: 1;
+      text-align: center;
+      font-family: system-ui, sans-serif;
+    }
+    .logo span:nth-child(1) { text-align: left; }
+    .logo span:nth-child(3) { text-align: right; }
+    .title {
+      margin-top: 28px;
+      font-size: 26px; font-weight: 800;
+      background: linear-gradient(90deg, #E8A33D, #3EC6C0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-family: system-ui, sans-serif;
+    }
+    .loader {
+      margin-top: 30px;
+      width: 50px; height: 50px;
+      border: 3px solid rgba(232,163,61,0.2);
+      border-top-color: #E8A33D;
+      border-right-color: #3EC6C0;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <div id="splash">
+    <div class="logo">
+      <span>FA</span>
+      <span>WO</span>
+      <span>RI</span>
+    </div>
+    <div class="title">شركة فاوري</div>
+    <div class="loader"></div>
+  </div>
+  <script>
+    window.addEventListener('flutter-first-frame', function() {
+      const s = document.getElementById('splash');
+      if (s) {
+        s.classList.add('hide');
+        setTimeout(() => s.remove(), 700);
+      }
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
