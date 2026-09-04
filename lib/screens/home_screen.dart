@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'assets/images/as1.PNG',
     'assets/images/as2.PNG',
     'assets/images/as3.PNG',
-    'assets/images/as4.jpg',
+    'assets/images/as4.PNG',
   ];
 
   @override
