@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
 import '../core/theme.dart';
 
 class BottomNav extends StatelessWidget {
@@ -10,10 +12,11 @@ class BottomNav extends StatelessWidget {
     Icons.home_rounded, Icons.grid_view_rounded,
     Icons.account_balance_wallet_rounded, Icons.favorite_rounded, Icons.person_rounded,
   ];
-  static const _labels = ['الرئيسية', 'المنتجات', 'المحفظة', 'المفضلة', 'الإعدادات'];
+  static const _keys = ['home', 'products', 'wallet', 'favorites', 'settings'];
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -43,7 +46,7 @@ class BottomNav extends StatelessWidget {
                       ),
                       Icon(_icons[i], color: color, size: 24),
                       const SizedBox(height: 4),
-                      Text(_labels[i],
+                      Text(s.tr(_keys[i]),
                           style: TextStyle(color: color, fontSize: 12,
                               fontWeight: active ? FontWeight.w700 : FontWeight.w400)),
                     ],
