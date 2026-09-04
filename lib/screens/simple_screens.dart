@@ -1,37 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
 import '../core/favorites.dart';
 import '../data/sample_data.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.account_balance_wallet_rounded, size: 70, color: Colors.grey.shade600),
-            const SizedBox(height: 12),
-            Text('المحفظة', style: TextStyle(fontSize: 18, color: Colors.grey.shade500)),
-            const Text('هذه الصفحة نبنيها حسب شرحك لاحقاً', style: TextStyle(color: Colors.grey)),
-          ]),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    return Scaffold(
+      body: Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.account_balance_wallet_rounded, size: 70, color: Colors.grey.shade600),
+          const SizedBox(height: 12),
+          Text(s.tr('wallet'), style: TextStyle(fontSize: 18, color: Colors.grey.shade500)),
+          Text(s.tr('walletSoon'), style: const TextStyle(color: Colors.grey)),
+        ]),
+      ),
+    );
+  }
 }
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
     final favs = context.watch<Favorites>();
     final items = sampleProducts.where((p) => favs.contains(p.id)).toList();
     return Scaffold(
       appBar: AppBar(
-          title: const Text('المفضلة'),
+          title: Text(s.tr('favorites')),
           backgroundColor: Colors.transparent,
           elevation: 0),
       body: items.isEmpty
-          ? const Center(
-              child: Text('لا توجد منتجات في المفضلة بعد', style: TextStyle(color: Colors.grey)))
+          ? Center(
+              child: Text(s.tr('noFavorites'), style: const TextStyle(color: Colors.grey)))
           : ListView.separated(
               padding: const EdgeInsets.all(20),
               itemCount: items.length,
