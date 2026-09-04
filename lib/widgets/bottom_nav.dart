@@ -29,27 +29,42 @@ class BottomNav extends StatelessWidget {
           child: Row(
             children: List.generate(_icons.length, (i) {
               final active = i == index;
+              final locked = s.isGuest && (i == 2 || i == 3);
               final color = active ? AppColors.orange : Colors.grey;
               return Expanded(
                 child: InkWell(
                   onTap: () => onTap(i),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 24, height: 3,
-                        margin: const EdgeInsets.only(bottom: 6),
-                        decoration: BoxDecoration(
-                          color: active ? AppColors.orange : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
+                  child: Opacity(
+                    opacity: locked ? 0.45 : 1,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 24, height: 3,
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: active ? AppColors.orange : Colors.transparent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                      Icon(_icons[i], color: color, size: 24),
-                      const SizedBox(height: 4),
-                      Text(s.tr(_keys[i]),
-                          style: TextStyle(color: color, fontSize: 12,
-                              fontWeight: active ? FontWeight.w700 : FontWeight.w400)),
-                    ],
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Icon(_icons[i], color: color, size: 24),
+                            if (locked)
+                              Positioned(
+                                bottom: -2, right: -7,
+                                child: Icon(Icons.lock_rounded,
+                                    size: 12, color: Colors.grey.shade400),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(s.tr(_keys[i]),
+                            style: TextStyle(color: color, fontSize: 12,
+                                fontWeight: active ? FontWeight.w700 : FontWeight.w400)),
+                      ],
+                    ),
                   ),
                 ),
               );
