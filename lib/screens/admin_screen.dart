@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/github_admin.dart';
@@ -125,6 +126,20 @@ class _AdminEditorState extends State<AdminEditor> {
     }
   }
 
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: _c.text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Copied ✅')));
+  }
+
+  Future<void> _paste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data != null && data.text != null && data.text!.isNotEmpty) {
+      setState(() => _c.text = data.text!);
+    }
+  }
+
   Future<void> _save() async {
     if (_sha == null) return;
     setState(() => _saving = true);
@@ -142,6 +157,30 @@ class _AdminEditorState extends State<AdminEditor> {
       if (mounted) setState(() => _saving = false);
     }
   }
+
+  Widget _toolBtn(IconData ic, String label, VoidCallback onTap) => Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.orange.withAlpha(60)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(ic, color: AppColors.orange, size: 18),
+                const SizedBox(width: 6),
+                Text(label,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -165,24 +204,46 @@ class _AdminEditorState extends State<AdminEditor> {
       ),
       body: _loading
           ? Center(child: Text(s.tr('loading')))
-          : Padding(
-              padding: const EdgeInsets.all(12),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(14),
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Row(
+                    children: [
+                      _toolBtn(Icons.content_copy_rounded,
+                          s.isArabic ? 'نسخ' : 'Copy', _copy),
+                      const SizedBox(width: 8),
+                      _toolBtn(Icons.delete_sweep_rounded,
+                          s.isArabic ? 'مسح الكل' : 'Clear all',
+                          () => setState(() => _c.text = '')),
+                      const SizedBox(width: 8),
+                      _toolBtn(Icons.content_paste_rounded,
+                          s.isArabic ? 'لصق' : 'Paste', _paste),
+                    ],
+                  ),
                 ),
-                padding: const EdgeInsets.all(12),
-                child: TextField(
-                  controller: _c,
-                  maxLines: null,
-                  expands: true,
-                  textDirection: TextDirection.ltr,
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                  decoration: const InputDecoration(
-                      border: InputBorder.none, contentPadding: EdgeInsets.zero),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: TextField(
+                        controller: _c,
+                        maxLines: null,
+                        expands: true,
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                        decoration: const InputDecoration(
+                            border: InputBorder.none, contentPadding: EdgeInsets.zero),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
     );
   }
