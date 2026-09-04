@@ -18,13 +18,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _controller = PageController();
   Timer? _timer;
 
-    static const _bannerImages = [
+  static const _bannerImages = [
     'assets/images/as1.PNG',
     'assets/images/as2.PNG',
     'assets/images/as3.PNG',
     'assets/images/as4.jpg',
   ];
-
 
   @override
   void initState() {
