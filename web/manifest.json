@@ -1,0 +1,9 @@
+{
+  "name": "fawori_company",
+  "short_name": "فاوري",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#141419",
+  "theme_color": "#E8A33D",
+  "icons": []
+}
