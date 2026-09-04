@@ -187,8 +187,15 @@ class _LoginScreenState extends State<LoginScreen>
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18)),
                 ),
-                onPressed: () => _accountDialog(s),
-                child: Text(s.tr('login'),
+                onPressed: () {
+                  if (_type == 'guest') {
+                    s.loginAsGuest();
+                  } else {
+                    _accountDialog(s);
+                  }
+                },
+                child: Text(
+                    _type == 'guest' ? s.tr('continueAsGuest') : s.tr('login'),
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -238,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen>
             value: _type,
             hint: Text(s.tr('accountType'),
                 style: TextStyle(color: Colors.grey.shade400)),
-            items: ['customer', 'agent']
+            items: ['agent', 'tech', 'guest']
                 .map((t) => DropdownMenuItem(value: t, child: Text(s.tr(t))))
                 .toList(),
             onChanged: (v) => setState(() => _type = v),
