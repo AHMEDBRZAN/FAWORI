@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/favorites.dart';
+import '../core/locked_dialog.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/fawori_logo.dart';
@@ -221,7 +222,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   backgroundColor: Colors.black26, shape: const CircleBorder()),
               icon: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                   color: isFav ? AppColors.red : Colors.white, size: 20),
-              onPressed: () => favs.toggle(p.id),
+              onPressed: () {
+                final s = context.read<AppSettings>();
+                if (s.isGuest) {
+                  showLockedDialog(context, s);
+                  return;
+                }
+                favs.toggle(p.id);
+              },
             ),
           ),
         ]),
