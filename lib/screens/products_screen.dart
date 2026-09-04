@@ -6,6 +6,7 @@ import '../core/locked_dialog.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/fawori_logo.dart';
+import '../widgets/gifts_view.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -51,9 +52,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             _catRow(s),
             const SizedBox(height: 12),
             Expanded(
-                child: _productsTab
-                    ? _grid()
-                    : Center(child: Text(s.tr('giftsSoon')))),
+                child: _productsTab ? _grid() : const GiftsView()),
           ],
         ),
       ),
