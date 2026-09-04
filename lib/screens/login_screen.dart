@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen>
                       _pill(Icons.language_rounded, AppColors.teal,
                           s.isArabic ? 'English' : 'العربية', s.toggleLanguage, null),
                       const SizedBox(width: 10),
-                      _pill(Icons.nightlight_round, AppColors.orange,
+                      _pill(Icons.nightlightButton.styleFrom(f_round, AppColors.orange,
                           s.tr('darkMode'), s.toggleDark, _openAdmin),
                     ],
                   ),
@@ -93,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen>
             border: Border.all(color: c.withAlpha(60)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(ic, color: c, size: 20),
+            Icon(ic, color: c, size:oregroundColor: AppColors.teal), 20),
             const SizedBox(width: 8),
             Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
           ]),
@@ -105,7 +105,9 @@ class _LoginScreenState extends State<LoginScreen>
           AnimatedBuilder(
             animation: _pulse,
             builder: (_, child) =>
-                Transform.scale(scale: 1 + _pulse.value * 0.03, child: child),
+                Transform.scale(scale: 
+              ),
+1 + _pulse.value * 0.03, child: child),
             child: Container(
               width: 130, height: 130,
               decoration: BoxDecoration(
@@ -144,6 +146,7 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _card(AppSettings s) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
+                     ),
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: AppColors.orange.withAlpha(50)),
@@ -210,155 +213,306 @@ class _LoginScreenState extends State<LoginScreen>
                 label: Text(s.tr('continueAsGuest')),
                 style: TextButton.styleFrom(foregroundColor: AppColors.teal),
               ),
-            ),
-          ],
-        ),
+ ],
+        ),            ),
+         
       );
 
-  Widget _footer(AppSettings s) => Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(s.tr('noAccount'), style: TextStyle(color: Colors.grey.shade400)),
-            const SizedBox(width: 6),
+ ],
+        ),  Widget _footer
+      );
+
+(AppSettings s)  Widget _footer => Center(
+(AppSettings s)        child: Row => Center(
+(
+          main        child: RowAxisSize: MainAxisSize(
+          main.min,
+         AxisSize: MainAxisSize children: [
+.min,
+                     Text(s.tr children: [
+('noAccount'),            Text(s.tr style: TextStyle(color('noAccount'),: Colors style: TextStyle(color.grey.shade4: Colors00)),
+.grey.shade4            const SizedBox(width00)),
+: 6),            const SizedBox(width
+            GestureDetector(: 6),
             GestureDetector(
+              onTap: () => _account
               onTap: () => _accountDialog(s),
+              child: TextDialog(s),
               child: Text(s.tr('signUp'),
-                  style: const TextStyle(
-                      color: AppColors.orange, fontWeight: FontWeight.w800)),
+                 (s.tr('sign style: constUp'),
+                  TextStyle(
+                      style: const TextStyle(
+                      color: AppColors.orange, fontWeight: color: AppColors FontWeight.w80.orange, fontWeight:0)),
+            FontWeight.w800)),
             ),
           ],
         ),
-      );
+ ),
+          ],      );
 
-  Widget _accountType(AppSettings s) => Container(
-        height: 58,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade700),
+ 
         ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            isExpanded: true,
-            dropdownColor: Theme.of(context).colorScheme.surface,
-            value: _type,
-            hint: Text(s.tr('accountType'),
-                style: TextStyle(color: Colors.grey.shade400)),
-            items: ['agent', 'tech', 'guest']
-                .map((t) => DropdownMenuItem(value: t, child: Text(s.tr(t))))
+ Widget _accountType      );
+
+ (AppSettings s) Widget _accountType => Container(
+(AppSettings s)        height:  => Container(
+58,
+        height:         padding: const58,
+ EdgeInsets.symmetric(horizontal:        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: 14), BoxDecoration(
+         
+        decoration: borderRadius: BorderRadius.circular BoxDecoration(
+         (16), borderRadius: BorderRadius.circular
+          border:(16), Border.all(color:
+          border: Colors.grey.shade Border.all(color:700), Colors.grey.shade700),
+        ),
+        child: Dropdown
+        ),
+ButtonHideUnderline        child: Dropdown(
+          childButtonHideUnderline: DropdownButton<String(
+          child>(
+            is: DropdownButton<StringExpanded: true,>(
+            is
+            dropdownColorExpanded: true,
+            dropdownColor: Theme.of(context).colorScheme.surface: Theme.of(context,
+            value).colorScheme.surface: _type,,
+            value
+            hint:: _type, Text(s.tr('
+            hint:accountType'),
+                style: TextStyle Text(s.tr('accountType'),
+(color: Colors.grey                style: TextStyle(color: Colors.grey.shade40.shade400)),
+            items: ['agent0)),
+           ', 'tech', items: ['agent 'guest']
+', 'tech',                .map(( 'guest']
+t) => Dropdown                .map((MenuItem(value: tt) => Dropdown, child: TextMenuItem(value: t(s.tr(t)))), child: Text(s.tr(t))))
                 .toList(),
-            onChanged: (v) => setState(() => _type = v),
-          ),
+            onChanged
+                .toList: (v)(),
+            onChanged => setState(() =>: (v) _type = v => setState(() =>),
+          ), _type = v
         ),
-      );
+),
+          ),      );
 
-  Widget _field(AppSettings s, TextEditingController c, String hintKey, IconData ic,
-          {TextInputType? keyboard, int? maxLength, bool obscure = false, Widget? suffix}) =>
-      TextField(
-        controller: c,
-        keyboardType: keyboard,
+ 
+        ),
+ Widget _field(App      );
+
+ Settings s, TextEditingController Widget _field(AppSettings s, TextEditingController c, String hintKey, IconData ic,
+ c, String hintKey, IconData          {TextInputType ic,
+? keyboard, int          {TextInputType? maxLength, bool? keyboard, int obscure = false,? maxLength, bool Widget? suffix}) obscure = false, =>
+      TextField Widget? suffix})(
+        controller =>
+      TextField: c(
+        controller,
+        keyboardType: c: keyboard,
+        keyboardType,
+        maxLength: keyboard: maxLength,
+,
         maxLength: maxLength,
         obscureText: obscure,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          hintText: s.tr(hintKey),
+               obscureText: onChanged: (_) => obscure,
+        setState(() {}), onChanged: (_) =>
+        decoration: setState(() {}), InputDecoration(
+         
+        decoration: hintText: s.tr InputDecoration(
+         (hintKey), hintText: s.tr(hintKey),
+          prefixIcon: Icon(ic,
           prefixIcon: Icon(ic, color: Colors.white70),
           suffixIcon: suffix,
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.shade700)),
+          enabledBorder: OutlineInputBorder color: Colors.white70),
+          suffixIcon: suffix,
+         (
+              borderRadius enabledBorder: OutlineInputBorder: BorderRadius.circular((
+              borderRadius16),
+: BorderRadius.circular(              borderSide: BorderSide16),
+(color: Colors.grey              borderSide: BorderSide.shade70(color: Colors.grey0)),
+         .shade700)),
           focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.teal, width: 2)),
-          counterStyle: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+              borderRadius focusedBorder: OutlineInputBorder: BorderRadius.circular((
+              borderRadius16),
+: BorderRadius.circular(              borderSide: const16),
+ BorderSide(color: App              borderSide: constColors.teal, BorderSide(color: App width: 2Colors.teal, width: 2)),
+          counterStyle: TextStyle(color)),
+          counter: Colors.grey.shStyle: TextStyle(colorade500: Colors.grey.shade500, fontSize: 12),
+, fontSize: 12),
         ),
       );
 
-  void _accountDialog(AppSettings s) => showDialog(
-        context: context,
-        builder: (_) => Dialog(
+  void        ),
+      _accountDialog(App );
+
+  voidSettings s) => _accountDialog(AppSettings s) => showDialog(
+        context: context, showDialog(
+       
+        builder: context: context, (_) => Dialog(
+        builder:
+          backgroundColor: (_) => Dialog(
           backgroundColor: Colors.transparent,
           child: Container(
+            padding Colors.transparent,
+          child: Container: const EdgeInsets.all(
             padding: const EdgeInsets.all(24),
+            decoration:(24),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(24),
+              color: Theme.of BoxDecoration(
+             (context).colorScheme.surface,
+              color: Theme.of(context).colorScheme borderRadius: BorderRadius.circular(24),
               border: Border.all(color: AppColors.orange.withAlpha(70)),
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ),.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.orange.withAlpha(70
+            child:)),
+            ), Column(mainAxisSize:
+            child: MainAxisSize.min, Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
-                width: 70, height: 70,
-                decoration: BoxDecoration(
+ children: [
+                width:               Container(
+70, height                width: : 7070, height,
+                decoration: 70: BoxDecoration(
+,
+                decoration                  shape: Box: BoxDecoration(
+Shape.circle,
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: [
-                    AppColors.orange.withAlpha(120),
-                    AppColors.teal.withAlpha(80)
+                  gradient: LinearGradient                    AppColors.orange(colors: [
+.withAlpha(1                    AppColors.orange20),
+.withAlpha(1                    AppColors.te20),
+al.withAlpha(                    AppColors.te80)
+al.withAlpha(                  ]),
+80)
                   ]),
                 ),
-                child: const Icon(Icons.support_agent_rounded,
-                    color: Colors.white, size: 34),
+                child: const Icon                ),
+               (Icons.support_agent_round child: const Iconed,
+(Icons.support_agent_round                    color: Colorsed,
+.white, size:                    color: Colors 34),.white, size:
               ),
-              const SizedBox(height: 16),
-              Text(s.tr('createAccount'),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 10),
+ 34),              const SizedBox(height: 16
+              ),
+              const SizedBox(height),
+              Text: 16(s.tr('create),
+              TextAccount'),
+                 (s.tr('create style: const TextStyleAccount'),
+                 (fontSize: 2 style: const TextStyle0, fontWeight:(fontSize: 2 FontWeight.w800, fontWeight:0)),
+              FontWeight.w800)),
+              const SizedBox(height: 10), const SizedBox(height:
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
                   style: TextStyle(
-                      color: Colors.grey.shade300, fontSize: 15, height: 1.6),
-                  children: [
-                    TextSpan(text: s.tr('contactAgentPart')),
+                      color 10),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: TextStyle: Colors.grey.sh(
+                      colorade300: Colors.grey.sh, fontSize: ade30015, height, fontSize: : 1.15, height6),
+                 : 1. children: [
+6),
+                                     TextSpan(text children: [
+: s.tr('                    TextSpan(textcontactAgentPart')),: s.tr('contactAgentPart')),
                     TextSpan(
-                        text: ' ${s.tr('guest')}',
-                        style: const TextStyle(
-                            color: AppColors.orange, fontWeight: FontWeight.w800)),
+                        text
+                    TextSpan: ' ${s(
+                        text.tr('guest'): ' ${s}',
+                        style.tr('guest'): const TextStyle(}',
+                        style
+                            color:: const TextStyle( AppColors.orange,
+                            color: fontWeight: FontWeight.w AppColors.orange,800)), fontWeight: FontWeight.w
                   ],
-                ),
+800)),                ),
+             
+                  ],
+ ),
+              const                ),
               ),
               const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
+ SizedBox(height:               SizedBox(
+22),
+                width: double              SizedBox(
+.infinity,
+                               width: double height: 5.infinity,
+               2,
+                height: 5 child: ElevatedButton2,
+               (
+                  child: ElevatedButton style: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.orange,
+                      backgroundColor: App.styleFrom(
+Colors.orange,
+                      backgroundColor: App                      foregroundColor:Colors.orange,
+ Colors.black,
                       foregroundColor: Colors.black,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16))),
-                  onPressed: () {
+                          borderRadius                      shape: RoundedRectangleBorder: BorderRadius.circular((
+                          borderRadius16))),
+: BorderRadius.circular(                  onPressed: ()16))),
+ {
+                    Navigator                  onPressed: ().pop(context);
+ {
                     Navigator.pop(context);
                     s.loginAsGuest();
-                  },
-                  child: Text(s.tr('continueAsGuest'),
-                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                                     s.loginAs },
+                  childGuest();
+                 : Text(s.tr },
+                  child('continueAsGuest: Text(s.tr'),
+                      style('continueAsGuest: const TextStyle(font'),
+                      style: const TextStyle(fontWeight: FontWeight.w800)),Weight: FontWeight.w
                 ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(s.tr('cancel'),
-                    style: TextStyle(color: Colors.grey.shade400)),
-              ),
-            ]),
-          ),
-        ),
-      );
+800)),              ),
+             
+                ),
+ const SizedBox(height:              ),
+              8),
+ const SizedBox(height:              TextButton( 8),
 
-  Future<void> _openAdmin() async {
-    final s = context.read<AppSettings>();
+                onPressed:              TextButton( () => Navigator.pop
+                onPressed:(context),
+                () => Navigator.pop child: Text(s(context),
+               .tr('cancel'), child: Text(s
+                    style:.tr('cancel'), TextStyle(color: Colors
+                    style:.grey.shade4 TextStyle(color: Colors.grey.shade400)),
+              ),
+           00)),
+ ]),
+                       ),
+            ),
+        ]),
+          ),
+      ); ),
+       
+
+  Future<void ),
+      );> _openAdmin
+
+  Future<void() async {
+> _openAdmin    final s =() async {
+ context.read<AppSettings    final s =>();
+    var context.read<AppSettings token = await GitHub>();
     var token = await GitHubAdmin.getToken();
-    if (token == null || token.isEmpty) {
-      token = await askTokenDialog(context, s);
-      if (token == null || token.isEmpty) return;
+    if (tokenAdmin.getToken();
+ == null || token    if (token.isEmpty) {
+ == null || token      token = await.isEmpty) {
+ askTokenDialog(context      token = await, s);
+ askTokenDialog(context      if (token, s);
+      if (token == null || token.isEmpty) return; == null || token.isEmpty) return;
       await GitHubAdmin.saveToken(token);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(s.tr('tokenSaved'))));
-    }
-    if (!mounted) return;
-    Navigator.push(
-        context, MaterialPageRoute(builder: (_) => AdminScreen(token: token!)));
+          .show
+      await GitHubAdmin.saveToken(token);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(sSnackBar(SnackBar.tr('tokenSaved(content: Text(s'))));
+   .tr('tokenSaved }
+    if'))));
+    (!mounted) return }
+    if;
+    Navigator (!mounted) return.push(
+       ;
+    Navigator context, MaterialPageRoute(builder.push(
+       : (_) => Admin context, MaterialPageRoute(builderScreen(token: token: (_) => Admin!)));
+ Screen(token: token }
+}
+!)));
   }
 }
