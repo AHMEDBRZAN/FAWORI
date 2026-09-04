@@ -70,12 +70,10 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Center(
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                ShaderMask(
-                  shaderCallback: (r) => const LinearGradient(
-                          colors: [AppColors.orange, AppColors.teal])
-                      .createShader(r),
-                  child:
-                      const Icon(Icons.waves_rounded, size: 26, color: Colors.white),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset('assets/images/logo.png',
+                      width: 30, height: 30, fit: BoxFit.cover),
                 ),
                 const SizedBox(width: 8),
                 Text(s.tr('appName'),
