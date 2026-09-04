@@ -32,8 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!_controller.hasClients) return;
       final next = (_banner + 1) % _bannerImages.length;
       _controller.animateToPage(next,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 600), curve: Curves.easeInOut);
     });
   }
 
@@ -91,10 +90,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
-                child: ShaderMask(
-                  shaderCallback: (r) => const LinearGradient(
-                          colors: [AppColors.orange, AppColors.teal]).createShader(r),
-                  child: const Icon(Icons.waves_rounded, size: 30, color: Colors.white),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset('assets/images/logo.png',
+                      width: 40, height: 40, fit: BoxFit.cover),
                 ),
               ),
             ),
