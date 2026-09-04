@@ -64,14 +64,18 @@ class SettingsScreen extends StatelessWidget {
               ]),
             ),
             const SizedBox(height: 30),
-            Center(child: Text(s.tr('version'), style: TextStyle(color: Colors.grey.shade500))),
+            Center(
+                child: Text(s.tr('version'),
+                    style: TextStyle(color: Colors.grey.shade500))),
             const SizedBox(height: 8),
             Center(
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 ShaderMask(
                   shaderCallback: (r) => const LinearGradient(
-                          colors: [AppColors.orange, AppColors.teal]).createShader(r),
-                  child: const Icon(Icons.waves_rounded, size: 26, color: Colors.white),
+                          colors: [AppColors.orange, AppColors.teal])
+                      .createShader(r),
+                  child:
+                      const Icon(Icons.waves_rounded, size: 26, color: Colors.white),
                 ),
                 const SizedBox(width: 8),
                 Text(s.tr('appName'),
@@ -90,7 +94,8 @@ class SettingsScreen extends StatelessWidget {
           title: Text(s.tr('about')),
           content: Text(s.tr('aboutText')),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text(s.tr('ok')))
+            TextButton(
+                onPressed: () => Navigator.pop(context), child: Text(s.tr('ok')))
           ],
         ),
       );
@@ -100,7 +105,7 @@ class SettingsScreen extends StatelessWidget {
         builder: (_) => Dialog(
           backgroundColor: Colors.transparent,
           child: Stack(
-            clipBehavior: false,
+            clipBehavior: Clip.none,
             alignment: Alignment.topCenter,
             children: [
               Container(
@@ -115,7 +120,8 @@ class SettingsScreen extends StatelessWidget {
                   children: [
                     Text(s.tr('confirmLogout'),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 24),
                     Row(
                       children: [
