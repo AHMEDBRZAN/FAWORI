@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/github_admin.dart';
 import '../core/theme.dart';
+import '../widgets/pressable.dart';
 import 'admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -42,38 +43,41 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
-    return Scaffold(
-      body: Stack(
-        children: [
-          _glow(const Color(0xFF3EC6C0), Alignment.topLeft),
-          _glow(const Color(0xFFE8A33D), Alignment.bottomRight),
-          SafeArea(
-            child: SingleChildScrollView(
-              controller: _scroll,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _pill(Icons.language_rounded, AppColors.teal,
-                          s.isArabic ? 'English' : 'العربية', s.toggleLanguage, null),
-                      const SizedBox(width: 10),
-                      _pill(Icons.nightlight_round, AppColors.orange,
-                          s.tr('darkMode'), s.toggleDark, _openAdmin),
-                    ],
-                  ),
-                  const SizedBox(height: 36),
-                  _logo(s),
-                  const SizedBox(height: 36),
-                  _card(s),
-                  const SizedBox(height: 22),
-                  _footer(s),
-                ],
+    return Theme(
+      data: AppTheme.dark(),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            _glow(const Color(0xFF3EC6C0), Alignment.topLeft),
+            _glow(const Color(0xFFE8A33D), Alignment.bottomRight),
+            SafeArea(
+              child: SingleChildScrollView(
+                controller: _scroll,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        _pill(Icons.language_rounded, AppColors.teal,
+                            s.isArabic ? 'English' : 'العربية', s.toggleLanguage, null),
+                        const SizedBox(width: 10),
+                        _pill(Icons.nightlight_round, AppColors.orange,
+                            s.tr('darkMode'), s.toggleDark, _openAdmin),
+                      ],
+                    ),
+                    const SizedBox(height: 36),
+                    _logo(s),
+                    const SizedBox(height: 36),
+                    _card(s),
+                    const SizedBox(height: 22),
+                    _footer(s),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -93,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _pill(IconData ic, Color c, String label, VoidCallback onTap,
           VoidCallback? onLongPress) =>
-      GestureDetector(
+      Pressable(
         onTap: onTap,
         onLongPress: onLongPress,
         child: Container(
@@ -178,10 +182,22 @@ class _LoginScreenState extends State<LoginScreen>
                   )),
             ],
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 58,
+            Pressable(
+              onTap: () {
+                if (_type == 'guest') {
+                  s.loginAsGuest();
+                } else if (_phone.text.trim() == '1997' && _pass.text == '2000') {
+                  s.loginAsAdmin();
+                } else if (_type == null) {
+                  _openTypePicker(s);
+                } else {
+                  _accountDialog(s);
+                }
+              },
+              scale: 0.97,
               child: Container(
+                width: double.infinity,
+                height: 58,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                       colors: [Color(0xFFF26B0F), AppColors.orange]),
@@ -193,25 +209,7 @@ class _LoginScreenState extends State<LoginScreen>
                         offset: const Offset(0, 8))
                   ],
                 ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18)),
-                  ),
-                  onPressed: () {
-                    if (_type == 'guest') {
-                      s.loginAsGuest();
-                    } else if (_phone.text.trim() == '1997' &&
-                        _pass.text == '2000') {
-                      s.loginAsAdmin();
-                    } else if (_type == null) {
-                      _openTypePicker(s);
-                    } else {
-                      _accountDialog(s);
-                    }
-                  },
+                child: Center(
                   child: Text(s.tr('login'),
                       style: const TextStyle(
                           fontSize: 18,
@@ -230,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             Text(s.tr('noAccount'), style: TextStyle(color: Colors.grey.shade400)),
             const SizedBox(width: 6),
-            GestureDetector(
+            Pressable(
               onTap: () => _accountDialog(s),
               child: Text(s.tr('signUp'),
                   style: const TextStyle(
@@ -263,9 +261,8 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _accountType(AppSettings s) => InkWell(
+  Widget _accountType(AppSettings s) => Pressable(
         onTap: () => _openTypePicker(s),
-        borderRadius: BorderRadius.circular(16),
         child: Container(
           height: 58,
           padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -323,19 +320,18 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _typeOption(AppSettings s, String t, String sub) {
     final selected = _type == t;
-    return InkWell(
+    return Pressable(
       onTap: () {
         setState(() => _type = t);
         Navigator.pop(context);
       },
-      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: selected ? AppColors.orange.withAlpha(30) : Colors.transparent,
-          border:
-              Border.all(color: selected ? AppColors.orange : Colors.grey.shade700),
+          border: Border.all(
+              color: selected ? AppColors.orange : Colors.grey.shade700),
         ),
         child: Row(children: [
           _typeIcon(t),
@@ -419,28 +415,32 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.orange,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16))),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    s.loginAsGuest();
-                  },
-                  child: Text(s.tr('continueAsGuest'),
-                      style: const TextStyle(fontWeight: FontWeight.w800)),
+              Pressable(
+                onTap: () {
+                  Navigator.pop(context);
+                  s.loginAsGuest();
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.orange,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(s.tr('continueAsGuest'),
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(s.tr('cancel'),
-                    style: TextStyle(color: Colors.grey.shade400)),
+              Pressable(
+                onTap: () => Navigator.pop(context),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(s.tr('cancel'),
+                      style: TextStyle(color: Colors.grey.shade400)),
+                ),
               ),
             ]),
           ),
