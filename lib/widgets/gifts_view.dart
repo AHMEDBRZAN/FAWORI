@@ -9,6 +9,7 @@ import '../core/gifts_service.dart';
 import '../core/github_admin.dart';
 import '../core/theme.dart';
 import '../screens/admin_screen.dart' show askTokenDialog;
+import 'pressable.dart';
 
 class GiftsView extends StatefulWidget {
   const GiftsView({super.key});
@@ -53,9 +54,8 @@ class _GiftsViewState extends State<GiftsView> {
                     itemBuilder: (_, i) {
                       final c = cats[i];
                       final active = c == _cat;
-                      return InkWell(
+                      return Pressable(
                         onTap: () => setState(() => _cat = c),
-                        borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           alignment: Alignment.center,
@@ -64,10 +64,16 @@ class _GiftsViewState extends State<GiftsView> {
                                 ? AppColors.orange
                                 : Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: active
+                                    ? Colors.transparent
+                                    : AppTheme.border(context)),
                           ),
                           child: Text(c == 'all' ? s.tr('all') : c,
                               style: TextStyle(
-                                  color: active ? Colors.black : Colors.white,
+                                  color: active
+                                      ? Colors.black
+                                      : AppTheme.text(context),
                                   fontWeight: FontWeight.w700)),
                         ),
                       );
@@ -100,24 +106,41 @@ class _GiftsViewState extends State<GiftsView> {
                 bottom: 16,
                 left: 20,
                 right: 20,
-                child: SizedBox(
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.orange,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
+                child: Pressable(
+                  onTap: () async {
+                    await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AdminGiftEditor()));
+                    _reload();
+                  },
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFFF26B0F), AppColors.orange]),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppColors.orange.withAlpha(80),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6))
+                      ],
                     ),
-                    onPressed: () async {
-                      await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AdminGiftEditor()));
-                      _reload();
-                    },
-                    icon: const Icon(Icons.add_rounded),
-                    label: Text(s.isArabic ? 'إضافة هدية (مدير)' : 'Add gift (admin)'),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.add_rounded, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                            s.isArabic
+                                ? 'إضافة هدية (مدير)'
+                                : 'Add gift (admin)',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -127,79 +150,85 @@ class _GiftsViewState extends State<GiftsView> {
     );
   }
 
-  Widget _giftCard(AppSettings s, Gift g) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  height: 150,
-                  margin: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                      color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      g.image,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Center(
-                          child: Icon(Icons.redeem_rounded,
-                              size: 60, color: AppColors.orange)),
+  Widget _giftCard(AppSettings s, Gift g) => Pressable(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppTheme.border(context)),
+          ),
+          child: Column(
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    height: 150,
+                    margin: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        g.image,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.redeem_rounded,
+                                size: 60, color: AppColors.orange)),
+                      ),
                     ),
                   ),
-                ),
-                PositionedDirectional(
-                  top: 8,
-                  start: 8,
-                  child: IconButton(
-                    style: IconButton.styleFrom(
-                        backgroundColor: Colors.black26, shape: const CircleBorder()),
-                    icon: const Icon(Icons.favorite_border_rounded,
-                        color: Colors.white, size: 20),
-                    onPressed: () {},
+                  PositionedDirectional(
+                    top: 8,
+                    start: 8,
+                    child: IconButton(
+                      style: IconButton.styleFrom(
+                          backgroundColor: Colors.black26,
+                          shape: const CircleBorder()),
+                      icon: const Icon(Icons.favorite_border_rounded,
+                          color: Colors.white, size: 20),
+                      onPressed: () {},
+                    ),
                   ),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(g.name,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-            ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(g.desc,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-            ),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('${g.points}',
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                      shape: BoxShape.circle, color: AppColors.orange),
-                  child: const Icon(Icons.attach_money_rounded,
-                      color: Colors.white, size: 14),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-          ],
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(g.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(g.desc,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              ),
+              const Spacer(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('${g.points}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 16)),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                        shape: BoxShape.circle, color: AppColors.orange),
+                    child: const Icon(Icons.attach_money_rounded,
+                        color: Colors.white, size: 14),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       );
 }
@@ -278,7 +307,7 @@ class _AdminGiftEditorState extends State<AdminGiftEditor> {
           fillColor: Theme.of(context).colorScheme.surface,
           enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.grey.shade700)),
+              borderSide: BorderSide(color: AppTheme.border(context))),
           focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: AppColors.teal)),
@@ -298,16 +327,14 @@ class _AdminGiftEditorState extends State<AdminGiftEditor> {
                   child: SizedBox(
                       width: 20, height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2)))
-              : IconButton(
-                  icon: const Icon(Icons.check_rounded), onPressed: _save),
+              : IconButton(icon: const Icon(Icons.check_rounded), onPressed: _save),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          InkWell(
+          Pressable(
             onTap: _pick,
-            borderRadius: BorderRadius.circular(16),
             child: Container(
               height: 180,
               decoration: BoxDecoration(
@@ -318,11 +345,13 @@ class _AdminGiftEditorState extends State<AdminGiftEditor> {
               child: _bytes == null
                   ? Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.add_photo_alternate_rounded,
-                            size: 40, color: AppColors.orange),
-                        const SizedBox(height: 8),
-                        Text(s.isArabic ? 'إرفاق صورة الهدية' : 'Attach gift image'),
-                      ]))
+                          const Icon(Icons.add_photo_alternate_rounded,
+                              size: 40, color: AppColors.orange),
+                          const SizedBox(height: 8),
+                          Text(s.isArabic
+                              ? 'إرفاق صورة الهدية'
+                              : 'Attach gift image'),
+                        ]))
                   : Center(child: Image.memory(_bytes!, fit: BoxFit.contain)),
             ),
           ),
@@ -339,7 +368,8 @@ class _AdminGiftEditorState extends State<AdminGiftEditor> {
                     keyboard: TextInputType.number)),
             const SizedBox(width: 10),
             Expanded(
-                child: _tf(_price, s.isArabic ? 'السعر (اختياري)' : 'Price (optional)',
+                child: _tf(_price,
+                    s.isArabic ? 'السعر (اختياري)' : 'Price (optional)',
                     keyboard: TextInputType.number)),
           ]),
         ],
