@@ -45,36 +45,47 @@ class _GiftsViewState extends State<GiftsView> {
             Column(
               children: [
                 SizedBox(
-                  height: 46,
+                  height: 118,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: cats.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
                     itemBuilder: (_, i) {
                       final c = cats[i];
                       final active = c == _cat;
                       return Pressable(
                         onTap: () => setState(() => _cat = c),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          alignment: Alignment.center,
+                          width: 110,
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: active
-                                ? AppColors.orange
-                                : Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                                 color: active
-                                    ? Colors.transparent
-                                    : AppTheme.border(context)),
+                                    ? AppColors.orange
+                                    : AppTheme.border(context),
+                                width: active ? 1.5 : 1),
                           ),
-                          child: Text(c == 'all' ? s.tr('all') : c,
-                              style: TextStyle(
-                                  color: active
-                                      ? Colors.black
-                                      : AppTheme.text(context),
-                                  fontWeight: FontWeight.w700)),
+                          child: Column(children: [
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.orange.withAlpha(active ? 40 : 18),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.redeem_rounded,
+                                    color: AppColors.orange, size: 26),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(c == 'all' ? s.tr('all') : c,
+                                style: const TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.w700),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ]),
                         ),
                       );
                     },
@@ -93,7 +104,7 @@ class _GiftsViewState extends State<GiftsView> {
                             crossAxisCount: 2,
                             mainAxisSpacing: 14,
                             crossAxisSpacing: 14,
-                            childAspectRatio: 0.62,
+                            childAspectRatio: 0.66,
                           ),
                           itemCount: shown.length,
                           itemBuilder: (_, i) => _giftCard(s, shown[i]),
@@ -120,12 +131,6 @@ class _GiftsViewState extends State<GiftsView> {
                       gradient: const LinearGradient(
                           colors: [Color(0xFFF26B0F), AppColors.orange]),
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                            color: AppColors.orange.withAlpha(80),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6))
-                      ],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -162,11 +167,10 @@ class _GiftsViewState extends State<GiftsView> {
               Stack(
                 children: [
                   Container(
-                    height: 150,
+                    height: 160,
                     margin: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12)),
+                        color: Colors.white, borderRadius: BorderRadius.circular(12)),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
@@ -195,7 +199,7 @@ class _GiftsViewState extends State<GiftsView> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text(g.name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis),
@@ -218,7 +222,7 @@ class _GiftsViewState extends State<GiftsView> {
                           fontWeight: FontWeight.w800, fontSize: 16)),
                   const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(5),
                     decoration: const BoxDecoration(
                         shape: BoxShape.circle, color: AppColors.orange),
                     child: const Icon(Icons.attach_money_rounded,
@@ -226,7 +230,7 @@ class _GiftsViewState extends State<GiftsView> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -327,7 +331,8 @@ class _AdminGiftEditorState extends State<AdminGiftEditor> {
                   child: SizedBox(
                       width: 20, height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2)))
-              : IconButton(icon: const Icon(Icons.check_rounded), onPressed: _save),
+              : IconButton(
+                  icon: const Icon(Icons.check_rounded), onPressed: _save),
         ],
       ),
       body: ListView(
