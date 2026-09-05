@@ -29,11 +29,17 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final p in _bannerImages) {
+        precacheImage(AssetImage(p), context);
+      }
+    });
+    _timer = Timer.periodic(const Duration(seconds: 7), (_) {
       if (!_controller.hasClients) return;
       final next = (_banner + 1) % _bannerImages.length;
       _controller.animateToPage(next,
-          duration: const Duration(milliseconds: 600), curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeInOut);
     });
   }
 
@@ -160,8 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: List.generate(_bannerImages.length, (i) {
             final active = i == _banner;
             return AnimatedContainer(
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOutBack,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
               margin: const EdgeInsets.symmetric(horizontal: 5),
               width: active ? 26 : 10,
               height: 10,
