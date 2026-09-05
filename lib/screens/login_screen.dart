@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/github_admin.dart';
+import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
 import 'admin_screen.dart';
@@ -33,6 +34,31 @@ class _LoginScreenState extends State<LoginScreen> {
     _pass.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _doLogin(AppSettings s) async {
+    if (_type == 'guest') {
+      s.loginAsGuest();
+      return;
+    }
+    if (_phone.text.trim() == '1997' && _pass.text == '2000') {
+      s.loginAsAdmin();
+      return;
+    }
+    final users = await StoreService.loadUsers();
+    User? found;
+    for (final u in users) {
+      if (u.phone == _phone.text.trim()) {
+        found = u;
+        break;
+      }
+    }
+    if (!mounted) return;
+    if (found != null && found.password == _pass.text) {
+      s.loginAsUser(found);
+    } else {
+      _accountDialog(s);
+    }
   }
 
   @override
@@ -172,17 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
             const SizedBox(height: 24),
             Pressable(
-              onTap: () {
-                if (_type == 'guest') {
-                  s.loginAsGuest();
-                } else if (_phone.text.trim() == '1997' && _pass.text == '2000') {
-                  s.loginAsAdmin();
-                } else if (_type == null) {
-                  _openTypePicker(s);
-                } else {
-                  _accountDialog(s);
-                }
-              },
+              onTap: () => _doLogin(s),
               scale: 0.97,
               child: Container(
                 width: double.infinity,
@@ -287,8 +303,11 @@ class _LoginScreenState extends State<LoginScreen> {
               border: Border.all(color: AppColors.orange.withAlpha(70)),
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('نوع الحساب',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+              Text(s.tr('accountType'),
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white)),
               const SizedBox(height: 14),
               _typeOption(s, 'agent', s.isArabic ? 'وكيل معتمد' : 'Certified agent'),
               const SizedBox(height: 10),
@@ -386,9 +405,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
               Text(s.tr('createAccount'),
                   style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white)),
+                      fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
               const SizedBox(height: 10),
               RichText(
                 textAlign: TextAlign.center,
