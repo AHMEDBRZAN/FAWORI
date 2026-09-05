@@ -12,16 +12,12 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> {
   final _phone = TextEditingController();
   final _pass = TextEditingController();
   final _scroll = ScrollController();
   bool _obscure = true;
   String? _type;
-  late final AnimationController _pulse =
-      AnimationController(vsync: this, duration: const Duration(seconds: 2))
-        ..repeat(reverse: true);
 
   @override
   void initState() {
@@ -33,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
-    _pulse.dispose();
     _phone.dispose();
     _pass.dispose();
     _scroll.dispose();
@@ -103,40 +98,34 @@ class _LoginScreenState extends State<LoginScreen>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: const Color(0xFF1B1B21),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: c.withAlpha(60)),
+            border: Border.all(color: c.withAlpha(90)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(ic, color: c, size: 20),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, color: Colors.white)),
           ]),
         ),
       );
 
   Widget _logo(AppSettings s) => Center(
         child: Column(children: [
-          AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, child) =>
-                Transform.scale(scale: 1 + _pulse.value * 0.03, child: child),
-            child: Container(
-              width: 140, height: 140,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(34),
-                border: Border.all(color: AppColors.orange.withAlpha(110), width: 2),
-                boxShadow: [
-                  BoxShadow(color: AppColors.orange.withAlpha(70), blurRadius: 45)
-                ],
-              ),
-              child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(26),
-                  child: Image.asset('assets/images/logo.png',
-                      width: 122, height: 122, fit: BoxFit.cover),
-                ),
+          Container(
+            width: 140, height: 140,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(34),
+              border: Border.all(color: AppColors.orange.withAlpha(110), width: 2),
+            ),
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(26),
+                child: Image.asset('assets/images/logo.png',
+                    width: 122, height: 122, fit: BoxFit.cover),
               ),
             ),
           ),
@@ -157,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _card(AppSettings s) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: const Color(0xFF1B1B21),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: AppColors.orange.withAlpha(50)),
         ),
@@ -202,12 +191,6 @@ class _LoginScreenState extends State<LoginScreen>
                   gradient: const LinearGradient(
                       colors: [Color(0xFFF26B0F), AppColors.orange]),
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.orange.withAlpha(80),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8))
-                  ],
                 ),
                 child: Center(
                   child: Text(s.tr('login'),
@@ -299,13 +282,13 @@ class _LoginScreenState extends State<LoginScreen>
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: const Color(0xFF1B1B21),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: AppColors.orange.withAlpha(70)),
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(s.tr('accountType'),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const Text('نوع الحساب',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
               const SizedBox(height: 14),
               _typeOption(s, 'agent', s.isArabic ? 'وكيل معتمد' : 'Certified agent'),
               const SizedBox(height: 10),
@@ -338,7 +321,9 @@ class _LoginScreenState extends State<LoginScreen>
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.tr(t), style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text(s.tr(t),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, color: Colors.white)),
               Text(sub,
                   style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
             ]),
@@ -357,9 +342,11 @@ class _LoginScreenState extends State<LoginScreen>
         keyboardType: keyboard,
         maxLength: maxLength,
         obscureText: obscure,
+        style: const TextStyle(color: Colors.white),
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
           hintText: s.tr(hintKey),
+          hintStyle: TextStyle(color: Colors.grey.shade500),
           prefixIcon: Icon(ic, color: Colors.white70),
           suffixIcon: suffix,
           enabledBorder: OutlineInputBorder(
@@ -379,7 +366,7 @@ class _LoginScreenState extends State<LoginScreen>
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: const Color(0xFF1B1B21),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: AppColors.orange.withAlpha(70)),
             ),
@@ -398,7 +385,10 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               const SizedBox(height: 16),
               Text(s.tr('createAccount'),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white)),
               const SizedBox(height: 10),
               RichText(
                 textAlign: TextAlign.center,
