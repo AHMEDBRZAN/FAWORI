@@ -16,7 +16,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _banner = 0;
-  final PageController _controller = PageController();
+  static const int _startPage = 5000;
+  final PageController _controller = PageController(initialPage: _startPage);
   Timer? _timer;
 
   static const _bannerImages = [
@@ -25,6 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
     'assets/images/as3.PNG',
     'assets/images/as4.PNG',
   ];
+
+  int get _count => _bannerImages.length;
 
   @override
   void initState() {
@@ -36,8 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     _timer = Timer.periodic(const Duration(seconds: 7), (_) {
       if (!_controller.hasClients) return;
-      final next = (_banner + 1) % _bannerImages.length;
-      _controller.animateToPage(next,
+      _controller.nextPage(
           duration: const Duration(milliseconds: 900),
           curve: Curves.easeInOut);
     });
@@ -132,14 +134,14 @@ class _HomeScreenState extends State<HomeScreen> {
         height: 230,
         child: PageView.builder(
           controller: _controller,
-          itemCount: _bannerImages.length,
-          onPageChanged: (i) => setState(() => _banner = i),
+          itemCount: 10000,
+          onPageChanged: (i) => setState(() => _banner = i % _count),
           itemBuilder: (_, i) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(26),
               child: Image.asset(
-                _bannerImages[i],
+                _bannerImages[i % _count],
                 fit: BoxFit.cover,
                 width: double.infinity,
                 errorBuilder: (_, __, ___) => Container(
@@ -163,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.only(top: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_bannerImages.length, (i) {
+          children: List.generate(_count, (i) {
             final active = i == _banner;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
