@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/theme.dart';
+import 'pressable.dart';
 
 class BottomNav extends StatelessWidget {
   final int index;
@@ -20,7 +21,7 @@ class BottomNav extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Colors.grey.shade800)),
+        border: Border(top: BorderSide(color: AppTheme.border(context))),
       ),
       child: SafeArea(
         top: false,
@@ -32,7 +33,7 @@ class BottomNav extends StatelessWidget {
               final locked = s.isGuest && (i == 2 || i == 3);
               final color = active ? AppColors.orange : Colors.grey;
               return Expanded(
-                child: InkWell(
+                child: Pressable(
                   onTap: () => onTap(i),
                   child: Opacity(
                     opacity: locked ? 0.45 : 1,
