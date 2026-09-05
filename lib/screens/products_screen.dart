@@ -7,6 +7,7 @@ import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/gifts_view.dart';
+import '../widgets/pressable.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -74,21 +75,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Widget _segBtn(String t, IconData ic, bool isProducts) {
     final active = _productsTab == isProducts;
-    return InkWell(
+    return Pressable(
       onTap: () => setState(() => _productsTab = isProducts),
-      borderRadius: BorderRadius.circular(14),
       child: Container(
         height: 54,
         decoration: BoxDecoration(
           color: active ? AppColors.orange : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: active ? Colors.transparent : AppTheme.border(context)),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(ic, color: active ? Colors.black : Colors.grey, size: 22),
           const SizedBox(width: 8),
           Text(t,
               style: TextStyle(
-                  color: active ? Colors.black : Colors.white,
+                  color: active ? Colors.black : AppTheme.text(context),
                   fontWeight: FontWeight.w700)),
         ]),
       ),
@@ -102,13 +104,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: TextField(
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: s.tr('searchProduct'),
-              prefixIcon: const Icon(Icons.search_rounded),
+              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
             ),
           ),
         ),
@@ -124,19 +127,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
           itemBuilder: (_, i) {
             final b = _brands[i];
             final active = b == _brand;
-            return InkWell(
+            return Pressable(
               onTap: () => setState(() => _brand = b),
-              borderRadius: BorderRadius.circular(12),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 22),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: active ? AppColors.orange : Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: active ? Colors.transparent : AppTheme.border(context)),
                 ),
                 child: Text(s.tr('brand_$b'),
                     style: TextStyle(
-                        color: active ? Colors.black : Colors.white,
+                        color: active ? Colors.black : AppTheme.text(context),
                         fontWeight: FontWeight.w700)),
               ),
             );
@@ -154,7 +158,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           itemBuilder: (_, i) {
             final c = _cats[i];
             final active = c == _category;
-            return InkWell(
+            return Pressable(
               onTap: () => setState(() => _category = c),
               child: Container(
                 width: 110,
@@ -163,7 +167,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                      color: active ? AppColors.orange : Colors.transparent, width: 1.5),
+                      color: active ? AppColors.orange : AppTheme.border(context),
+                      width: active ? 1.5 : 1),
                 ),
                 child: Column(children: [
                   Expanded(
@@ -203,53 +208,56 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget _productCard(Product p) {
     final favs = context.watch<Favorites>();
     final isFav = favs.contains(p.id);
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(children: [
-        Stack(children: [
-          Container(
-            height: 170,
-            margin: const EdgeInsets.all(10),
-            decoration:
-                BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child: const Center(child: FaworiLogo(size: 90)),
-          ),
-          PositionedDirectional(
-            top: 8,
-            start: 8,
-            child: IconButton(
-              style: IconButton.styleFrom(
-                  backgroundColor: Colors.black26, shape: const CircleBorder()),
-              icon: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: isFav ? AppColors.red : Colors.white, size: 20),
-              onPressed: () {
-                final s = context.read<AppSettings>();
-                if (s.isGuest) {
-                  showLockedDialog(context, s);
-                  return;
-                }
-                favs.toggle(p.id);
-              },
+    return Pressable(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.border(context)),
+        ),
+        child: Column(children: [
+          Stack(children: [
+            Container(
+              height: 170,
+              margin: const EdgeInsets.all(10),
+              decoration:
+                  BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: const Center(child: FaworiLogo(size: 90)),
             ),
+            PositionedDirectional(
+              top: 8,
+              start: 8,
+              child: IconButton(
+                style: IconButton.styleFrom(
+                    backgroundColor: Colors.black26, shape: const CircleBorder()),
+                icon: Icon(isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: isFav ? AppColors.red : Colors.white, size: 20),
+                onPressed: () {
+                  final s = context.read<AppSettings>();
+                  if (s.isGuest) {
+                    showLockedDialog(context, s);
+                    return;
+                  }
+                  favs.toggle(p.id);
+                },
+              ),
+            ),
+          ]),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(p.desc,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
           ),
         ]),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-        ),
-        const SizedBox(height: 6),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(p.desc,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-        ),
-      ]),
+      ),
     );
   }
 }
