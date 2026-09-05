@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
+import '../widgets/pressable.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onOpenProducts;
@@ -88,6 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.border(context)),
               ),
               child: Center(
                 child: ClipRRect(
@@ -104,13 +106,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     .titleLarge
                     ?.copyWith(fontWeight: FontWeight.w800)),
             const Spacer(),
-            IconButton(
-              style: IconButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            Pressable(
+              onTap: () {},
+              child: Container(
+                width: 54, height: 54,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.border(context)),
+                ),
+                child: const Icon(Icons.notifications_none_rounded),
               ),
-              icon: const Icon(Icons.notifications_none_rounded),
-              onPressed: () {},
             ),
           ],
         ),
@@ -151,15 +157,24 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.only(top: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_bannerImages.length, (i) => AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                width: 10, height: 10,
-                decoration: BoxDecoration(
-                  color: i == _banner ? AppColors.orange : Colors.grey.shade300,
-                  shape: BoxShape.circle,
-                ),
-              )),
+          children: List.generate(_bannerImages.length, (i) {
+            final active = i == _banner;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutBack,
+              margin: const EdgeInsets.symmetric(horizontal: 5),
+              width: active ? 26 : 10,
+              height: 10,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                gradient: active
+                    ? const LinearGradient(
+                        colors: [Color(0xFFF26B0F), AppColors.orange])
+                    : null,
+                color: active ? null : Colors.grey.shade400,
+              ),
+            );
+          }),
         ),
       );
 
@@ -179,15 +194,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _quickBtn(String t, IconData ic, Color c, VoidCallback? onTap) => InkWell(
+  Widget _quickBtn(String t, IconData ic, Color c, VoidCallback? onTap) => Pressable(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
         child: Container(
           height: 58,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.border(context)),
           ),
           child: Row(children: [
             Expanded(
@@ -212,38 +227,42 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _categoryCard(AppSettings s, _Category c) => Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: c.color.withAlpha(31),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: c.useLogo
-                      ? const FaworiLogo(size: 80)
-                      : Text(c.latin,
-                          style: TextStyle(color: c.color, fontWeight: FontWeight.w800, fontSize: 18)),
+  Widget _categoryCard(AppSettings s, _Category c) => Pressable(
+        onTap: widget.onOpenProducts,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppTheme.border(context)),
+          ),
+          child: Column(
+            children: [
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: c.color.withAlpha(31),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: c.useLogo
+                        ? const FaworiLogo(size: 80)
+                        : Text(c.latin,
+                            style: TextStyle(color: c.color, fontWeight: FontWeight.w800, fontSize: 18)),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(
-                  child: Center(
-                      child: Text(s.tr(c.trKey),
-                          style: const TextStyle(fontWeight: FontWeight.w700)))),
-              Icon(c.icon, color: Colors.grey.shade400, size: 20),
-            ]),
-          ],
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                    child: Center(
+                        child: Text(s.tr(c.trKey),
+                            style: const TextStyle(fontWeight: FontWeight.w700)))),
+                Icon(c.icon, color: Colors.grey.shade400, size: 20),
+              ]),
+            ],
+          ),
         ),
       );
 }
