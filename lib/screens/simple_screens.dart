@@ -79,55 +79,61 @@ class _WalletScreenState extends State<WalletScreen> {
                     padding: const EdgeInsets.only(top: 30),
                     child: Center(
                         child: Text(
-                            s.isArabic
-                                ? 'لا توجد فواتير بعد'
-                                : 'No invoices yet',
+                            s.isArabic ? 'لا توجد فواتير بعد' : 'No invoices yet',
                             style: const TextStyle(color: Colors.grey))),
                   )
                 else
-                  ...mine.map((inv) => Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.border(context)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(children: [
-                              Text(inv.date,
-                                  style: TextStyle(
-                                      color: Colors.grey.shade400, fontSize: 12)),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: AppColors.orange.withAlpha(40),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text('+${inv.points}',
-                                    style: const TextStyle(
-                                        color: AppColors.orange,
-                                        fontWeight: FontWeight.w800)),
+                  ...mine.map((inv) {
+                    final neg = inv.points < 0;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.border(context)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Text(
+                                '${inv.type == 'return' ? (s.isArabic ? 'مرتجع' : 'Return') : (s.isArabic ? 'مبيع' : 'Sale')}  •  ${inv.date}',
+                                style: TextStyle(
+                                    color: neg ? Colors.red.shade300 : Colors.grey.shade400,
+                                    fontSize: 12)),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: neg
+                                    ? Colors.red.withAlpha(40)
+                                    : AppColors.orange.withAlpha(40),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                            ]),
-                            const SizedBox(height: 8),
-                            Text(
-                                inv.items
-                                    .map((e) => '${e.name} (${e.price.toStringAsFixed(0)})')
-                                    .join('، '),
-                                style: const TextStyle(fontSize: 13)),
-                            const SizedBox(height: 8),
-                            Text(
-                                '${s.isArabic ? 'الإجمالي' : 'Total'}: ${inv.total.toStringAsFixed(0)}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700, fontSize: 13)),
-                          ],
-                        ),
-                      )),
+                              child: Text(
+                                  neg ? '${inv.points}' : '+${inv.points}',
+                                  style: TextStyle(
+                                      color: neg ? Colors.red.shade300 : AppColors.orange,
+                                      fontWeight: FontWeight.w800)),
+                            ),
+                          ]),
+                          const SizedBox(height: 8),
+                          Text(
+                              inv.items
+                                  .map((e) => '${e.name} (${e.price.toStringAsFixed(0)})')
+                                  .join('، '),
+                              style: const TextStyle(fontSize: 13)),
+                          const SizedBox(height: 8),
+                          Text(
+                              '${s.isArabic ? 'الإجمالي' : 'Total'}: ${inv.total.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 13)),
+                        ],
+                      ),
+                    );
+                  }),
               ],
             );
           },
