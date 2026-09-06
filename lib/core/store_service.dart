@@ -34,7 +34,7 @@ class InvoiceItem {
 }
 
 class Invoice {
-  final String id, userId, date;
+  final String id, userId, date, type;
   final double total;
   final int points;
   final List<InvoiceItem> items;
@@ -43,6 +43,7 @@ class Invoice {
     required this.id,
     required this.userId,
     required this.date,
+    required this.type,
     required this.total,
     required this.points,
     required this.items,
@@ -52,6 +53,7 @@ class Invoice {
         id: j['id']?.toString() ?? '',
         userId: j['userId']?.toString() ?? '',
         date: j['date'] ?? '',
+        type: j['type']?.toString() ?? 'sale',
         total: (j['total'] as num?)?.toDouble() ?? 0,
         points: (j['points'] as num?)?.toInt() ?? 0,
         items: (j['items'] as List<dynamic>? ?? [])
