@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
-import '../core/github_admin.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
-import 'admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -39,10 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _doLogin(AppSettings s) async {
     if (_type == 'guest') {
       s.loginAsGuest();
-      return;
-    }
-    if (_phone.text.trim() == '1997' && _pass.text == '2000') {
-      s.loginAsAdmin();
       return;
     }
     final users = await StoreService.loadUsers();
@@ -81,10 +75,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       children: [
                         _pill(Icons.language_rounded, AppColors.teal,
-                            s.isArabic ? 'English' : 'العربية', s.toggleLanguage, null),
+                            s.isArabic ? 'English' : 'العربية', s.toggleLanguage),
                         const SizedBox(width: 10),
                         _pill(Icons.nightlight_round, AppColors.orange,
-                            s.tr('darkMode'), s.toggleDark, _openAdmin),
+                            s.tr('darkMode'), s.toggleDark),
                       ],
                     ),
                     const SizedBox(height: 36),
@@ -116,11 +110,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
-  Widget _pill(IconData ic, Color c, String label, VoidCallback onTap,
-          VoidCallback? onLongPress) =>
-      Pressable(
+  Widget _pill(IconData ic, Color c, String label, VoidCallback onTap) => Pressable(
         onTap: onTap,
-        onLongPress: onLongPress,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
@@ -305,9 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text(s.tr('accountType'),
                   style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white)),
+                      fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
               const SizedBox(height: 14),
               _typeOption(s, 'agent', s.isArabic ? 'وكيل معتمد' : 'Certified agent'),
               const SizedBox(height: 10),
@@ -343,8 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(s.tr(t),
                   style: const TextStyle(
                       fontWeight: FontWeight.w800, color: Colors.white)),
-              Text(sub,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              Text(sub, style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
             ]),
           ),
           if (selected)
@@ -453,20 +441,4 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       );
-
-  Future<void> _openAdmin() async {
-    final s = context.read<AppSettings>();
-    var token = await GitHubAdmin.getToken();
-    if (token == null || token.isEmpty) {
-      token = await askTokenDialog(context, s);
-      if (token == null || token.isEmpty) return;
-      await GitHubAdmin.saveToken(token);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(s.tr('tokenSaved'))));
-    }
-    if (!mounted) return;
-    Navigator.push(
-        context, MaterialPageRoute(builder: (_) => AdminScreen(token: token!)));
-  }
 }
