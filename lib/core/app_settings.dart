@@ -16,6 +16,7 @@ class AppSettings extends ChangeNotifier {
   bool get isGuest => _isGuest;
   User? get user => _user;
   int get points => _user?.points ?? 0;
+  int get stored => _user?.stored ?? 0;
 
   /// استعادة الجلسة المحفوظة عند فتح التطبيق
   Future<void> restoreSession() async {
