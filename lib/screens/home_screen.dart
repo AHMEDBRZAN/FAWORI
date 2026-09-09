@@ -40,8 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _timer = Timer.periodic(const Duration(seconds: 7), (_) {
       if (!_controller.hasClients) return;
       _controller.nextPage(
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 900), curve: Curves.easeInOut);
     });
   }
 
@@ -60,6 +59,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _Category('brand_sibax', 'SIBAX', Color(0xFFC9A227), Icons.build_rounded, false),
     _Category('certifiedAgents', 'AGENTS', Color(0xFF4C8DF5), Icons.people_alt_rounded, false),
   ];
+
+  /// في الوضع الفاتح: أي لون فاتح جداً يُستبدل بحبر داكن ليظل مقروءاً
+  Color _latinColor(Color c) {
+    if (Theme.of(context).brightness == Brightness.dark) return c;
+    final lum = (0.2126 * c.red + 0.7152 * c.green + 0.0722 * c.blue) / 255;
+    return lum > 0.75 ? AppColors.ink : c;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           children: [
             Container(
-              width: 54, height: 54,
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
@@ -117,7 +124,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Pressable(
               onTap: () {},
               child: Container(
-                width: 54, height: 54,
+                width: 54,
+                height: 54,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
@@ -188,16 +196,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _sectionTitle(String t) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-        child: Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        child:
+            Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
       );
 
   Widget _quickAccess(AppSettings s) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            Expanded(child: _quickBtn(s.tr('products'), Icons.inventory_2_rounded, AppColors.orange, widget.onOpenProducts)),
+            Expanded(
+                child: _quickBtn(s.tr('products'), Icons.inventory_2_rounded,
+                    AppColors.orange, widget.onOpenProducts)),
             const SizedBox(width: 12),
-            Expanded(child: _quickBtn(s.tr('gifts'), Icons.redeem_rounded, AppColors.teal, widget.onOpenProducts)),
+            Expanded(
+                child: _quickBtn(s.tr('gifts'), Icons.redeem_rounded, AppColors.teal,
+                    widget.onOpenProducts)),
           ],
         ),
       );
@@ -215,7 +228,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(children: [
             Expanded(
                 child: Center(
-                    child: Text(t, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)))),
+                    child: Text(t,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 16)))),
             Icon(ic, color: c, size: 26),
           ]),
         ),
@@ -227,7 +242,9 @@ class _HomeScreenState extends State<HomeScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14,
+            crossAxisCount: 2,
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
             childAspectRatio: 0.85,
           ),
           itemCount: _categories.length,
@@ -257,7 +274,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: c.useLogo
                         ? const FaworiLogo(size: 80)
                         : Text(c.latin,
-                            style: TextStyle(color: c.color, fontWeight: FontWeight.w800, fontSize: 18)),
+                            style: TextStyle(
+                                color: _latinColor(c.color),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18)),
                   ),
                 ),
               ),
