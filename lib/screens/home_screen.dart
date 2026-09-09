@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
       for (final p in _bannerImages) {
         precacheImage(AssetImage(p), context);
       }
+      precacheImage(const AssetImage('assets/images/logo.png'), context);
     });
     _timer = Timer.periodic(const Duration(seconds: 7), (_) {
       if (!_controller.hasClients) return;
@@ -60,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _Category('certifiedAgents', 'AGENTS', Color(0xFF4C8DF5), Icons.people_alt_rounded, false),
   ];
 
-  /// في الوضع الفاتح: أي لون فاتح جداً يُستبدل بحبر داكن ليظل مقروءاً
   Color _latinColor(Color c) {
     if (Theme.of(context).brightness == Brightness.dark) return c;
     final lum = (0.2126 * c.red + 0.7152 * c.green + 0.0722 * c.blue) / 255;
@@ -110,7 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.asset('assets/images/logo.png',
-                      width: 40, height: 40, fit: BoxFit.cover),
+                      width: 40, height: 40, fit: BoxFit.cover,
+                      gaplessPlayback: true),
                 ),
               ),
             ),
@@ -152,6 +153,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 _bannerImages[i % _count],
                 fit: BoxFit.cover,
                 width: double.infinity,
+                gaplessPlayback: true,
+                frameBuilder: (ctx, child, frame, wasSync) {
+                  if (wasSync) return child;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        color: Theme.of(ctx).colorScheme.surface,
+                        child: Center(
+                          child: Icon(Icons.image_outlined,
+                              color: Colors.grey.shade600, size: 40),
+                        ),
+                      ),
+                      AnimatedOpacity(
+                        opacity: frame == null ? 0 : 1,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOut,
+                        child: child,
+                      ),
+                    ],
+                  );
+                },
                 errorBuilder: (_, __, ___) => Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(26),
