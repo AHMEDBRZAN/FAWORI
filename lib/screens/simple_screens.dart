@@ -313,6 +313,20 @@ class _WalletScreenState extends State<WalletScreen> {
                       fontWeight: FontWeight.w900,
                       fontSize: 15)),
             ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Text(
+                  s.isArabic
+                      ? 'رصيد مخزن من هذه الفاتورة'
+                      : 'Stored from this invoice',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const Spacer(),
+              Text(_fmt(inv.stored),
+                  style: const TextStyle(
+                      color: AppColors.teal,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15)),
+            ]),
             const SizedBox(height: 14),
           ],
         ),
