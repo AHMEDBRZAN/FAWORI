@@ -1,23 +1,40 @@
-name: fawori_company
-description: تطبيق شركة فاوري
-publish_to: 'none'
-version: 1.0.0+1
-
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-
-dependencies:
-  flutter:
-    sdk: flutter
-  flutter_localizations:
-    sdk: flutter
-  provider: ^6.1.2
-  http: ^1.2.0
-  shared_preferences: ^2.2.0
-  image_picker: ^1.1.2
-
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/images/
-    - assets/data/
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>شركة فاوري</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html { background: #141419; }
+    body { margin: 0; padding: 0; width: 100%; height: 100%; background: #141419; overflow: hidden; position: fixed; inset: 0; overscroll-behavior: none; }
+    #splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #141419; z-index: 9999; transition: opacity .6s ease; }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    .logoBox { width: 160px; height: 160px; border-radius: 38px; overflow: hidden; background: #000; border: 2px solid rgba(232,163,61,.55); animation: pulse 2s ease-in-out infinite; }
+    .logoBox img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .5s ease; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(232,163,61,.35); } 50% { transform: scale(1.04); box-shadow: 0 0 60px rgba(62,198,192,.45); } }
+    .title { margin-top: 26px; font-size: 26px; font-weight: 800; background: linear-gradient(90deg, #E8A33D, #3EC6C0); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: system-ui, sans-serif; }
+    .loader { margin-top: 28px; width: 46px; height: 46px; border: 3px solid rgba(232,163,61,.2); border-top-color: #E8A33D; border-right-color: #3EC6C0; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div class="logoBox">
+      <img src="assets/assets/images/logo.png" alt="FAWORI" onload="this.style.opacity=1">
+    </div>
+    <div class="title">شركة فاوري</div>
+    <div class="loader"></div>
+  </div>
+  <script>
+    function hideSplash() {
+      var s = document.getElementById('splash');
+      if (s) { s.classList.add('hide'); setTimeout(function () { s.remove(); }, 700); }
+    }
+    window.addEventListener('flutter-first-frame', hideSplash);
+    setTimeout(hideSplash, 8000);
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
