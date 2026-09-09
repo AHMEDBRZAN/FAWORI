@@ -7,13 +7,18 @@ import 'core/theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 
-void main() => runApp(MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppSettings()),
-        ChangeNotifierProvider(create: (_) => Favorites()),
-      ],
-      child: const FaworiApp(),
-    ));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final settings = AppSettings();
+  await settings.restoreSession();
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: settings),
+      ChangeNotifierProvider(create: (_) => Favorites()),
+    ],
+    child: const FaworiApp(),
+  ));
+}
 
 class FaworiApp extends StatelessWidget {
   const FaworiApp({super.key});
@@ -21,17 +26,17 @@ class FaworiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
     return MaterialApp(
-      title: 'شركة فاوري',
+      title: 'Fawori',
       debugShowCheckedModeBanner: false,
-      locale: Locale(s.isArabic ? 'ar' : 'en'),
+      theme: s.isDark ? AppTheme.dark() : AppTheme.light(),
+      locale: s.isArabic ? const Locale('ar') : const Locale('en'),
       supportedLocales: const [Locale('ar'), Locale('en')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      home: Consumer<AppSettings>(
-        builder: (_, s, __) => s.isLoggedIn ? const MainScreen() : const LoginScreen(),
-      ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: s.isLoggedIn ? const MainScreen() : const LoginScreen(),
     );
   }
 }
