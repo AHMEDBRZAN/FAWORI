@@ -13,10 +13,55 @@ class WalletScreen extends StatefulWidget {
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
-class _WalletScreenState extends State<WalletScreen> {
+class _WalletScreenState extends State<WalletScreen>
+    with WidgetsBindingObserver {
   static const int unit = 125000;
   late Future<List<Invoice>> _future = StoreService.loadInvoices();
   bool _refreshing = false;
+  String _sig = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(silent: true));
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// تحديث تلقائي عند الرجوع للتطبيق
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh(silent: true);
+  }
+
+  Future<void> _refresh({bool silent = false}) async {
+    if (_refreshing || !mounted) return;
+    setState(() => _refreshing = true);
+    final s = context.read<AppSettings>();
+    await s.refreshUser();
+    final invs = await StoreService.loadInvoices();
+    final mine = invs.where((i) => i.userId == s.user?.id).toList();
+    final sig =
+        '${s.points}|${s.stored}|${mine.length}|${mine.fold<int>(0, (a, b) => a + b.points)}';
+    final changed = sig != _sig;
+    if (!mounted) return;
+    setState(() {
+      _sig = sig;
+      _future = Future.value(invs);
+      _refreshing = false;
+    });
+    if (!silent || changed) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(changed
+              ? 'تم جلب تحديثات جديدة ✅'
+              : 'المحفظة محدّثة — لا تغييرات')));
+    }
+  }
 
   String _fmt(num n) {
     final s = n.toStringAsFixed(0);
@@ -28,20 +73,6 @@ class _WalletScreenState extends State<WalletScreen> {
       if (c % 3 == 0 && i != 0) out.write(',');
     }
     return out.toString().split('').reversed.join();
-  }
-
-  Future<void> _refreshWallet(AppSettings s) async {
-    if (_refreshing) return;
-    setState(() => _refreshing = true);
-    await s.refreshUser();
-    setState(() {
-      _future = StoreService.loadInvoices();
-      _refreshing = false;
-    });
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم تحديث المحفظة من المستودع ✅')));
-    }
   }
 
   @override
@@ -77,7 +108,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                   const SizedBox(width: 8),
                   Pressable(
-                    onTap: () => _refreshWallet(s),
+                    onTap: () => _refresh(),
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
