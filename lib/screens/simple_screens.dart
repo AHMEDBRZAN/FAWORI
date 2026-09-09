@@ -16,6 +16,7 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   static const int unit = 125000;
   late Future<List<Invoice>> _future = StoreService.loadInvoices();
+  bool _refreshing = false;
 
   String _fmt(num n) {
     final s = n.toStringAsFixed(0);
@@ -27,6 +28,20 @@ class _WalletScreenState extends State<WalletScreen> {
       if (c % 3 == 0 && i != 0) out.write(',');
     }
     return out.toString().split('').reversed.join();
+  }
+
+  Future<void> _refreshWallet(AppSettings s) async {
+    if (_refreshing) return;
+    setState(() => _refreshing = true);
+    await s.refreshUser();
+    setState(() {
+      _future = StoreService.loadInvoices();
+      _refreshing = false;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تحديث المحفظة من المستودع ✅')));
+    }
   }
 
   @override
@@ -47,14 +62,9 @@ class _WalletScreenState extends State<WalletScreen> {
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                Text(s.tr('wallet'),
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 16),
-                _pointsCard(s, u),
-                const SizedBox(height: 24),
                 Row(children: [
-                  Text(s.isArabic ? 'الفواتير' : 'Invoices',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  Text(s.tr('wallet'),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -65,6 +75,34 @@ class _WalletScreenState extends State<WalletScreen> {
                         style: const TextStyle(
                             color: AppColors.orange, fontWeight: FontWeight.w800)),
                   ),
+                  const SizedBox(width: 8),
+                  Pressable(
+                    onTap: () => _refreshWallet(s),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.teal.withAlpha(40),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.teal.withAlpha(90)),
+                      ),
+                      child: _refreshing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: AppColors.teal))
+                          : const Icon(Icons.refresh_rounded,
+                              color: AppColors.teal, size: 18),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                _pointsCard(s, u),
+                const SizedBox(height: 24),
+                Row(children: [
+                  Text(s.isArabic ? 'الفواتير' : 'Invoices',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const Spacer(),
                 ]),
                 const SizedBox(height: 12),
                 if (mine.isEmpty)
