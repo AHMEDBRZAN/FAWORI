@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _showStatus('أدخل رقم الهاتف وكلمة المرور', isError: true);
         return;
       }
-      _showStatus('لإنشاء حساب جديد، يرجى التواصل مع الوكيل المعتمد\nأو تواصل عباس حسين لفتة ', isError: true);
+      _showStatus('لإنشاء حساب جديد، يرجى التواصل مع الوكيل المعتمد\nأو تواصل مع وكيل عباس حسين لفتة ', isError: true);
       return;
     }
 
