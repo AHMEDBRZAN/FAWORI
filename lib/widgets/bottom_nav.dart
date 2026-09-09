@@ -10,8 +10,11 @@ class BottomNav extends StatelessWidget {
   const BottomNav({super.key, required this.index, required this.onTap});
 
   static const _icons = [
-    Icons.home_rounded, Icons.grid_view_rounded,
-    Icons.account_balance_wallet_rounded, Icons.favorite_rounded, Icons.person_rounded,
+    Icons.home_rounded,
+    Icons.grid_view_rounded,
+    Icons.account_balance_wallet_rounded,
+    Icons.favorite_rounded,
+    Icons.person_rounded,
   ];
   static const _keys = ['home', 'products', 'wallet', 'favorites', 'settings'];
 
@@ -32,6 +35,9 @@ class BottomNav extends StatelessWidget {
               final active = i == index;
               final locked = s.isGuest && (i == 2 || i == 3);
               final color = active ? AppColors.orange : Colors.grey;
+              final label = i == 4
+                  ? (s.isArabic ? 'ملف الشخصي' : 'Profile')
+                  : s.tr(_keys[i]);
               return Expanded(
                 child: Pressable(
                   onTap: () => onTap(i),
@@ -41,7 +47,8 @@ class BottomNav extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 24, height: 3,
+                          width: 24,
+                          height: 3,
                           margin: const EdgeInsets.only(bottom: 6),
                           decoration: BoxDecoration(
                             color: active ? AppColors.orange : Colors.transparent,
@@ -54,16 +61,20 @@ class BottomNav extends StatelessWidget {
                             Icon(_icons[i], color: color, size: 24),
                             if (locked)
                               Positioned(
-                                bottom: -2, right: -7,
+                                bottom: -2,
+                                right: -7,
                                 child: Icon(Icons.lock_rounded,
                                     size: 12, color: Colors.grey.shade400),
                               ),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(s.tr(_keys[i]),
-                            style: TextStyle(color: color, fontSize: 12,
-                                fontWeight: active ? FontWeight.w700 : FontWeight.w400)),
+                        Text(label,
+                            style: TextStyle(
+                                color: color,
+                                fontSize: 12,
+                                fontWeight:
+                                    active ? FontWeight.w700 : FontWeight.w400)),
                       ],
                     ),
                   ),
