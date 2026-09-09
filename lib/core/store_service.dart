@@ -1,6 +1,6 @@
 import 'dart:convert';
-
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart' as http;
 
 class User {
   final String id, name, phone, password, role;
@@ -26,6 +26,16 @@ class User {
         points: (j['points'] as num?)?.toInt() ?? 0,
         stored: (j['stored'] as num?)?.toInt() ?? 0,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'phone': phone,
+        'password': password,
+        'role': role,
+        'points': points,
+        'stored': stored,
+      };
 }
 
 class InvoiceItem {
@@ -90,5 +100,17 @@ class StoreService {
     } catch (_) {
       return [];
     }
+  }
+
+  /// إنشاء مستخدم جديد وحفظه في المستودع (يُستخدم من تطبيق الكمبيوتر فقط)
+  /// من الجوال: لا يمكن الكتابة للمستودع مباشرة (يحتاج GitHub API)
+  static Future<bool> createUserLocally({
+    required String phone,
+    required String password,
+    required String role,
+  }) async {
+    // هذه الدالة تعمل محلياً فقط - التطبيق الجوال يقرأ فقط
+    // الإنشاء الفعلي يكون من لوحة الكمبيوتر
+    return false;
   }
 }
