@@ -1,6 +1,9 @@
 import 'dart:convert';
+
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
+
+const String kSiteBase = 'https://ahmedbrzan.github.io/FAWORI';
 
 class User {
   final String id, name, phone, password, role;
@@ -26,16 +29,6 @@ class User {
         points: (j['points'] as num?)?.toInt() ?? 0,
         stored: (j['stored'] as num?)?.toInt() ?? 0,
       );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'phone': phone,
-        'password': password,
-        'role': role,
-        'points': points,
-        'stored': stored,
-      };
 }
 
 class InvoiceItem {
@@ -82,35 +75,49 @@ class Invoice {
 }
 
 class StoreService {
+  /// جلب مباشر من المستودع مع كسر الكاش
+  static Future<String> _fetchRaw(String file) async {
+    final url =
+        '$kSiteBase/assets/assets/data/$file?t=${DateTime.now().millisecondsSinceEpoch}';
+    final r =
+        await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+    if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
+    return r.body;
+  }
+
   static Future<List<User>> loadUsers() async {
     try {
-      final t = await rootBundle.loadString('assets/data/users.json');
+      final t = await _fetchRaw('users.json');
       return (jsonDecode(t) as List<dynamic>)
-          .map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+          .map((e) => User.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
-      return [];
+      try {
+        final t = await rootBundle.loadString('assets/data/users.json');
+        return (jsonDecode(t) as List<dynamic>)
+            .map((e) => User.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        return [];
+      }
     }
   }
 
   static Future<List<Invoice>> loadInvoices() async {
     try {
-      final t = await rootBundle.loadString('assets/data/invoices.json');
+      final t = await _fetchRaw('invoices.json');
       return (jsonDecode(t) as List<dynamic>)
-          .map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
+          .map((e) => Invoice.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
-      return [];
+      try {
+        final t = await rootBundle.loadString('assets/data/invoices.json');
+        return (jsonDecode(t) as List<dynamic>)
+            .map((e) => Invoice.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        return [];
+      }
     }
-  }
-
-  /// إنشاء مستخدم جديد وحفظه في المستودع (يُستخدم من تطبيق الكمبيوتر فقط)
-  /// من الجوال: لا يمكن الكتابة للمستودع مباشرة (يحتاج GitHub API)
-  static Future<bool> createUserLocally({
-    required String phone,
-    required String password,
-    required String role,
-  }) async {
-    // هذه الدالة تعمل محلياً فقط - التطبيق الجوال يقرأ فقط
-    // الإنشاء الفعلي يكون من لوحة الكمبيوتر
-    return false;
   }
 }
