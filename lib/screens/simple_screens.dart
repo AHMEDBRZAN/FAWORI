@@ -5,6 +5,7 @@ import '../core/favorites.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
+import '../widgets/pressable.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -13,67 +14,59 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
+  static const int unit = 125000;
   late Future<List<Invoice>> _future = StoreService.loadInvoices();
+
+  String _fmt(num n) {
+    final s = n.toStringAsFixed(0);
+    final out = StringBuffer();
+    var c = 0;
+    for (var i = s.length - 1; i >= 0; i--) {
+      out.write(s[i]);
+      c++;
+      if (c % 3 == 0 && i != 0) out.write(',');
+    }
+    return out.toString().split('').reversed.join();
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
+    final u = s.user;
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: FutureBuilder<List<Invoice>>(
           future: _future,
           builder: (_, snap) {
-            final all = snap.data ?? [];
-            final mine = all.where((i) => i.userId == s.user?.id).toList();
+            final mine = (snap.data ?? [])
+                .where((i) => i.userId == u?.id)
+                .toList()
+                .reversed
+                .toList();
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
                 Text(s.tr('wallet'),
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [Color(0xFFF26B0F), AppColors.orange]),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Row(children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(50),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.attach_money_rounded,
-                          color: Colors.white, size: 30),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(s.user?.name ?? '',
-                            style: const TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        Text('${s.points}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w900)),
-                      ],
-                    ),
-                    const Spacer(),
-                    Text(s.isArabic ? 'نقطة' : 'points',
+                _pointsCard(s, u),
+                const SizedBox(height: 24),
+                Row(children: [
+                  Text(s.isArabic ? 'الفواتير' : 'Invoices',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: AppColors.orange.withAlpha(40),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Text('${mine.length}',
                         style: const TextStyle(
-                            color: Colors.white70, fontWeight: FontWeight.w700)),
-                  ]),
-                ),
-                const SizedBox(height: 20),
-                Text(s.isArabic ? 'الفواتير' : 'Invoices',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 10),
+                            color: AppColors.orange, fontWeight: FontWeight.w800)),
+                  ),
+                ]),
+                const SizedBox(height: 12),
                 if (mine.isEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 30),
@@ -83,60 +76,245 @@ class _WalletScreenState extends State<WalletScreen> {
                             style: const TextStyle(color: Colors.grey))),
                   )
                 else
-                  ...mine.map((inv) {
-                    final neg = inv.points < 0;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.border(context)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(children: [
-                            Text(
-                                '${inv.type == 'return' ? (s.isArabic ? 'مرتجع' : 'Return') : (s.isArabic ? 'مبيع' : 'Sale')}  •  ${inv.date}',
-                                style: TextStyle(
-                                    color: neg ? Colors.red.shade300 : Colors.grey.shade400,
-                                    fontSize: 12)),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: neg
-                                    ? Colors.red.withAlpha(40)
-                                    : AppColors.orange.withAlpha(40),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                  neg ? '${inv.points}' : '+${inv.points}',
-                                  style: TextStyle(
-                                      color: neg ? Colors.red.shade300 : AppColors.orange,
-                                      fontWeight: FontWeight.w800)),
-                            ),
-                          ]),
-                          const SizedBox(height: 8),
-                          Text(
-                              inv.items
-                                  .map((e) => '${e.name} (${e.price.toStringAsFixed(0)})')
-                                  .join('، '),
-                              style: const TextStyle(fontSize: 13)),
-                          const SizedBox(height: 8),
-                          Text(
-                              '${s.isArabic ? 'الإجمالي' : 'Total'}: ${inv.total.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 13)),
-                        ],
-                      ),
-                    );
-                  }),
+                  ...mine.map((inv) => _tile(s, inv)),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _pointsCard(AppSettings s, User? u) {
+    final stored = u?.stored ?? 0;
+    final remaining = unit - stored;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+            colors: [Color(0xFFF26B0F), AppColors.orange],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+              color: AppColors.orange.withAlpha(70),
+              blurRadius: 24,
+              offset: const Offset(0, 8))
+        ],
+      ),
+      child: Column(children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration:
+                BoxDecoration(color: Colors.white.withAlpha(50), shape: BoxShape.circle),
+            child:
+                const Icon(Icons.attach_money_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(u?.name ?? '',
+                  style: const TextStyle(
+                      color: Colors.white70, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text('${u?.points ?? 0}',
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900)),
+            ]),
+          ),
+          Text(s.isArabic ? 'نقطة' : 'points',
+              style: const TextStyle(
+                  color: Colors.white70, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 18),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: stored / unit,
+            minHeight: 8,
+            backgroundColor: Colors.white.withAlpha(60),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(children: [
+          Text(s.isArabic ? 'رصيد مخزن: ${_fmt(stored)}' : 'Stored: ${_fmt(stored)}',
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+          const Spacer(),
+          Text(
+              s.isArabic
+                  ? 'متبقي ${_fmt(remaining)} للنقطة القادمة'
+                  : '${_fmt(remaining)} to next point',
+              style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _tile(AppSettings s, Invoice inv) {
+    final isRet = inv.type == 'return' || inv.points < 0;
+    return Pressable(
+      onTap: () => _openDetails(s, inv),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.border(context)),
+        ),
+        child: Column(children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                  color: isRet ? Colors.red.withAlpha(35) : AppColors.teal.withAlpha(35),
+                  borderRadius: BorderRadius.circular(8)),
+              child: Text(
+                  isRet
+                      ? (s.isArabic ? 'مرتجع' : 'Return')
+                      : (s.isArabic ? 'شراء' : 'Purchase'),
+                  style: TextStyle(
+                      color: isRet ? Colors.red.shade300 : AppColors.teal,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(width: 8),
+            Text(inv.date,
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                  color: isRet
+                      ? Colors.red.withAlpha(35)
+                      : AppColors.orange.withAlpha(40),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Text(inv.points < 0 ? '${inv.points}' : '+${inv.points}',
+                  style: TextStyle(
+                      color: isRet ? Colors.red.shade300 : AppColors.orange,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12)),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Text('${inv.items.length} ${s.isArabic ? 'مادة' : 'items'}',
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+            const Spacer(),
+            Text(_fmt(inv.total),
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  void _openDetails(AppSettings s, Invoice inv) {
+    final isRet = inv.type == 'return' || inv.points < 0;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: AppTheme.border(context)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 46,
+              height: 5,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade600, borderRadius: BorderRadius.circular(3)),
+            ),
+            const SizedBox(height: 16),
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                    color: isRet
+                        ? Colors.red.withAlpha(35)
+                        : AppColors.teal.withAlpha(35),
+                    borderRadius: BorderRadius.circular(10)),
+                child: Text(
+                    isRet
+                        ? (s.isArabic ? 'مرتجع' : 'Return')
+                        : (s.isArabic ? 'شراء' : 'Purchase'),
+                    style: TextStyle(
+                        color: isRet ? Colors.red.shade300 : AppColors.teal,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12)),
+              ),
+              const SizedBox(width: 10),
+              Text(inv.date,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              const Spacer(),
+              Text(
+                  '#${inv.id.length > 6 ? inv.id.substring(inv.id.length - 6) : inv.id}',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+            ]),
+            const SizedBox(height: 14),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: inv.items.length,
+                separatorBuilder: (_, __) => const Divider(height: 10),
+                itemBuilder: (_, i) {
+                  final it = inv.items[i];
+                  return Row(children: [
+                    Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(it.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700, fontSize: 13)),
+                            const SizedBox(height: 2),
+                            Text('${it.qty} × ${_fmt(it.price)}',
+                                style: TextStyle(
+                                    color: Colors.grey.shade400, fontSize: 11)),
+                          ]),
+                    ),
+                    Text(_fmt(it.price * it.qty),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 13)),
+                  ]);
+                },
+              ),
+            ),
+            const Divider(height: 18),
+            Row(children: [
+              Text(s.isArabic ? 'الإجمالي' : 'Total',
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              const Spacer(),
+              Text(_fmt(inv.total),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 17,
+                      color: AppColors.orange)),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Text(s.isArabic ? 'نقاط هذه الفاتورة' : 'Invoice points',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const Spacer(),
+              Text(inv.points < 0 ? '${inv.points}' : '+${inv.points}',
+                  style: TextStyle(
+                      color: inv.points < 0 ? Colors.red.shade300 : AppColors.teal,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15)),
+            ]),
+            const SizedBox(height: 14),
+          ],
         ),
       ),
     );
