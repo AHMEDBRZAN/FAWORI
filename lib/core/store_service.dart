@@ -43,6 +43,7 @@ class Invoice {
   final String id, userId, date, type;
   final double total;
   final int points;
+  final int stored;
   final List<InvoiceItem> items;
 
   Invoice({
@@ -53,6 +54,7 @@ class Invoice {
     required this.points,
     required this.items,
     this.type = 'sale',
+    this.stored = 0,
   });
 
   factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(
@@ -62,6 +64,7 @@ class Invoice {
         type: j['type'] ?? 'sale',
         total: (j['total'] as num?)?.toDouble() ?? 0,
         points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
         items: (j['items'] as List<dynamic>? ?? [])
             .map((e) => InvoiceItem.fromJson(e as Map<String, dynamic>))
             .toList(),
