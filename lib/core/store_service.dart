@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 class User {
   final String id, name, phone, password, role;
   final int points;
+  final int stored;
 
   User({
     required this.id,
@@ -13,6 +14,7 @@ class User {
     required this.password,
     required this.role,
     required this.points,
+    this.stored = 0,
   });
 
   factory User.fromJson(Map<String, dynamic> j) => User(
@@ -22,15 +24,19 @@ class User {
         password: j['password']?.toString() ?? '',
         role: j['role'] ?? 'customer',
         points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
       );
 }
 
 class InvoiceItem {
   final String name;
   final double price;
-  InvoiceItem({required this.name, required this.price});
+  final int qty;
+  InvoiceItem({required this.name, required this.price, this.qty = 1});
   factory InvoiceItem.fromJson(Map<String, dynamic> j) => InvoiceItem(
-      name: j['name'] ?? '', price: (j['price'] as num?)?.toDouble() ?? 0);
+      name: j['name'] ?? '',
+      price: (j['price'] as num?)?.toDouble() ?? 0,
+      qty: (j['qty'] as num?)?.toInt() ?? 1);
 }
 
 class Invoice {
@@ -43,17 +49,17 @@ class Invoice {
     required this.id,
     required this.userId,
     required this.date,
-    required this.type,
     required this.total,
     required this.points,
     required this.items,
+    this.type = 'sale',
   });
 
   factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(
         id: j['id']?.toString() ?? '',
         userId: j['userId']?.toString() ?? '',
         date: j['date'] ?? '',
-        type: j['type']?.toString() ?? 'sale',
+        type: j['type'] ?? 'sale',
         total: (j['total'] as num?)?.toDouble() ?? 0,
         points: (j['points'] as num?)?.toInt() ?? 0,
         items: (j['items'] as List<dynamic>? ?? [])
