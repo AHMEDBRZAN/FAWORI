@@ -6,7 +6,7 @@ import '../widgets/bottom_nav.dart';
 import 'home_screen.dart';
 import 'products_screen.dart';
 import 'profile_screen.dart';
-import 'simple_screens.dart';
+import 'simple_screens.dart'; // ← هذا السطر يجلب WalletScreen و FavoritesScreen
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
