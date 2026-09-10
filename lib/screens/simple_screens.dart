@@ -551,7 +551,7 @@ class FavoritesScreen extends StatelessWidget {
                   ),
                 );
               },
-            );
+            ),
     );
   }
 }
