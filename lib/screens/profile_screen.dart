@@ -30,16 +30,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pick() async {
     final f = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 50,
-        maxWidth: 600,
-        maxHeight: 600);
+        source: ImageSource.gallery, imageQuality: 50, maxWidth: 600, maxHeight: 600);
     if (f == null) return;
     final bytes = await f.readAsBytes();
     final b64 = base64Encode(bytes);
     final p = await SharedPreferences.getInstance();
     await p.setString('profile_pic', b64);
     if (mounted) setState(() => _pic = b64);
+  }
+
+  /// تنسيق الأرقام بفواصل: 14000 => 14,000
+  String _fmt(num n) {
+    final s = n.toStringAsFixed(0);
+    final out = StringBuffer();
+    var c = 0;
+    for (var i = s.length - 1; i >= 0; i--) {
+      out.write(s[i]);
+      c++;
+      if (c % 3 == 0 && i != 0) out.write(',');
+    }
+    return out.toString().split('').reversed.join();
   }
 
   @override
@@ -136,7 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _statCard(
                   icon: Icons.stars_rounded,
-                  value: '${u.points}',
+                  value: _fmt(u.points),
                   label: s.isArabic ? 'نقطة' : 'points',
                   colors: const [Color(0xFFF26B0F), AppColors.orange],
                 ),
@@ -145,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _statCard(
                   icon: Icons.savings_rounded,
-                  value: '${u.stored}',
+                  value: _fmt(u.stored),
                   label: s.isArabic ? 'رصيد مخزن' : 'stored',
                   colors: const [Color(0xFF2BAE9E), AppColors.teal],
                 ),
