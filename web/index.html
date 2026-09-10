@@ -4,47 +4,86 @@
   <base href="$FLUTTER_BASE_HREF">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#141419">
   <title>شركة فاوري</title>
   <link rel="manifest" href="manifest.json">
   <style>
-    html { background: #141419; }
+    html {
+      background: #141419;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
     body {
-      margin: 0; padding: 0; width: 100%; height: 100%;
-      background: #141419; overflow: hidden;
-      position: fixed; inset: 0; overscroll-behavior: none;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: fixed;
+      inset: 0;
+      overscroll-behavior: none;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      background: #141419;
+    }
+    canvas {
+      touch-action: none;
+      outline: none;
     }
     #splash {
-      position: fixed; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: #141419; z-index: 9999;
-      transition: opacity 0.6s ease;
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #141419;
+      z-index: 9999;
+      transition: opacity .6s ease;
     }
     #splash.hide { opacity: 0; pointer-events: none; }
     .logoBox {
       width: 160px; height: 160px;
-      border-radius: 38px; overflow: hidden;
+      border-radius: 38px;
+      overflow: hidden;
       background: #000;
       border: 2px solid rgba(232,163,61,.55);
       animation: pulse 2s ease-in-out infinite;
     }
-    .logoBox img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .logoBox img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0;
+      transition: opacity .5s ease;
+    }
     @keyframes pulse {
       0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(232,163,61,.35); }
       50% { transform: scale(1.04); box-shadow: 0 0 60px rgba(62,198,192,.45); }
     }
     .title {
       margin-top: 26px;
-      font-size: 26px; font-weight: 800;
+      font-size: 26px;
+      font-weight: 800;
       background: linear-gradient(90deg, #E8A33D, #3EC6C0);
-      -webkit-background-clip: text; background-clip: text;
+      -webkit-background-clip: text;
+      background-clip: text;
       color: transparent;
       font-family: system-ui, sans-serif;
     }
     .loader {
-      margin-top: 28px; width: 46px; height: 46px;
+      margin-top: 28px;
+      width: 46px; height: 46px;
       border: 3px solid rgba(232,163,61,.2);
-      border-top-color: #E8A33D; border-right-color: #3EC6C0;
+      border-top-color: #E8A33D;
+      border-right-color: #3EC6C0;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -54,7 +93,7 @@
 <body>
   <div id="splash">
     <div class="logoBox">
-      <img src="assets/assets/images/logo.png" alt="FAWORI">
+      <img src="assets/assets/images/logo.png" alt="FAWORI" onload="this.style.opacity=1">
     </div>
     <div class="title">شركة فاوري</div>
     <div class="loader"></div>
@@ -66,6 +105,9 @@
     }
     window.addEventListener('flutter-first-frame', hideSplash);
     setTimeout(hideSplash, 8000);
+    // منع أي سحب أو زوم على مستوى الصفحة
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+    document.addEventListener('dblclick', function (e) { e.preventDefault(); });
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
