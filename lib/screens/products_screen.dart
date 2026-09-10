@@ -229,15 +229,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               margin: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                   color: Colors.white, borderRadius: BorderRadius.circular(12)),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  p.image,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const Center(child: FaworiLogo(size: 90)),
-                ),
-              ),
+              child: const Center(child: FaworiLogo(size: 90)),
             ),
             PositionedDirectional(
               top: 8,
