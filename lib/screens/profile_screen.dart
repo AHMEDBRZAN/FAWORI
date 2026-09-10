@@ -39,12 +39,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() => _pic = b64);
   }
 
-  /// تنسيق الأرقام بفواصل: 14000 => 14,000
   String _fmt(num n) {
     final s = n.toStringAsFixed(0);
     final out = StringBuffer();
-    var c = 0;
-    for (var i = s.length - 1; i >= 0; i--) {
+    int c = 0;
+    for (int i = s.length - 1; i >= 0; i--) {
       out.write(s[i]);
       c++;
       if (c % 3 == 0 && i != 0) out.write(',');
@@ -77,8 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.orange, width: 3),
                       boxShadow: [
-                        BoxShadow(
-                            color: AppColors.orange.withAlpha(60), blurRadius: 24)
+                        BoxShadow(color: AppColors.orange.withAlpha(60), blurRadius: 24)
                       ],
                     ),
                     child: ClipOval(
@@ -136,9 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ? (s.isArabic ? 'صباغ' : 'Painter')
                             : (s.isArabic ? 'عميل' : 'Customer'),
                     style: const TextStyle(
-                        color: AppColors.teal,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12)),
+                        color: AppColors.teal, fontWeight: FontWeight.w700, fontSize: 12)),
               ),
             ),
             const SizedBox(height: 24),
@@ -198,9 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-              colors: colors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight),
+              colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
