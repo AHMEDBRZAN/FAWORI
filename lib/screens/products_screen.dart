@@ -1,280 +1,224 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../core/app_settings.dart';
-import '../core/favorites.dart';
-import '../core/locked_dialog.dart';
-import '../core/theme.dart';
-import '../data/sample_data.dart';
-import '../widgets/fawori_logo.dart';
-import '../widgets/gifts_view.dart';
-import '../widgets/pressable.dart';
+import 'dart:convert';
 
-class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key});
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../core/app_settings.dart';
+import '../core/theme.dart';
+import 'settings_screen.dart';
+
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
   @override
-  State<ProductsScreen> createState() => _ProductsScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> {
-  bool _productsTab = true;
-  String _brand = 'fawori';
-  String _category = 'all';
-  String _query = '';
+class _ProfileScreenState extends State<ProfileScreen> {
+  String? _pic;
 
-  final List<String> _brands = ['fawori', 'isomat', 'cadence', 'sibax'];
-  final List<String> _cats = ['all', 'primers', 'interior', 'exterior'];
+  @override
+  void initState() {
+    super.initState();
+    _loadPic();
+  }
 
-  List<Product> get _filtered => sampleProducts
-      .where((p) =>
-          p.brand == _brand &&
-          (_category == 'all' || p.category == _category) &&
-          p.name.contains(_query))
-      .toList();
+  Future<void> _loadPic() async {
+    final p = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _pic = p.getString('profile_pic'));
+  }
+
+  Future<void> _pick() async {
+    final f = await ImagePicker().pickImage(
+        source: ImageSource.gallery, imageQuality: 50, maxWidth: 600, maxHeight: 600);
+    if (f == null) return;
+    final bytes = await f.readAsBytes();
+    final b64 = base64Encode(bytes);
+    final p = await SharedPreferences.getInstance();
+    await p.setString('profile_pic', b64);
+    if (mounted) setState(() => _pic = b64);
+  }
+
+  /// تنسيق الأرقام بفواصل: 14000 => 14,000
+  String _fmt(num n) {
+    final s = n.toStringAsFixed(0);
+    final out = StringBuffer();
+    var c = 0;
+    for (var i = s.length - 1; i >= 0; i--) {
+      out.write(s[i]);
+      c++;
+      if (c % 3 == 0 && i != 0) out.write(',');
+    }
+    return out.toString().split('').reversed.join();
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
+    if (s.user == null) return const SettingsScreen();
+    final u = s.user!;
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
           children: [
+            Text(s.isArabic ? 'ملف الشخصي' : 'Profile',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 24),
+            Center(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 116,
+                    height: 116,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.orange, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppColors.orange.withAlpha(60), blurRadius: 24)
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: _pic != null
+                          ? Image.memory(base64Decode(_pic!), fit: BoxFit.cover)
+                          : Container(
+                              color: AppColors.orange.withAlpha(30),
+                              child: const Icon(Icons.person_rounded,
+                                  size: 60, color: AppColors.orange),
+                            ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -4,
+                    right: -4,
+                    child: InkWell(
+                      onTap: _pick,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.teal,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.photo_camera_rounded,
+                            size: 18, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             Center(
-                child: Text(s.tr('productsAndGifts'),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800))),
-            const SizedBox(height: 16),
-            _segment(s),
-            const SizedBox(height: 12),
-            if (_productsTab) ...[
-              _search(s),
-              const SizedBox(height: 12),
-              _brandChips(s),
-              const SizedBox(height: 12),
-              _catRow(s),
-              const SizedBox(height: 12),
-              Expanded(child: _grid()),
-            ] else ...[
-              const SizedBox(height: 4),
-              const Expanded(child: GiftsView()),
-            ],
+              child: Text(u.name,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(height: 4),
+            Center(
+              child: Text(u.phone,
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.teal.withAlpha(30),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                    u.role == 'agent'
+                        ? (s.isArabic ? 'وكيل معتمد' : 'Agent')
+                        : u.role == 'tech'
+                            ? (s.isArabic ? 'صباغ' : 'Painter')
+                            : (s.isArabic ? 'عميل' : 'Customer'),
+                    style: const TextStyle(
+                        color: AppColors.teal,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(children: [
+              Expanded(
+                child: _statCard(
+                  icon: Icons.stars_rounded,
+                  value: _fmt(u.points),
+                  label: s.isArabic ? 'نقطة' : 'points',
+                  colors: const [Color(0xFFF26B0F), AppColors.orange],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _statCard(
+                  icon: Icons.savings_rounded,
+                  value: _fmt(u.stored),
+                  label: s.isArabic ? 'رصيد مخزن' : 'stored',
+                  colors: const [Color(0xFF2BAE9E), AppColors.teal],
+                ),
+              ),
+            ]),
+            const SizedBox(height: 24),
+            InkWell(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen())),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.border(context)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.settings_rounded, color: AppColors.orange),
+                  const SizedBox(width: 12),
+                  Text(s.isArabic ? 'الإعدادات' : 'Settings',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  const Icon(Icons.chevron_left_rounded, color: Colors.grey),
+                ]),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _segment(AppSettings s) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(children: [
-          Expanded(child: _segBtn(s.tr('products'), Icons.inventory_2_rounded, true)),
-          const SizedBox(width: 10),
-          Expanded(child: _segBtn(s.tr('gifts'), Icons.redeem_rounded, false)),
-        ]),
-      );
-
-  Widget _segBtn(String t, IconData ic, bool isProducts) {
-    final active = _productsTab == isProducts;
-    return Pressable(
-      onTap: () => setState(() => _productsTab = isProducts),
-      child: Container(
-        height: 52,
+  Widget _statCard(
+          {required IconData icon,
+          required String value,
+          required String label,
+          required List<Color> colors}) =>
+      Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: active ? AppColors.orange : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: active ? Colors.transparent : AppTheme.border(context)),
-        ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(ic, color: active ? Colors.black : Colors.grey, size: 22),
-          const SizedBox(width: 8),
-          Text(t,
-              style: TextStyle(
-                  color: active ? Colors.black : AppTheme.text(context),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700)),
-        ]),
-      ),
-    );
-  }
-
-  Widget _search(AppSettings s) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Container(
-          height: 56,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.border(context)),
-          ),
-          child: TextField(
-            onChanged: (v) => setState(() => _query = v),
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              hintText: s.tr('searchProduct'),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-            ),
-          ),
-        ),
-      );
-
-  Widget _brandChips(AppSettings s) => SizedBox(
-        height: 44,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: _brands.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 10),
-          itemBuilder: (_, i) {
-            final b = _brands[i];
-            final active = b == _brand;
-            return Pressable(
-              onTap: () => setState(() => _brand = b),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: active ? AppColors.orange : Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: active ? Colors.transparent : AppTheme.border(context)),
-                ),
-                child: Text(s.tr('brand_$b'),
-                    style: TextStyle(
-                        color: active ? Colors.black : AppTheme.text(context),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700)),
-              ),
-            );
-          },
-        ),
-      );
-
-  Widget _catRow(AppSettings s) => SizedBox(
-        height: 118,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: _cats.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
-          itemBuilder: (_, i) {
-            final c = _cats[i];
-            final active = c == _category;
-            return Pressable(
-              onTap: () => setState(() => _category = c),
-              child: Container(
-                width: 110,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: active ? AppColors.orange : AppTheme.border(context),
-                      width: active ? 1.5 : 1),
-                ),
-                child: Column(children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.orange.withAlpha(active ? 40 : 18),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                          c == 'all' ? Icons.grid_view_rounded : Icons.format_paint_rounded,
-                          color: AppColors.orange, size: 26),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(s.tr(c),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ]),
-              ),
-            );
-          },
-        ),
-      );
-
-  Widget _grid() => _filtered.isEmpty
-      ? Center(
-          child: Text(context.watch<AppSettings>().tr('noProducts'),
-              style: const TextStyle(color: Colors.grey)))
-      : GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.72,
-          ),
-          itemCount: _filtered.length,
-          itemBuilder: (_, i) => _productCard(_filtered[i]),
-        );
-
-  Widget _productCard(Product p) {
-    final favs = context.watch<Favorites>();
-    final isFav = favs.contains(p.id);
-    return Pressable(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.border(context)),
+          boxShadow: [
+            BoxShadow(
+                color: colors.first.withAlpha(60),
+                blurRadius: 18,
+                offset: const Offset(0, 6))
+          ],
         ),
         child: Column(children: [
-          Stack(children: [
-            Container(
-              height: 170,
-              margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(12)),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset('assets/images/logo.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) =>
-                        const Center(child: FaworiLogo(size: 90))),
-              ),
-            ),
-            PositionedDirectional(
-              top: 8,
-              start: 8,
-              child: IconButton(
-                style: IconButton.styleFrom(
-                    backgroundColor: Colors.black26, shape: const CircleBorder()),
-                icon: Icon(
-                    isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    color: isFav ? AppColors.red : Colors.white, size: 20),
-                onPressed: () {
-                  final s = context.read<AppSettings>();
-                  if (s.isGuest) {
-                    showLockedDialog(context, s);
-                    return;
-                  }
-                  favs.toggle(p.id);
-                },
-              ),
-            ),
-          ]),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(p.name,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(p.desc,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-          ),
+          Icon(icon, color: Colors.white, size: 26),
+          const SizedBox(height: 8),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700)),
         ]),
-      ),
-    );
-  }
+      );
 }
