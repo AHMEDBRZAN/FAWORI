@@ -247,8 +247,7 @@ class _WalletScreenState extends State<WalletScreen>
                     fontSize: 13)),
             const SizedBox(width: 6),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                   color: active
                       ? Colors.black.withAlpha(30)
