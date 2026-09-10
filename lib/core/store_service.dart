@@ -75,12 +75,10 @@ class Invoice {
 }
 
 class StoreService {
-  /// جلب مباشر من المستودع مع كسر الكاش
   static Future<String> _fetchRaw(String file) async {
     final url =
         '$kSiteBase/assets/assets/data/$file?t=${DateTime.now().millisecondsSinceEpoch}';
-    final r =
-        await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+    final r = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
     if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
     return r.body;
   }
