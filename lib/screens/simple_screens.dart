@@ -544,7 +544,7 @@ class FavoritesScreen extends StatelessWidget {
                   tileColor: Theme.of(context).colorScheme.surface,
                   title: Text(p.name),
                   subtitle:
-                      Text(p.desc, maxLimits: 1, overflow: TextOverflow.ellipsis),
+                      Text(p.desc, maxLines: 1, overflow: TextOverflow.ellipsis),
                   trailing: IconButton(
                     icon: const Icon(Icons.favorite_rounded,
                         color: Color(0xFFE5484D)),
@@ -553,5 +553,6 @@ class FavoritesScreen extends StatelessWidget {
                 );
               },
             );
+    );
   }
 }
