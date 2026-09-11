@@ -16,7 +16,7 @@ class AppSettings extends ChangeNotifier {
   bool get isGuest => _isGuest;
   User? get user => _user;
   int get points => _user?.points ?? 0;
-  int get stored => _user?.stored ?? 0; // ← إصلاح الخطأ الأول
+  int get stored => _user?.stored ?? 0;
 
   Future<void> restoreSession() async {
     final p = await SharedPreferences.getInstance();
@@ -43,6 +43,12 @@ class AppSettings extends ChangeNotifier {
         await p.remove('session_id');
       }
     }
+    notifyListeners();
+  }
+
+  /// مزامنة بيانات المستخدم الحالية (نقاط/رصيد) من المستودع
+  void syncUser(User u) {
+    _user = u;
     notifyListeners();
   }
 
