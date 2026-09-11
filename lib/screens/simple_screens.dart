@@ -7,6 +7,12 @@ import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 
+class _WalletData {
+  final User? user;
+  final List<Invoice> invoices;
+  _WalletData(this.user, this.invoices);
+}
+
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
   @override
@@ -25,16 +31,41 @@ class _WalletScreenState extends State<WalletScreen>
     'older'
   ];
 
-  late Future<List<Invoice>> _future = StoreService.loadInvoices();
+  late Future<_WalletData> _future = _loadAll();
   bool _refreshing = false;
-  String _sig = '';
   String? _bucket;
+
+  static Future<_WalletData> _loadAllStatic(AppSettings s) async {
+    final users = await StoreService.loadUsers();
+    final invs = await StoreService.loadInvoices();
+    User? me = s.user;
+    if (s.user != null) {
+      for (final u in users) {
+        if (u.id == s.user!.id) {
+          me = u;
+          break;
+        }
+      }
+    }
+    return _WalletData(me, invs);
+  }
+
+  Future<_WalletData> _loadAll() async {
+    final s = context.read<AppSettings>();
+    final data = await _loadAllStatic(s);
+    final cur = s.user;
+    if (data.user != null &&
+        cur != null &&
+        (data.user!.points != cur.points || data.user!.stored != cur.stored)) {
+      s.syncUser(data.user!);
+    }
+    return data;
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(silent: true));
   }
 
   @override
@@ -52,22 +83,27 @@ class _WalletScreenState extends State<WalletScreen>
     if (_refreshing || !mounted) return;
     setState(() => _refreshing = true);
     final s = context.read<AppSettings>();
-    await s.refreshUser();
-    final invs = await StoreService.loadInvoices();
-    final mine = invs.where((i) => i.userId == s.user?.id).toList();
-    final sig =
-        '${s.points}|${s.stored}|${mine.length}|${mine.fold<int>(0, (a, b) => a + b.points)}';
-    final changed = sig != _sig;
+    final old = s.user;
+    final data = await _loadAllStatic(s);
+    final changed = old == null ||
+        data.user == null ||
+        data.user!.points != old.points ||
+        data.user!.stored != old.stored;
+    if (data.user != null &&
+        (old == null ||
+            data.user!.points != old.points ||
+            data.user!.stored != old.stored)) {
+      s.syncUser(data.user!);
+    }
     if (!mounted) return;
     setState(() {
-      _sig = sig;
-      _future = Future.value(invs);
+      _future = Future.value(data);
       _refreshing = false;
     });
     if (!silent || changed) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(changed
-              ? 'تم جلب تحديثات جديدة ✅'
+              ? 'تم جلب تحديثات جديدة (نقاط/رصيد/فواتير) ✅'
               : 'المحفظة محدّثة — لا تغييرات')));
     }
   }
@@ -122,15 +158,17 @@ class _WalletScreenState extends State<WalletScreen>
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
-    final u = s.user;
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: FutureBuilder<List<Invoice>>(
+        child: FutureBuilder<_WalletData>(
           future: _future,
           builder: (_, snap) {
-            final mine =
-                (snap.data ?? []).where((i) => i.userId == u?.id).toList();
+            final data = snap.data;
+            final u = data?.user ?? s.user;
+            final mine = (data?.invoices ?? [])
+                .where((i) => i.userId == u?.id)
+                .toList();
             final present = _bucketOrder
                 .where((k) => mine.any((i) => _bucketOf(_days(i.date)) == k))
                 .toList();
