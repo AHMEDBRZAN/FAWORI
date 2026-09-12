@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
+import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/pressable.dart';
@@ -39,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _timer;
   int _idx = 0;
   List<String> _homeImages = [];
+  Map<String, String> _brandMap = {};
 
   static const List<String> _defaultBanners = <String>[
     'assets/images/as1.PNG',
@@ -70,11 +73,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       setState(() {
         _homeImages = List<String>.from(m['home'] ?? []);
+        _brandMap = Map<String, String>.from(m['brands'] ?? {});
       });
     }
   }
 
-  // دوران لا نهائي بحركة انسيابية
   void _startAuto() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
@@ -84,6 +87,31 @@ class _HomeScreenState extends State<HomeScreen> {
         curve: Curves.easeInOutCubic,
       );
     });
+  }
+
+  Future<void> _uploadBrand(String key) async {
+    final f = await ImagePicker().pickImage(
+        source: ImageSource.gallery, imageQuality: 80, maxWidth: 1000);
+    if (f == null) return;
+    final bytes = await f.readAsBytes();
+    try {
+      final path = 'assets/images/brand_$key.png';
+      await ImagesService.putBytes(path, bytes, kUploadToken, 'brand $key');
+      await ImagesService.setMapping('brands', key, path, kUploadToken);
+      final m = await ImagesService.loadImages();
+      if (mounted) {
+        setState(() {
+          _brandMap = Map<String, String>.from(m['brands'] ?? {});
+        });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('✅ تم رفع صورة $key')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل الرفع: $e')));
+      }
+    }
   }
 
   Widget _banner(int real) {
@@ -181,7 +209,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _brand(String ar, String en, Color c) {
+  Widget _brand(String key, String ar, String en, Color c, bool isAdmin) {
+    final String? img = _brandMap[key];
     return Pressable(
       onTap: widget.onOpenProducts,
       child: Container(
@@ -194,21 +223,54 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: c.withAlpha(70)),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: <Widget>[
-            Text(
-              en,
-              style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900),
+            Center(
+              child: img != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(_imgUrl(img),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (BuildContext c2, Object o, StackTrace? st) =>
+                              _brandText(en, ar, c)),
+                    )
+                  : _brandText(en, ar, c),
             ),
-            const SizedBox(height: 4),
-            Text(
-              ar,
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-            ),
+            if (isAdmin)
+              Positioned(
+                bottom: 6,
+                right: 6,
+                child: InkWell(
+                  onTap: () => _uploadBrand(key),
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.orange,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(Icons.photo_camera_rounded,
+                        size: 16, color: Colors.white),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _brandText(String en, String ar, Color c) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Text(en,
+            style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 4),
+        Text(ar, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+      ],
     );
   }
 
@@ -216,6 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final bool isAdmin = s.isImageAdmin;
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -345,10 +408,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.15,
                 children: <Widget>[
-                  _brand('فاوري', 'FAWORI', AppColors.orange),
-                  _brand('الهدايا', 'GIFTS', AppColors.teal),
-                  _brand('isomat', 'ISOMAT', Colors.red.shade400),
-                  _brand('CADENCE', 'CADENCE', Colors.grey.shade500),
+                  _brand('fawori', 'فاوري', 'FAWORI', AppColors.orange, isAdmin),
+                  _brand('gifts', 'الهدايا', 'GIFTS', AppColors.teal, isAdmin),
+                  _brand('isomat', 'isomat', 'ISOMAT', Colors.red.shade400, isAdmin),
+                  _brand('cadence', 'CADENCE', 'CADENCE', Colors.grey.shade500, isAdmin),
                 ],
               ),
             ],
