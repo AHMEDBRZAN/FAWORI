@@ -26,62 +26,119 @@ class AppSettings extends ChangeNotifier {
     _isArabic = p.getBool('isArabic') ?? true;
     final type = p.getString('session_type');
     if (type == 'guest') {
-      _isLoggedIn = true; _isGuest = true; _user = null;
+      _isLoggedIn = true;
+      _isGuest = true;
+      _user = null;
+      _isImageAdmin = false;
+    } else if (type == 'admin') {
+      _isLoggedIn = true;
+      _isGuest = false;
+      _isImageAdmin = true;
+      _user = null;
     } else if (type == 'user') {
       final id = p.getString('session_id') ?? '';
       final users = await StoreService.loadUsers();
       for (final u in users) {
-        if (u.id == id) { _user = u; _isLoggedIn = true; _isGuest = false; break; }
+        if (u.id == id) {
+          _user = u;
+          _isLoggedIn = true;
+          _isGuest = false;
+          _isImageAdmin = false;
+          break;
+        }
       }
-      if (_user == null) { await p.remove('session_type'); await p.remove('session_id'); }
+      if (_user == null) {
+        await p.remove('session_type');
+        await p.remove('session_id');
+      }
     }
     notifyListeners();
   }
 
-  void syncUser(User u) { _user = u; notifyListeners(); }
+  void syncUser(User u) {
+    _user = u;
+    notifyListeners();
+  }
 
   Future<bool> refreshUser() async {
     if (_user == null) return false;
     final users = await StoreService.loadUsers();
     for (final u in users) {
-      if (u.id == _user!.id) { _user = u; notifyListeners(); return true; }
+      if (u.id == _user!.id) {
+        _user = u;
+        notifyListeners();
+        return true;
+      }
     }
     return false;
   }
 
-  void enterImageAdmin() { _isImageAdmin = true; notifyListeners(); }
-  void exitImageAdmin() { _isImageAdmin = false; notifyListeners(); }
+  /// دخول المدير: يفتح التطبيق الطبيعي مع صلاحيات رفع الصور
+  Future<void> loginAsAdmin() async {
+    _isLoggedIn = true;
+    _isGuest = false;
+    _isImageAdmin = true;
+    _user = null;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('session_type', 'admin');
+    await p.remove('session_id');
+    notifyListeners();
+  }
+
+  void enterImageAdmin() {
+    _isImageAdmin = true;
+    notifyListeners();
+  }
+
+  void exitImageAdmin() {
+    _isImageAdmin = false;
+    notifyListeners();
+  }
 
   Future<void> toggleDark() async {
     _isDark = !_isDark;
     final p = await SharedPreferences.getInstance();
-    await p.setBool('isDark', _isDark); notifyListeners();
+    await p.setBool('isDark', _isDark);
+    notifyListeners();
   }
 
   Future<void> toggleLanguage() async {
     _isArabic = !_isArabic;
     final p = await SharedPreferences.getInstance();
-    await p.setBool('isArabic', _isArabic); notifyListeners();
+    await p.setBool('isArabic', _isArabic);
+    notifyListeners();
   }
 
   Future<void> loginAsGuest() async {
-    _isLoggedIn = true; _isGuest = true; _user = null; _isImageAdmin = false;
+    _isLoggedIn = true;
+    _isGuest = true;
+    _user = null;
+    _isImageAdmin = false;
     final p = await SharedPreferences.getInstance();
-    await p.setString('session_type', 'guest'); await p.remove('session_id');
+    await p.setString('session_type', 'guest');
+    await p.remove('session_id');
     notifyListeners();
   }
 
   Future<void> loginAsUser(User u) async {
-    _isLoggedIn = true; _isGuest = false; _user = u; _isImageAdmin = false;
+    _isLoggedIn = true;
+    _isGuest = false;
+    _user = u;
+    _isImageAdmin = false;
     final p = await SharedPreferences.getInstance();
-    await p.setString('session_type', 'user'); await p.setString('session_id', u.id);
+    await p.setString('session_type', 'user');
+    await p.setString('session_id', u.id);
     notifyListeners();
   }
 
   Future<void> logout() async {
-    _isLoggedIn = false; _isGuest = false; _user = null; _isImageAdmin = false;
+    _isLoggedIn = false;
+    _isGuest = false;
+    _user = null;
+    _isImageAdmin = false;
     final p = await SharedPreferences.getInstance();
-    await p.remove('session_type'); await p.remove('session_id');
+    await p.remove('session_type');
+    await p.remove('session_id');
     notifyListeners();
   }
 
