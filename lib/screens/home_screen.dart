@@ -18,16 +18,13 @@ Future<Map<String, dynamic>> _loadImgs() async {
   try {
     final r = await http.get(Uri.parse(
         '$_base/assets/assets/data/images.json?t=${DateTime.now().millisecondsSinceEpoch}'));
-    if (r.statusCode == 200) {
-      return Map<String, dynamic>.from(jsonDecode(r.body));
-    }
+    if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
   } catch (_) {}
   return {};
 }
 
-String _imgUrl(String p) {
-  return '$_base/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
-}
+String _imgUrl(String p) =>
+    '$_base/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onOpenProducts;
@@ -50,9 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
     'assets/images/as4.PNG',
   ];
 
-  int get _count {
-    return _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
-  }
+  int get _count =>
+      _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
 
   @override
   void initState() {
@@ -90,14 +86,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _uploadBrand(String key) async {
+    String tk = await ImagesService.resolveToken();
+    if (tk.isEmpty) {
+      final t = await ImagesService.askGitHubToken(context);
+      if (t == null) return;
+      tk = t;
+    }
     final f = await ImagePicker().pickImage(
         source: ImageSource.gallery, imageQuality: 80, maxWidth: 1000);
     if (f == null) return;
     final bytes = await f.readAsBytes();
     try {
       final path = 'assets/images/brand_$key.png';
-      await ImagesService.putBytes(path, bytes, kUploadToken, 'brand $key');
-      await ImagesService.setMapping('brands', key, path, kUploadToken);
+      await ImagesService.putBytes(path, bytes, tk, 'brand $key');
+      await ImagesService.setMapping('brands', key, path, tk);
       final m = await ImagesService.loadImages();
       if (mounted) {
         setState(() {
@@ -162,10 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            t,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-          ),
+          Text(t, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -197,15 +196,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-              ),
+              child: Text(label,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             ),
             Icon(Icons.chevron_left_rounded, color: c, size: 20),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _brandText(String en, String ar, Color c) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Text(en,
+            style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 4),
+        Text(ar, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+      ],
     );
   }
 
@@ -259,18 +268,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _brandText(String en, String ar, Color c) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        Text(en,
-            style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 4),
-        Text(ar, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-      ],
     );
   }
 
