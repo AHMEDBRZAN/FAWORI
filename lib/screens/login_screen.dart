@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
-import 'image_admin_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,16 +26,10 @@ class _LoginScreenState extends State<LoginScreen> {
       _busy = true;
     });
 
-    // دخول مدير الصور: هاتف 1 و رمز 2
+    // مدير الصور: هاتف 1 و رمز 2 => يفتح التطبيق الطبيعي مع صلاحيات الرفع
     if (ph == '1' && pw == '2') {
-      s.enterImageAdmin();
-      setState(() {
-        _busy = false;
-      });
-      if (mounted) {
-        Navigator.push(context,
-            MaterialPageRoute(builder: (BuildContext c) => const ImageAdminScreen()));
-      }
+      await s.loginAsAdmin();
+      if (mounted) setState(() { _busy = false; });
       return;
     }
 
