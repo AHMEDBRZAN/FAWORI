@@ -7,104 +7,37 @@ import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 
-class _WalletData {
-  final User? user;
-  final List<Invoice> invoices;
-  _WalletData(this.user, this.invoices);
-}
-
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
   @override
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
-class _WalletScreenState extends State<WalletScreen>
-    with WidgetsBindingObserver {
-  static const int unit = 125000;
-  static const List<String> _bucketOrder = [
-    'today',
-    'day1',
-    'week',
-    'month1',
-    'month2',
-    'older'
-  ];
-
-  late Future<_WalletData> _future = _loadAll();
+class _WalletScreenState extends State<WalletScreen> {
+  late Future<List<Invoice>> _future = StoreService.loadInvoices();
   bool _refreshing = false;
-  String? _bucket;
 
-  static Future<_WalletData> _loadAllStatic(AppSettings s) async {
-    final users = await StoreService.loadUsers();
-    final invs = await StoreService.loadInvoices();
-    User? me = s.user;
-    if (s.user != null) {
-      for (final u in users) {
-        if (u.id == s.user!.id) {
-          me = u;
-          break;
-        }
-      }
-    }
-    return _WalletData(me, invs);
-  }
-
-  Future<_WalletData> _loadAll() async {
-    final s = context.read<AppSettings>();
-    final data = await _loadAllStatic(s);
-    final cur = s.user;
-    if (data.user != null &&
-        cur != null &&
-        (data.user!.points != cur.points || data.user!.stored != cur.stored)) {
-      s.syncUser(data.user!);
-    }
-    return data;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refresh(silent: true);
-  }
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
   Future<void> _refresh({bool silent = false}) async {
     if (_refreshing || !mounted) return;
     setState(() => _refreshing = true);
     final s = context.read<AppSettings>();
-    final old = s.user;
-    final data = await _loadAllStatic(s);
-    final changed = old == null ||
-        data.user == null ||
-        data.user!.points != old.points ||
-        data.user!.stored != old.stored;
-    if (data.user != null &&
-        (old == null ||
-            data.user!.points != old.points ||
-            data.user!.stored != old.stored)) {
-      s.syncUser(data.user!);
-    }
+    final int oldPoints = s.points;
+    final int oldStored = s.stored;
+    await s.refreshUser();
+    final invs = await StoreService.loadInvoices();
     if (!mounted) return;
     setState(() {
-      _future = Future.value(data);
+      _future = Future.value(invs);
       _refreshing = false;
     });
-    if (!silent || changed) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(changed
-              ? 'تم جلب تحديثات جديدة (نقاط/رصيد/فواتير) ✅'
-              : 'المحفظة محدّثة — لا تغييرات')));
+    final int newPoints = s.points;
+    final int newStored = s.stored;
+    if (newPoints != oldPoints || newStored != oldStored) {
+      final int d = newPoints - oldPoints;
+      _snack(d >= 0 ? 'تم تحديث نقاطك: +$d ✅' : 'تم تحديث نقاطك: $d');
     }
   }
 
@@ -120,83 +53,36 @@ class _WalletScreenState extends State<WalletScreen>
     return out.toString().split('').reversed.join();
   }
 
-  int _days(String dateStr) {
-    final d = DateTime.tryParse(dateStr);
-    if (d == null) return 9999;
-    final now = DateTime.now();
-    final a = DateTime(now.year, now.month, now.day);
-    final b = DateTime(d.year, d.month, d.day);
-    return a.difference(b).inDays;
-  }
-
-  String _bucketOf(int days) {
-    if (days <= 0) return 'today';
-    if (days == 1) return 'day1';
-    if (days <= 7) return 'week';
-    if (days <= 30) return 'month1';
-    if (days <= 60) return 'month2';
-    return 'older';
-  }
-
-  String _bucketLabel(String key, bool ar) {
-    switch (key) {
-      case 'today':
-        return ar ? 'اليوم' : 'Today';
-      case 'day1':
-        return ar ? 'منذ يوم' : '1 day';
-      case 'week':
-        return ar ? 'منذ اسبوع' : '1 week';
-      case 'month1':
-        return ar ? 'منذ شهر' : '1 month';
-      case 'month2':
-        return ar ? 'منذ شهرين' : '2 months';
-      default:
-        return ar ? 'أقدم' : 'Older';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
+    final u = s.user;
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: FutureBuilder<_WalletData>(
+        child: FutureBuilder<List<Invoice>>(
           future: _future,
           builder: (_, snap) {
-            final data = snap.data;
-            final u = data?.user ?? s.user;
-            final mine = (data?.invoices ?? [])
+            final mine = (snap.data ?? [])
                 .where((i) => i.userId == u?.id)
-                .toList();
-            final present = _bucketOrder
-                .where((k) => mine.any((i) => _bucketOf(_days(i.date)) == k))
-                .toList();
-            final selected = (_bucket != null && present.contains(_bucket))
-                ? _bucket!
-                : (present.isNotEmpty ? present.first : '');
-            final shown = mine
-                .where((i) => _bucketOf(_days(i.date)) == selected)
                 .toList()
-              ..sort((a, b) => b.date.compareTo(a.date));
+                .reversed
+                .toList();
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
                 Row(children: [
                   Text(s.tr('wallet'),
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.w800)),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                   const Spacer(),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                         color: AppColors.orange.withAlpha(40),
                         borderRadius: BorderRadius.circular(10)),
                     child: Text('${mine.length}',
                         style: const TextStyle(
-                            color: AppColors.orange,
-                            fontWeight: FontWeight.w800)),
+                            color: AppColors.orange, fontWeight: FontWeight.w800)),
                   ),
                   const SizedBox(width: 8),
                   Pressable(
@@ -210,8 +96,7 @@ class _WalletScreenState extends State<WalletScreen>
                       ),
                       child: _refreshing
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
+                              width: 16, height: 16,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: AppColors.teal))
                           : const Icon(Icons.refresh_rounded,
@@ -222,14 +107,10 @@ class _WalletScreenState extends State<WalletScreen>
                 const SizedBox(height: 16),
                 _pointsCard(s, u),
                 const SizedBox(height: 24),
-                Row(children: [
-                  Text(s.isArabic ? 'الفواتير' : 'Invoices',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800)),
-                  const Spacer(),
-                ]),
+                Text(s.isArabic ? 'الفواتير' : 'Invoices',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 12),
-                if (present.isEmpty)
+                if (mine.isEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 30),
                     child: Center(
@@ -237,26 +118,8 @@ class _WalletScreenState extends State<WalletScreen>
                             s.isArabic ? 'لا توجد فواتير بعد' : 'No invoices yet',
                             style: const TextStyle(color: Colors.grey))),
                   )
-                else ...[
-                  SizedBox(
-                    height: 40,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: present.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) => _chip(
-                          present[i],
-                          mine
-                              .where((x) =>
-                                  _bucketOf(_days(x.date)) == present[i])
-                              .length,
-                          present[i] == selected,
-                          s),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  ...shown.map((inv) => _tile(s, inv)),
-                ],
+                else
+                  ...mine.map((inv) => _tile(s, inv)),
               ],
             );
           },
@@ -265,43 +128,8 @@ class _WalletScreenState extends State<WalletScreen>
     );
   }
 
-  Widget _chip(String key, int count, bool active, AppSettings s) => Pressable(
-        onTap: () => setState(() => _bucket = key),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: active
-                ? AppColors.orange
-                : Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: active ? Colors.transparent : AppTheme.border(context)),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(_bucketLabel(key, s.isArabic),
-                style: TextStyle(
-                    color: active ? Colors.black : AppTheme.text(context),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                  color: active
-                      ? Colors.black.withAlpha(30)
-                      : AppColors.orange.withAlpha(40),
-                  borderRadius: BorderRadius.circular(8)),
-              child: Text('$count',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: active ? Colors.black : AppColors.orange)),
-            ),
-          ]),
-        ),
-      );
-
   Widget _pointsCard(AppSettings s, User? u) {
+    const int unit = 125000;
     final stored = u?.stored ?? 0;
     final remaining = unit - stored;
     return Container(
@@ -325,8 +153,7 @@ class _WalletScreenState extends State<WalletScreen>
             padding: const EdgeInsets.all(12),
             decoration:
                 BoxDecoration(color: Colors.white.withAlpha(50), shape: BoxShape.circle),
-            child:
-                const Icon(Icons.attach_money_rounded, color: Colors.white, size: 28),
+            child: const Icon(Icons.attach_money_rounded, color: Colors.white, size: 28),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -341,8 +168,7 @@ class _WalletScreenState extends State<WalletScreen>
             ]),
           ),
           Text(s.isArabic ? 'نقطة' : 'points',
-              style: const TextStyle(
-                  color: Colors.white70, fontWeight: FontWeight.w700)),
+              style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: 18),
         ClipRRect(
@@ -371,7 +197,7 @@ class _WalletScreenState extends State<WalletScreen>
   }
 
   Widget _tile(AppSettings s, Invoice inv) {
-    final isRet = inv.type == 'return' || inv.points < 0;
+    final neg = inv.points < 0;
     return Pressable(
       onTap: () => _openDetails(s, inv),
       child: Container(
@@ -387,31 +213,28 @@ class _WalletScreenState extends State<WalletScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                  color: isRet ? Colors.red.withAlpha(35) : AppColors.teal.withAlpha(35),
+                  color: neg ? Colors.red.withAlpha(35) : AppColors.teal.withAlpha(35),
                   borderRadius: BorderRadius.circular(8)),
               child: Text(
-                  isRet
+                  neg
                       ? (s.isArabic ? 'مرتجع' : 'Return')
                       : (s.isArabic ? 'شراء' : 'Purchase'),
                   style: TextStyle(
-                      color: isRet ? Colors.red.shade300 : AppColors.teal,
+                      color: neg ? Colors.red.shade300 : AppColors.teal,
                       fontSize: 11,
                       fontWeight: FontWeight.w800)),
             ),
             const SizedBox(width: 8),
-            Text(inv.date,
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+            Text(inv.date, style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                  color: isRet
-                      ? Colors.red.withAlpha(35)
-                      : AppColors.orange.withAlpha(40),
+                  color: neg ? Colors.red.withAlpha(35) : AppColors.orange.withAlpha(40),
                   borderRadius: BorderRadius.circular(10)),
               child: Text(inv.points < 0 ? '${inv.points}' : '+${inv.points}',
                   style: TextStyle(
-                      color: isRet ? Colors.red.shade300 : AppColors.orange,
+                      color: neg ? Colors.red.shade300 : AppColors.orange,
                       fontWeight: FontWeight.w800,
                       fontSize: 12)),
             ),
@@ -430,7 +253,7 @@ class _WalletScreenState extends State<WalletScreen>
   }
 
   void _openDetails(AppSettings s, Invoice inv) {
-    final isRet = inv.type == 'return' || inv.points < 0;
+    final neg = inv.points < 0;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -447,8 +270,7 @@ class _WalletScreenState extends State<WalletScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 46,
-              height: 5,
+              width: 46, height: 5,
               decoration: BoxDecoration(
                   color: Colors.grey.shade600, borderRadius: BorderRadius.circular(3)),
             ),
@@ -457,22 +279,19 @@ class _WalletScreenState extends State<WalletScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                    color: isRet
-                        ? Colors.red.withAlpha(35)
-                        : AppColors.teal.withAlpha(35),
+                    color: neg ? Colors.red.withAlpha(35) : AppColors.teal.withAlpha(35),
                     borderRadius: BorderRadius.circular(10)),
                 child: Text(
-                    isRet
+                    neg
                         ? (s.isArabic ? 'مرتجع' : 'Return')
                         : (s.isArabic ? 'شراء' : 'Purchase'),
                     style: TextStyle(
-                        color: isRet ? Colors.red.shade300 : AppColors.teal,
+                        color: neg ? Colors.red.shade300 : AppColors.teal,
                         fontWeight: FontWeight.w800,
                         fontSize: 12)),
               ),
               const SizedBox(width: 10),
-              Text(inv.date,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              Text(inv.date, style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
               const Spacer(),
               Text(
                   inv.no.isNotEmpty
@@ -533,17 +352,12 @@ class _WalletScreenState extends State<WalletScreen>
             ]),
             const SizedBox(height: 8),
             Row(children: [
-              Text(
-                  s.isArabic
-                      ? 'رصيد مخزن من هذه الفاتورة'
-                      : 'Stored from this invoice',
+              Text(s.isArabic ? 'رصيد مخزن من هذه الفاتورة' : 'Stored from this invoice',
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               const Spacer(),
               Text(_fmt(inv.stored),
                   style: const TextStyle(
-                      color: AppColors.teal,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15)),
+                      color: AppColors.teal, fontWeight: FontWeight.w900, fontSize: 15)),
             ]),
             const SizedBox(height: 14),
           ],
@@ -583,8 +397,7 @@ class FavoritesScreen extends StatelessWidget {
                   subtitle:
                       Text(p.desc, maxLines: 1, overflow: TextOverflow.ellipsis),
                   trailing: IconButton(
-                    icon: const Icon(Icons.favorite_rounded,
-                        color: Color(0xFFE5484D)),
+                    icon: const Icon(Icons.favorite_rounded, color: Color(0xFFE5484D)),
                     onPressed: () => favs.toggle(p.id),
                   ),
                 );
