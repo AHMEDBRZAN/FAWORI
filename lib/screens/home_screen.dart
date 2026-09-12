@@ -65,12 +65,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, String> _brandMap = {};
   bool _imagesLoaded = false;
 
-  static const List<String> _defaultBanners = <String>[
-    'assets/images/as1.PNG',
-    'assets/images/as2.PNG',
-    'assets/images/as3.PNG',
-    'assets/images/as4.PNG',
-  ];
+ static const List<String> _defaultBanners = <String>[
+  'assets/images/BB-1.webp',
+  'assets/images/BB-2.webp',
+  'assets/images/BB-3.webp',
+  'assets/images/BB-4.webp',
+  'assets/images/BB-5.webp',
+];
+
 
   int get _count =>
       _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
