@@ -33,46 +33,48 @@ class AppSettings extends ChangeNotifier {
       for (final u in users) {
         if (u.id == id) { _user = u; _isLoggedIn = true; _isGuest = false; break; }
       }
-      if (_user == null) {
-        await p.remove('session_type'); await p.remove('session_id');
-      }
+      if (_user == null) { await p.remove('session_type'); await p.remove('session_id'); }
     }
     notifyListeners();
   }
 
   void syncUser(User u) { _user = u; notifyListeners(); }
 
-  /// دخول خاص بمدير الصور فقط (لا يُحفظ كجلسة مستخدم)
+  Future<bool> refreshUser() async {
+    if (_user == null) return false;
+    final users = await StoreService.loadUsers();
+    for (final u in users) {
+      if (u.id == _user!.id) { _user = u; notifyListeners(); return true; }
+    }
+    return false;
+  }
+
   void enterImageAdmin() { _isImageAdmin = true; notifyListeners(); }
   void exitImageAdmin() { _isImageAdmin = false; notifyListeners(); }
 
   Future<void> toggleDark() async {
     _isDark = !_isDark;
     final p = await SharedPreferences.getInstance();
-    await p.setBool('isDark', _isDark);
-    notifyListeners();
+    await p.setBool('isDark', _isDark); notifyListeners();
   }
 
   Future<void> toggleLanguage() async {
     _isArabic = !_isArabic;
     final p = await SharedPreferences.getInstance();
-    await p.setBool('isArabic', _isArabic);
-    notifyListeners();
+    await p.setBool('isArabic', _isArabic); notifyListeners();
   }
 
   Future<void> loginAsGuest() async {
     _isLoggedIn = true; _isGuest = true; _user = null; _isImageAdmin = false;
     final p = await SharedPreferences.getInstance();
-    await p.setString('session_type', 'guest');
-    await p.remove('session_id');
+    await p.setString('session_type', 'guest'); await p.remove('session_id');
     notifyListeners();
   }
 
   Future<void> loginAsUser(User u) async {
     _isLoggedIn = true; _isGuest = false; _user = u; _isImageAdmin = false;
     final p = await SharedPreferences.getInstance();
-    await p.setString('session_type', 'user');
-    await p.setString('session_id', u.id);
+    await p.setString('session_type', 'user'); await p.setString('session_id', u.id);
     notifyListeners();
   }
 
