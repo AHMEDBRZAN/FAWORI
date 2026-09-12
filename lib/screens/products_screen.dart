@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/favorites.dart';
+import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/fawori_logo.dart';
@@ -58,6 +60,31 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
+  Future<void> _uploadProduct(String pid, String pname) async {
+    final f = await ImagePicker().pickImage(
+        source: ImageSource.gallery, imageQuality: 80, maxWidth: 1000);
+    if (f == null) return;
+    final bytes = await f.readAsBytes();
+    try {
+      final path = 'assets/images/prod_$pid.png';
+      await ImagesService.putBytes(path, bytes, kUploadToken, 'product $pid');
+      await ImagesService.setMapping('products', pid, path, kUploadToken);
+      final m = await ImagesService.loadImages();
+      if (mounted) {
+        setState(() {
+          _prodMap = Map<String, String>.from(m['products'] ?? {});
+        });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('✅ تم رفع صورة: $pname')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل الرفع: $e')));
+      }
+    }
+  }
+
   List<Product> get _filtered {
     return sampleProducts
         .where((Product p) =>
@@ -102,7 +129,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  Widget _card(Product p) {
+  Widget _card(Product p, bool isAdmin) {
     final Favorites favs = context.watch<Favorites>();
     final bool isFav = favs.contains(p.id);
     final String? img = _prodMap[p.id];
@@ -126,43 +153,48 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 offset: const Offset(0, 6)),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: <Widget>[
-            Expanded(
-              child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(17)),
-                child: img != null
-                    ? Image.network(_imgUrl(img), fit: BoxFit.cover,
-                        errorBuilder: (BuildContext c, Object o, StackTrace? st) =>
-                            const _Ph())
-                    : const _Ph(),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                children: <Widget>[
-                  Text(
-                    p.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 13),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(17)),
+                    child: img != null
+                        ? Image.network(_imgUrl(img), fit: BoxFit.cover,
+                            errorBuilder: (BuildContext c, Object o, StackTrace? st) =>
+                                const _Ph())
+                        : const _Ph(),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    p.desc,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    children: <Widget>[
+                      Text(
+                        p.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 13),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        p.desc,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Align(
-              alignment: Alignment.topLeft,
+            Positioned(
+              top: 6,
+              left: 6,
               child: IconButton(
                 icon: Icon(
                     isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
@@ -171,6 +203,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 onPressed: () => favs.toggle(p.id),
               ),
             ),
+            if (isAdmin)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: InkWell(
+                  onTap: () => _uploadProduct(p.id, p.name),
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.orange,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(Icons.photo_camera_rounded,
+                        size: 16, color: Colors.white),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -181,6 +231,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final bool isAdmin = s.isImageAdmin;
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -280,7 +331,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 childAspectRatio: 0.72),
                         itemCount: _filtered.length,
                         itemBuilder: (BuildContext c, int i) =>
-                            _card(_filtered[i]),
+                            _card(_filtered[i], isAdmin),
                       ),
               ),
             ],
