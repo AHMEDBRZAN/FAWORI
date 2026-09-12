@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'dart:ui' as ui;
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
@@ -63,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _idx = 0;
   List<String> _homeImages = [];
   Map<String, String> _brandMap = {};
-  bool _imagesLoaded = false;
 
   static const List<String> _defaultBanners = <String>[
     'assets/images/as1.PNG',
@@ -95,9 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _homeImages = List<String>.from(m['home'] ?? []);
         _brandMap = Map<String, String>.from(m['brands'] ?? {});
-        _imagesLoaded = true;
       });
-      // Preload banner images
       for (final img in _homeImages.take(5)) {
         precacheImage(NetworkImage(_imgUrl(img)), context);
       }
@@ -135,10 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _brandMap = Map<String, String>.from(m['brands'] ?? {});
         });
-        if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('✅ تم رفع صورة $key')));
-        }
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('✅ تم رفع صورة $key')));
       }
     } catch (e) {
       if (mounted) {
@@ -191,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
-          errorBuilder: (BuildContext c, Object o, StackTrace? st) =>
+          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
               const _Fallback(),
         ),
       ),
@@ -345,12 +339,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           );
                         },
-                        errorBuilder: (c, o, st) => _brandText(en, ar, c),
+                        // ✅ هنا تم التصحيح: تمرير اللون c بدلاً من متغير الـ context
+                        errorBuilder: (context, error, stackTrace) => _brandText(en, ar, c),
                       )
                     : _brandText(en, ar, c),
               ),
             ),
-            // Elegant overlay border
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
