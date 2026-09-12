@@ -27,8 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _busy = true;
     });
 
-    // دخول مدير الصور الخاص
-    if (ph == 'احمد' && pw == '1997') {
+    // دخول مدير الصور: هاتف 1 و رمز 2
+    if (ph == '1' && pw == '2') {
       s.enterImageAdmin();
       setState(() {
         _busy = false;
@@ -61,32 +61,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _logo() {
     return Container(
-      width: 104,
-      height: 104,
+      width: 108,
+      height: 108,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(28),
         gradient: const LinearGradient(
-            colors: <Color>[AppColors.orange, AppColors.teal]),
+            colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
         boxShadow: [
           BoxShadow(
-              color: AppColors.orange.withAlpha(70),
-              blurRadius: 30,
-              offset: const Offset(0, 10)),
+              color: AppColors.orange.withAlpha(90),
+              blurRadius: 34,
+              offset: const Offset(0, 12)),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         child: Image.asset(
           'assets/images/logo.png',
-          width: 96,
-          height: 96,
+          width: 100,
+          height: 100,
           fit: BoxFit.cover,
           errorBuilder: (BuildContext c, Object o, StackTrace? st) {
             return Container(
               color: AppColors.orange.withAlpha(40),
               child: const Icon(Icons.store_rounded,
-                  size: 44, color: AppColors.orange),
+                  size: 46, color: AppColors.orange),
             );
           },
         ),
@@ -97,42 +97,58 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _title(AppSettings s) {
     return ShaderMask(
       shaderCallback: (Rect r) =>
-          const LinearGradient(colors: <Color>[AppColors.orange, AppColors.teal])
+          const LinearGradient(colors: <Color>[AppColors.orange, Color(0xFFF26B0F)])
               .createShader(r),
       child: Text(
         s.tr('appName'),
         style: const TextStyle(
-            fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
+            fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
       ),
     );
   }
 
-  Widget _fieldPhone(AppSettings s) {
+  Widget _fieldPhone(AppSettings s, bool dark) {
     return TextField(
       controller: _phone,
       keyboardType: TextInputType.phone,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: dark ? Colors.white : AppColors.ink),
       decoration: InputDecoration(
         labelText: s.isArabic ? 'رقم الهاتف' : 'Phone',
         prefixIcon: const Icon(Icons.phone_rounded, color: AppColors.orange),
         filled: true,
-        fillColor: const Color(0xFF141419),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)),
+        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: AppColors.orange.withAlpha(90))),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: AppColors.orange.withAlpha(70))),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.orange, width: 2)),
       ),
     );
   }
 
-  Widget _fieldPass(AppSettings s) {
+  Widget _fieldPass(AppSettings s, bool dark) {
     return TextField(
       controller: _pass,
       obscureText: _obscure,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: dark ? Colors.white : AppColors.ink),
       decoration: InputDecoration(
         labelText: s.isArabic ? 'كلمة المرور' : 'Password',
-        prefixIcon: const Icon(Icons.lock_rounded, color: AppColors.teal),
+        prefixIcon: const Icon(Icons.lock_rounded, color: AppColors.orange),
         filled: true,
-        fillColor: const Color(0xFF141419),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(13)),
+        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: AppColors.orange.withAlpha(90))),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: AppColors.orange.withAlpha(70))),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.orange, width: 2)),
         suffixIcon: IconButton(
           icon: Icon(
               _obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
@@ -150,19 +166,19 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _button(AppSettings s) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(13),
-        gradient:
-            const LinearGradient(colors: <Color>[AppColors.orange, AppColors.teal]),
+        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(
+            colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
         boxShadow: [
           BoxShadow(
-              color: AppColors.orange.withAlpha(70),
-              blurRadius: 16,
-              offset: const Offset(0, 6)),
+              color: AppColors.orange.withAlpha(90),
+              blurRadius: 18,
+              offset: const Offset(0, 7)),
         ],
       ),
       child: SizedBox(
         width: double.infinity,
-        height: 50,
+        height: 52,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
@@ -188,30 +204,49 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
 
     final List<Widget> kids = <Widget>[
-      const SizedBox(height: 20),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: IconButton(
+          tooltip: s.isArabic ? 'تبديل الوضع' : 'Toggle theme',
+          icon: Icon(
+              dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: AppColors.orange),
+          onPressed: () => s.toggleDark(),
+        ),
+      ),
+      const SizedBox(height: 8),
       _logo(),
       const SizedBox(height: 18),
       _title(s),
       const SizedBox(height: 6),
       Text(
         s.isArabic ? 'سجّل دخولك للمتابعة' : 'Sign in to continue',
-        style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+        style: TextStyle(
+            color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+            fontSize: 13),
       ),
       const SizedBox(height: 24),
       Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.orange.withAlpha(60)),
+          color: dark ? const Color(0xFF23232B) : const Color(0xFFFFFDF9),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.orange.withAlpha(80)),
+          boxShadow: [
+            BoxShadow(
+                color: AppColors.orange.withAlpha(dark ? 40 : 25),
+                blurRadius: 24,
+                offset: const Offset(0, 10)),
+          ],
         ),
         child: Column(
           children: <Widget>[
-            _fieldPhone(s),
+            _fieldPhone(s, dark),
             const SizedBox(height: 12),
-            _fieldPass(s),
+            _fieldPass(s, dark),
             if (_err.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
@@ -231,14 +266,15 @@ class _LoginScreenState extends State<LoginScreen> {
         children: <Widget>[
           Text(
             s.isArabic ? 'لا تملك حساباً؟' : 'No account?',
-            style: TextStyle(color: Colors.grey.shade400),
+            style: TextStyle(
+                color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
           ),
           TextButton(
             onPressed: () => s.loginAsGuest(),
             child: Text(
               s.isArabic ? 'دخول كضيف' : 'Guest',
               style: const TextStyle(
-                  color: AppColors.teal, fontWeight: FontWeight.w700),
+                  color: AppColors.orange, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -247,11 +283,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: <Color>[Color(0xFF141419), Color(0xFF1B1B21)],
+            colors: dark
+                ? const <Color>[Color(0xFF23232B), Color(0xFF2B2B34)]
+                : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
           ),
         ),
         child: SafeArea(
