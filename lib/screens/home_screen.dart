@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
@@ -13,6 +14,29 @@ import '../widgets/pressable.dart';
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
 const int _kPages = 10000;
 const int _kStart = 1000;
+
+class _CachedImage {
+  final String url;
+  final ImageProvider provider;
+  _CachedImage(this.url, this.provider);
+}
+
+class _ImageCacheManager {
+  final Map<String, _CachedImage> _cache = {};
+  
+  ImageProvider getProvider(String url) {
+    if (_cache.containsKey(url)) {
+      return _cache[url]!.provider;
+    }
+    final provider = NetworkImage(url);
+    _cache[url] = _CachedImage(url, provider);
+    return provider;
+  }
+  
+  void clear() => _cache.clear();
+}
+
+final _ImageCacheManager _imageCache = _ImageCacheManager();
 
 Future<Map<String, dynamic>> _loadImgs() async {
   try {
@@ -39,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _idx = 0;
   List<String> _homeImages = [];
   Map<String, String> _brandMap = {};
+  bool _imagesLoaded = false;
 
   static const List<String> _defaultBanners = <String>[
     'assets/images/as1.PNG',
@@ -70,17 +95,22 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _homeImages = List<String>.from(m['home'] ?? []);
         _brandMap = Map<String, String>.from(m['brands'] ?? {});
+        _imagesLoaded = true;
       });
+      // Preload banner images
+      for (final img in _homeImages.take(5)) {
+        precacheImage(NetworkImage(_imgUrl(img)), context);
+      }
     }
   }
 
   void _startAuto() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!mounted || !_ctrl.hasClients) return;
       _ctrl.nextPage(
-        duration: const Duration(milliseconds: 700),
-        curve: Curves.easeInOutCubic,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOutCubicEmphasized,
       );
     });
   }
@@ -93,20 +123,22 @@ class _HomeScreenState extends State<HomeScreen> {
       tk = t;
     }
     final f = await ImagePicker().pickImage(
-        source: ImageSource.gallery, imageQuality: 80, maxWidth: 1000);
+        source: ImageSource.gallery, imageQuality: 85, maxWidth: 800);
     if (f == null) return;
     final bytes = await f.readAsBytes();
     try {
       final path = 'assets/images/brand_$key.png';
       await ImagesService.putBytes(path, bytes, tk, 'brand $key');
       await ImagesService.setMapping('brands', key, path, tk);
-      final m = await ImagesService.loadImages();
+      final m = await _loadImgs();
       if (mounted) {
         setState(() {
           _brandMap = Map<String, String>.from(m['brands'] ?? {});
         });
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('✅ تم رفع صورة $key')));
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('✅ تم رفع صورة $key')));
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -117,19 +149,52 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _banner(int real) {
+    String url;
     if (_homeImages.isNotEmpty) {
-      return Image.network(
-        _imgUrl(_homeImages[real % _homeImages.length]),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        errorBuilder: (BuildContext c, Object o, StackTrace? st) => const _Fallback(),
-      );
+      url = _imgUrl(_homeImages[real % _homeImages.length]);
+    } else {
+      url = _defaultBanners[real % _defaultBanners.length];
     }
-    return Image.asset(
-      _defaultBanners[real % _defaultBanners.length],
-      fit: BoxFit.cover,
+    
+    return Container(
       width: double.infinity,
-      errorBuilder: (BuildContext c, Object o, StackTrace? st) => const _Fallback(),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.orange.withAlpha(80),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Image(
+          image: _imageCache.getProvider(url),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: AppColors.orange.withAlpha(30),
+              child: Center(
+                child: CircularProgressIndicator(
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                  color: AppColors.orange,
+                  strokeWidth: 3,
+                ),
+              ),
+            );
+          },
+          errorBuilder: (BuildContext c, Object o, StackTrace? st) =>
+              const _Fallback(),
+        ),
+      ),
     );
   }
 
@@ -148,12 +213,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _secTitle(String t) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: <Widget>[
           Container(
             width: 4,
-            height: 18,
+            height: 20,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topCenter,
@@ -163,8 +228,11 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(width: 8),
-          Text(t, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          const SizedBox(width: 10),
+          Text(
+            t,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          ),
         ],
       ),
     );
@@ -174,32 +242,39 @@ class _HomeScreenState extends State<HomeScreen> {
     return Pressable(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: <Color>[c.withAlpha(35), Theme.of(context).colorScheme.surface],
+            colors: <Color>[c.withAlpha(40), Theme.of(context).colorScheme.surface],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.withAlpha(80)),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: c.withAlpha(100), width: 1.5),
         ),
         child: Row(
           children: <Widget>[
             Container(
-              padding: const EdgeInsets.all(9),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: <Color>[c, c.withAlpha(170)]),
-                borderRadius: BorderRadius.circular(11),
+                gradient: LinearGradient(colors: <Color>[c, c.withAlpha(180)]),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: c.withAlpha(60),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Icon(ic, color: Colors.white, size: 22),
+              child: Icon(ic, color: Colors.white, size: 24),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             ),
-            Icon(Icons.chevron_left_rounded, color: c, size: 20),
+            Icon(Icons.chevron_left_rounded, color: c, size: 22),
           ],
         ),
       ),
@@ -225,43 +300,88 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: <Color>[c.withAlpha(30), Theme.of(context).colorScheme.surface],
+            colors: <Color>[
+              c.withAlpha(35),
+              Theme.of(context).colorScheme.surface
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.withAlpha(70)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: c.withAlpha(100), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: c.withAlpha(40),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Stack(
           children: <Widget>[
-            Center(
-              child: img != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(_imgUrl(img),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (BuildContext c2, Object o, StackTrace? st) =>
-                              _brandText(en, ar, c)),
-                    )
-                  : _brandText(en, ar, c),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: AspectRatio(
+                aspectRatio: 1.15,
+                child: img != null
+                    ? Image(
+                        image: _imageCache.getProvider(_imgUrl(img)),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: c.withAlpha(30),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                color: c,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (c, o, st) => _brandText(en, ar, c),
+                      )
+                    : _brandText(en, ar, c),
+              ),
+            ),
+            // Elegant overlay border
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withAlpha(60),
+                  width: 1,
+                ),
+              ),
             ),
             if (isAdmin)
               Positioned(
-                bottom: 6,
-                right: 6,
+                bottom: 8,
+                right: 8,
                 child: InkWell(
                   onTap: () => _uploadBrand(key),
                   child: Container(
-                    padding: const EdgeInsets.all(7),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.orange,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: Colors.white, width: 2.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(40),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: const Icon(Icons.photo_camera_rounded,
-                        size: 16, color: Colors.white),
+                        size: 18, color: Colors.white),
                   ),
                 ),
               ),
@@ -322,57 +442,51 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.orange.withAlpha(60),
-                      blurRadius: 26,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
-                  child: SizedBox(
-                    height: 180,
-                    child: PageView.builder(
-                      controller: _ctrl,
-                      itemCount: _kPages,
-                      onPageChanged: (int i) {
-                        setState(() {
-                          _idx = i % _count;
-                        });
-                      },
-                      itemBuilder: (BuildContext c, int i) => _banner(i),
-                    ),
-                  ),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 200,
+                child: PageView.builder(
+                  controller: _ctrl,
+                  itemCount: _kPages,
+                  onPageChanged: (int i) {
+                    setState(() {
+                      _idx = i % _count;
+                    });
+                  },
+                  itemBuilder: (BuildContext c, int i) => _banner(i),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(_count, (int i) {
                   final bool active = i == _idx;
                   return AnimatedContainer(
-                    duration: const Duration(milliseconds: 260),
+                    duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: active ? 24 : 7,
-                    height: 7,
+                    width: active ? 26 : 8,
+                    height: 8,
                     decoration: BoxDecoration(
                       gradient: active
                           ? const LinearGradient(
                               colors: <Color>[AppColors.orange, Color(0xFFF26B0F)])
                           : null,
-                      color: active ? null : Colors.grey.shade500,
+                      color: active ? null : Colors.grey.shade600,
                       borderRadius: BorderRadius.circular(4),
+                      boxShadow: active
+                          ? [
+                              BoxShadow(
+                                color: AppColors.orange.withAlpha(80),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
                     ),
                   );
                 }),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               _secTitle(s.isArabic ? 'الوصول السريع' : 'Quick access'),
               Row(
                 children: <Widget>[
@@ -384,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       widget.onOpenProducts,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: _quick(
                       Icons.redeem_rounded,
@@ -395,15 +509,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 26),
               _secTitle(s.isArabic ? 'العلامات' : 'Brands'),
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.15,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.87,
                 children: <Widget>[
                   _brand('fawori', 'فاوري', 'FAWORI', AppColors.orange, isAdmin),
                   _brand('gifts', 'الهدايا', 'GIFTS', AppColors.teal, isAdmin),
