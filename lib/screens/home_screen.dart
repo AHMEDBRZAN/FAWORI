@@ -65,14 +65,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, String> _brandMap = {};
   bool _imagesLoaded = false;
 
- static const List<String> _defaultBanners = <String>[
-  'assets/images/BB-1.webp',
-  'assets/images/BB-2.webp',
-  'assets/images/BB-3.webp',
-  'assets/images/BB-4.webp',
-  'assets/images/BB-5.webp',
-];
-
+  // ✅ تم التحديث: صور البانر الجديدة WebP
+  static const List<String> _defaultBanners = <String>[
+    'assets/images/BB-1.webp',
+    'assets/images/BB-2.webp',
+    'assets/images/BB-3.webp',
+    'assets/images/BB-4.webp',
+    'assets/images/BB-5.webp',
+  ];
 
   int get _count =>
       _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (f == null) return;
     final bytes = await f.readAsBytes();
     try {
-      final path = 'assets/images/brand_$key.png';
+      final path = 'assets/images/brand_$key.webp';
       await ImagesService.putBytes(path, bytes, tk, 'brand $key');
       await ImagesService.setMapping('brands', key, path, tk);
       final m = await _loadImgs();
@@ -383,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(11),
                       child: Image.asset(
-                        'assets/images/logo.png',
+                        'assets/images/logo.webp', // ✅ تم التحديث: WebP
                         width: 44,
                         height: 44,
                         fit: BoxFit.cover,
