@@ -1,8 +1,8 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
+import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/pressable.dart';
@@ -15,56 +15,56 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _banner = 0;
-  static const int _startPage = 5000;
-  final PageController _controller = PageController(initialPage: _startPage);
+  final PageController _ctrl = PageController();
+  int _idx = 0;
   Timer? _timer;
+  List<String> _homeImages = [];
 
-  static const _bannerImages = [
+  static const List<String> _defaultBanners = [
     'assets/images/as1.PNG',
     'assets/images/as2.PNG',
     'assets/images/as3.PNG',
     'assets/images/as4.PNG',
   ];
 
-  int get _count => _bannerImages.length;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (final p in _bannerImages) {
-        precacheImage(AssetImage(p), context);
+    _loadImages();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_ctrl.hasClients) {
+        _ctrl.nextPage(
+            duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
       }
-      precacheImage(const AssetImage('assets/images/logo.png'), context);
-    });
-    _timer = Timer.periodic(const Duration(seconds: 7), (_) {
-      if (!_controller.hasClients) return;
-      _controller.nextPage(
-          duration: const Duration(milliseconds: 900), curve: Curves.easeInOut);
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _controller.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  final List<_Category> _categories = const [
-    _Category('brand_fawori', 'FAVORI', Color(0xFFE8A33D), Icons.format_paint_rounded, true),
-    _Category('gifts', 'GIFTS', Color(0xFF3EC6C0), Icons.redeem_rounded, false),
-    _Category('brand_isomat', 'isomat', Color(0xFFD93025), Icons.apartment_rounded, false),
-    _Category('brand_cadence', 'CADENCE', Color(0xFFEDEDED), Icons.palette_rounded, false),
-    _Category('brand_sibax', 'SIBAX', Color(0xFFC9A227), Icons.build_rounded, false),
-    _Category('certifiedAgents', 'AGENTS', Color(0xFF4C8DF5), Icons.people_alt_rounded, false),
-  ];
+  Future<void> _loadImages() async {
+    final m = await ImagesService.loadImages();
+    if (mounted) {
+      setState(() => _homeImages = List<String>.from(m['home'] ?? []));
+    }
+  }
 
-  Color _latinColor(Color c) {
-    if (Theme.of(context).brightness == Brightness.dark) return c;
-    final lum = (0.2126 * c.red + 0.7152 * c.green + 0.0722 * c.blue) / 255;
-    return lum > 0.75 ? AppColors.ink : c;
+  int get _count =>
+      _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
+
+  Widget _banner(int i) {
+    if (_homeImages.isNotEmpty) {
+      return Image.network(ImagesService.remoteUrl(_homeImages[i]),
+          fit: BoxFit.cover, width: double.infinity,
+          errorBuilder: (_, __, ___) => const _Fallback());
+    }
+    return Image.asset(_defaultBanners[i % _defaultBanners.length],
+        fit: BoxFit.cover, width: double.infinity,
+        errorBuilder: (_, __, ___) => const _Fallback());
   }
 
   @override
@@ -73,255 +73,130 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _header(s),
-              const SizedBox(height: 12),
-              _bannerView(),
-              _dots(),
-              const SizedBox(height: 20),
-              _sectionTitle(s.tr('quickAccess')),
-              _quickAccess(s),
-              const SizedBox(height: 20),
-              _grid(s),
-              const SizedBox(height: 16),
-            ],
-          ),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Row(children: [
+              ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset('assets/images/logo.png',
+                      width: 44, height: 44, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const FaworiLogo(size: 44))),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: Text(s.tr('appName'),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w900))),
+              IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded),
+                  onPressed: () {}),
+            ]),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 170,
+              child: PageView.builder(
+                controller: _ctrl,
+                itemCount: _count,
+                onPageChanged: (i) => setState(() => _idx = i),
+                itemBuilder: (_, i) => ClipRRect(
+                    borderRadius: BorderRadius.circular(18), child: _banner(i)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                  _count,
+                  (i) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: i == _idx ? 20 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                            color: i == _idx ? AppColors.orange : Colors.grey.shade400,
+                            borderRadius: BorderRadius.circular(4)),
+                      )),
+            ),
+            const SizedBox(height: 18),
+            Text(s.isArabic ? 'الوصول السريع' : 'Quick access',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child: _quick(Icons.inventory_2_rounded,
+                      s.isArabic ? 'المنتجات' : 'Products', AppColors.orange,
+                      widget.onOpenProducts)),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _quick(Icons.redeem_rounded,
+                      s.isArabic ? 'الهدايا' : 'Gifts', AppColors.teal,
+                      widget.onOpenProducts)),
+            ]),
+            const SizedBox(height: 18),
+            Text(s.isArabic ? 'العلامات' : 'Brands',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1.15,
+              children: [
+                _brand('فاوري', 'FAWORI', AppColors.orange),
+                _brand('الهدايا', 'GIFTS', AppColors.teal),
+                _brand('isomat', 'ISOMAT', Colors.red.shade400),
+                _brand('CADENCE', 'CADENCE', Colors.grey.shade500),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _header(AppSettings s) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Row(
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.border(context)),
-              ),
-              child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset('assets/images/logo.png',
-                      width: 40, height: 40, fit: BoxFit.cover,
-                      gaplessPlayback: true),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(s.tr('appName'),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-            const Spacer(),
-            Pressable(
-              onTap: () {},
-              child: Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.border(context)),
-                ),
-                child: const Icon(Icons.notifications_none_rounded),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _bannerView() => SizedBox(
-        height: 230,
-        child: PageView.builder(
-          controller: _controller,
-          itemCount: 10000,
-          onPageChanged: (i) => setState(() => _banner = i % _count),
-          itemBuilder: (_, i) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(26),
-              child: Image.asset(
-                _bannerImages[i % _count],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                gaplessPlayback: true,
-                frameBuilder: (ctx, child, frame, wasSync) {
-                  if (wasSync) return child;
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Container(
-                        color: Theme.of(ctx).colorScheme.surface,
-                        child: Center(
-                          child: Icon(Icons.image_outlined,
-                              color: Colors.grey.shade600, size: 40),
-                        ),
-                      ),
-                      AnimatedOpacity(
-                        opacity: frame == null ? 0 : 1,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOut,
-                        child: child,
-                      ),
-                    ],
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(26),
-                    gradient: const LinearGradient(colors: [
-                      Color(0xFFEE6C2B),
-                      Color(0xFFF79A3E),
-                      Color(0xFFEE6C2B)
-                    ]),
-                  ),
-                  child: const Center(child: FaworiLogo(size: 150)),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-
-  Widget _dots() => Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_count, (i) {
-            final active = i == _banner;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              margin: const EdgeInsets.symmetric(horizontal: 5),
-              width: active ? 26 : 10,
-              height: 10,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(5),
-                gradient: active
-                    ? const LinearGradient(
-                        colors: [Color(0xFFF26B0F), AppColors.orange])
-                    : null,
-                color: active ? null : Colors.grey.shade400,
-              ),
-            );
-          }),
-        ),
-      );
-
-  Widget _sectionTitle(String t) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-        child:
-            Text(t, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-      );
-
-  Widget _quickAccess(AppSettings s) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          children: [
-            Expanded(
-                child: _quickBtn(s.tr('products'), Icons.inventory_2_rounded,
-                    AppColors.orange, widget.onOpenProducts)),
-            const SizedBox(width: 12),
-            Expanded(
-                child: _quickBtn(s.tr('gifts'), Icons.redeem_rounded, AppColors.teal,
-                    widget.onOpenProducts)),
-          ],
-        ),
-      );
-
-  Widget _quickBtn(String t, IconData ic, Color c, VoidCallback? onTap) => Pressable(
+  Widget _quick(IconData ic, String label, Color c, VoidCallback? onTap) => Pressable(
         onTap: onTap,
         child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.border(context)),
-          ),
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.border(context))),
           child: Row(children: [
-            Expanded(
-                child: Center(
-                    child: Text(t,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 16)))),
             Icon(ic, color: c, size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w800))),
           ]),
         ),
       );
 
-  Widget _grid(AppSettings s) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.85,
-          ),
-          itemCount: _categories.length,
-          itemBuilder: (_, i) => _categoryCard(s, _categories[i]),
-        ),
-      );
-
-  Widget _categoryCard(AppSettings s, _Category c) => Pressable(
+  Widget _brand(String ar, String en, Color c) => Pressable(
         onTap: widget.onOpenProducts,
         child: Container(
-          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppTheme.border(context)),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: c.color.withAlpha(31),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: c.useLogo
-                        ? const FaworiLogo(size: 80)
-                        : Text(c.latin,
-                            style: TextStyle(
-                                color: _latinColor(c.color),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 18)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(
-                    child: Center(
-                        child: Text(s.tr(c.trKey),
-                            style: const TextStyle(fontWeight: FontWeight.w700)))),
-                Icon(c.icon, color: Colors.grey.shade400, size: 20),
-              ]),
-            ],
-          ),
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.border(context))),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(en,
+                style: TextStyle(
+                    color: c, fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text(ar,
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+          ]),
         ),
       );
 }
 
-class _Category {
-  final String trKey, latin;
-  final Color color;
-  final IconData icon;
-  final bool useLogo;
-  const _Category(this.trKey, this.latin, this.color, this.icon, this.useLogo);
+class _Fallback extends StatelessWidget {
+  const _Fallback();
+  @override
+  Widget build(BuildContext context) => Container(
+      color: AppColors.orange.withAlpha(40),
+      child: const Center(child: FaworiLogo(size: 80)));
 }
