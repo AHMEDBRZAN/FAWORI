@@ -9,6 +9,8 @@ import '../widgets/fawori_logo.dart';
 import '../widgets/pressable.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
+const int _kPages = 10000;
+const int _kStart = 1000;
 
 Future<Map<String, dynamic>> _loadImgs() async {
   try {
@@ -33,12 +35,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final PageController _ctrl = PageController();
+  late final PageController _ctrl = PageController(initialPage: _kStart);
   Timer? _timer;
   int _idx = 0;
   List<String> _homeImages = [];
 
-  static const List<String> _defaultBanners = [
+  static const List<String> _defaultBanners = <String>[
     'assets/images/as1.PNG',
     'assets/images/as2.PNG',
     'assets/images/as3.PNG',
@@ -72,52 +74,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // دوران لا نهائي بحركة انسيابية
   void _startAuto() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_ctrl.hasClients) return;
-      if (_idx < _count - 1) {
-        _ctrl.nextPage(
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      } else {
-        _timer?.cancel();
-      }
+      _ctrl.nextPage(
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeInOutCubic,
+      );
     });
   }
 
-  Widget _banner(int i) {
+  Widget _banner(int real) {
     if (_homeImages.isNotEmpty) {
       return Image.network(
-        _imgUrl(_homeImages[i % _homeImages.length]),
+        _imgUrl(_homeImages[real % _homeImages.length]),
         fit: BoxFit.cover,
         width: double.infinity,
-        errorBuilder: (_, __, ___) => const _Fallback(),
+        errorBuilder: (BuildContext c, Object o, StackTrace? st) => const _Fallback(),
       );
     }
     return Image.asset(
-      _defaultBanners[i % _defaultBanners.length],
+      _defaultBanners[real % _defaultBanners.length],
       fit: BoxFit.cover,
       width: double.infinity,
-      errorBuilder: (_, __, ___) => const _Fallback(),
+      errorBuilder: (BuildContext c, Object o, StackTrace? st) => const _Fallback(),
     );
   }
 
   Widget _gradText(String t, double size) {
     return ShaderMask(
-      shaderCallback: (r) {
-        return const LinearGradient(
-          colors: [AppColors.orange, AppColors.teal],
-        ).createShader(r);
-      },
+      shaderCallback: (Rect r) =>
+          const LinearGradient(colors: <Color>[AppColors.orange, Color(0xFFF26B0F)])
+              .createShader(r),
       child: Text(
         t,
         style: TextStyle(
-          fontSize: size,
-          fontWeight: FontWeight.w900,
-          color: Colors.white,
-        ),
+            fontSize: size, fontWeight: FontWeight.w900, color: Colors.white),
       ),
     );
   }
@@ -126,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
-        children: [
+        children: <Widget>[
           Container(
             width: 4,
             height: 18,
@@ -134,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
               gradient: const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [AppColors.orange, AppColors.teal],
+                colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
               ),
               borderRadius: BorderRadius.circular(4),
             ),
@@ -142,10 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 8),
           Text(
             t,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -159,19 +150,19 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [c.withAlpha(30), Theme.of(context).colorScheme.surface],
+            colors: <Color>[c.withAlpha(35), Theme.of(context).colorScheme.surface],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.withAlpha(70)),
+          border: Border.all(color: c.withAlpha(80)),
         ),
         child: Row(
-          children: [
+          children: <Widget>[
             Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [c, c.withAlpha(160)]),
+                gradient: LinearGradient(colors: <Color>[c, c.withAlpha(170)]),
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(ic, color: Colors.white, size: 22),
@@ -180,10 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
               ),
             ),
             Icon(Icons.chevron_left_rounded, color: c, size: 20),
@@ -199,31 +187,24 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [c.withAlpha(26), Theme.of(context).colorScheme.surface],
+            colors: <Color>[c.withAlpha(30), Theme.of(context).colorScheme.surface],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.withAlpha(60)),
+          border: Border.all(color: c.withAlpha(70)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+          children: <Widget>[
             Text(
               en,
-              style: TextStyle(
-                color: c,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-              ),
+              style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
             Text(
               ar,
-              style: TextStyle(
-                color: Colors.grey.shade400,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             ),
           ],
         ),
@@ -233,29 +214,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppSettings>();
+    final AppSettings s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF141419), Color(0xFF1B1B21)],
+            colors: dark
+                ? const <Color>[Color(0xFF23232B), Color(0xFF2B2B34)]
+                : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
           ),
         ),
         child: SafeArea(
           bottom: false,
           child: ListView(
             padding: const EdgeInsets.all(16),
-            children: [
+            children: <Widget>[
               Row(
-                children: [
+                children: <Widget>[
                   Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.orange, AppColors.teal],
-                      ),
+                          colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: ClipRRect(
@@ -265,17 +248,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 44,
                         height: 44,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const FaworiLogo(size: 44),
+                        errorBuilder: (BuildContext c, Object o, StackTrace? st) =>
+                            const FaworiLogo(size: 44),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: _gradText(s.tr('appName'), 18)),
                   IconButton(
-                    icon: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: AppColors.orange,
-                    ),
+                    icon: const Icon(Icons.notifications_none_rounded,
+                        color: AppColors.orange),
                     onPressed: () {},
                   ),
                 ],
@@ -283,31 +265,28 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.orange.withAlpha(50),
-                      blurRadius: 22,
-                      offset: const Offset(0, 8),
+                      color: AppColors.orange.withAlpha(60),
+                      blurRadius: 26,
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   child: SizedBox(
-                    height: 175,
+                    height: 180,
                     child: PageView.builder(
                       controller: _ctrl,
-                      itemCount: _count,
-                      onPageChanged: (i) {
+                      itemCount: _kPages,
+                      onPageChanged: (int i) {
                         setState(() {
-                          _idx = i;
+                          _idx = i % _count;
                         });
-                        if (i >= _count - 1) {
-                          _timer?.cancel();
-                        }
                       },
-                      itemBuilder: (_, i) => _banner(i),
+                      itemBuilder: (BuildContext c, int i) => _banner(i),
                     ),
                   ),
                 ),
@@ -315,32 +294,28 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _count,
-                  (i) {
-                    final isActive = i == _idx;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      width: isActive ? 22 : 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        gradient: isActive
-                            ? const LinearGradient(
-                                colors: [AppColors.orange, AppColors.teal],
-                              )
-                            : null,
-                        color: isActive ? null : Colors.grey.shade600,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    );
-                  },
-                ),
+                children: List.generate(_count, (int i) {
+                  final bool active = i == _idx;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 260),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: active ? 24 : 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      gradient: active
+                          ? const LinearGradient(
+                              colors: <Color>[AppColors.orange, Color(0xFFF26B0F)])
+                          : null,
+                      color: active ? null : Colors.grey.shade500,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
               ),
               const SizedBox(height: 20),
               _secTitle(s.isArabic ? 'الوصول السريع' : 'Quick access'),
               Row(
-                children: [
+                children: <Widget>[
                   Expanded(
                     child: _quick(
                       Icons.inventory_2_rounded,
@@ -369,11 +344,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.15,
-                children: [
+                children: <Widget>[
                   _brand('فاوري', 'FAWORI', AppColors.orange),
                   _brand('الهدايا', 'GIFTS', AppColors.teal),
                   _brand('isomat', 'ISOMAT', Colors.red.shade400),
-                  _brand('CADENCE', 'CADENCE', Colors.grey.shade400),
+                  _brand('CADENCE', 'CADENCE', Colors.grey.shade500),
                 ],
               ),
             ],
@@ -390,9 +365,7 @@ class _Fallback extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.orange.withAlpha(40),
-      child: const Center(
-        child: FaworiLogo(size: 80),
-      ),
+      child: const Center(child: FaworiLogo(size: 80)),
     );
   }
 }
