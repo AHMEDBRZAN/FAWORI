@@ -99,7 +99,7 @@ class ImagesService {
       };
 
   static String remoteUrl(String path) =>
-      '$kSiteBase/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}';
+      '$kSiteBase/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
 
   static Future<String?> getToken() async {
     final p = await SharedPreferences.getInstance();
@@ -111,7 +111,6 @@ class ImagesService {
     await p.setString(_tokenKey, t);
   }
 
-  /// يرجع التوكن المحفوظ، وإلا الثابت إن كان صحيحاً، وإلا نص فارغ
   static Future<String> resolveToken() async {
     final stored = await getToken();
     if (stored != null && stored.isNotEmpty) return stored;
@@ -121,7 +120,6 @@ class ImagesService {
     return '';
   }
 
-  /// نافذة إدخال التوكن وحفظه
   static Future<String?> askGitHubToken(BuildContext context) async {
     final c = TextEditingController();
     final r = await showDialog<String>(
@@ -176,20 +174,18 @@ class ImagesService {
     if (tk.isEmpty || tk == 'PASTE_YOUR_GITHUB_TOKEN_HERE') {
       tk = await resolveToken();
     }
-    if (tk.isEmpty) {
-      throw Exception('لا يوجد توكن GitHub — أدخله أولاً');
-    }
+    if (tk.isEmpty) throw Exception('لا يوجد توكن GitHub — أدخله أولاً');
     final sha = await _sha(path, tk);
     final r = await http.put(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$path'),
         headers: _h(tk),
         body: jsonEncode({
-          'message': msg, 'content': base64Encode(bytes),
-          if (sha != null) 'sha': sha, 'branch': kBranch,
+          'message': msg,
+          'content': base64Encode(bytes),
+          if (sha != null) 'sha': sha,
+          'branch': kBranch,
         }));
-    if (r.statusCode == 401) {
-      throw Exception('401: التوكن غير صالح — أدخل توكن صحيح');
-    }
+    if (r.statusCode == 401) throw Exception('401: التوكن غير صالح — أدخل توكن صحيح');
     if (r.statusCode != 200 && r.statusCode != 201) {
       throw Exception('PUT ${r.statusCode}');
     }
@@ -222,7 +218,8 @@ class ImagesService {
         body: jsonEncode({
           'message': 'update images.json',
           'content': base64Encode(utf8.encode(jsonEncode(m))),
-          if (sha0 != null) 'sha': sha0, 'branch': kBranch,
+          if (sha0 != null) 'sha': sha0,
+          'branch': kBranch,
         }));
     if (r2.statusCode == 401) throw Exception('401: التوكن غير صالح');
     if (r2.statusCode != 200 && r2.statusCode != 201) {
