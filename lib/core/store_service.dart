@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 const String kSiteBase = 'https://ahmedbrzan.github.io/FAWORI';
 const String kOwner = 'AHMEDBRZAN';
@@ -63,7 +62,8 @@ class StoreService {
 
   static Future<List<User>> loadUsers() async {
     try {
-      final List<dynamic> list = jsonDecode(await _fetchRaw('users.json')) as List<dynamic>;
+      final List<dynamic> list =
+          jsonDecode(await _fetchRaw('users.json')) as List<dynamic>;
       return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       try {
@@ -78,7 +78,8 @@ class StoreService {
 
   static Future<List<Invoice>> loadInvoices() async {
     try {
-      final List<dynamic> list = jsonDecode(await _fetchRaw('invoices.json')) as List<dynamic>;
+      final List<dynamic> list =
+          jsonDecode(await _fetchRaw('invoices.json')) as List<dynamic>;
       return list.map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       try {
@@ -93,8 +94,8 @@ class StoreService {
 }
 
 class ImagesService {
-  static const String _tokenKey = 'gh_upload_token';
   static const String kImagesPath = 'assets/data/images.json';
+  static String? _memToken;
 
   static Map<String, String> _h(String t) {
     return {
@@ -108,19 +109,8 @@ class ImagesService {
     return '$kSiteBase/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
-  static Future<String?> getToken() async {
-    final p = await SharedPreferences.getInstance();
-    return p.getString(_tokenKey);
-  }
-
-  static Future<void> saveToken(String t) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_tokenKey, t);
-  }
-
   static Future<String> resolveToken() async {
-    final stored = await getToken();
-    if (stored != null && stored.isNotEmpty) return stored;
+    if (_memToken != null && _memToken!.isNotEmpty) return _memToken!;
     if (kUploadToken.isNotEmpty && kUploadToken != 'PASTE_YOUR_GITHUB_TOKEN_HERE') {
       return kUploadToken;
     }
@@ -138,8 +128,7 @@ class ImagesService {
           controller: c,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-              hintText: 'ghp_...',
-              hintStyle: TextStyle(color: Colors.grey)),
+              hintText: 'ghp_...', hintStyle: TextStyle(color: Colors.grey)),
         ),
         actions: [
           TextButton(
@@ -152,7 +141,7 @@ class ImagesService {
       ),
     );
     if (r != null && r.isNotEmpty) {
-      await saveToken(r);
+      _memToken = r;
       return r;
     }
     return null;
@@ -193,16 +182,14 @@ class ImagesService {
       'content': base64Encode(bytes),
       'branch': kBranch,
     };
-    if (sha != null) {
-      body['sha'] = sha;
-    }
+    if (sha != null) body['sha'] = sha;
 
     final r = await http.put(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$path'),
         headers: _h(tk),
         body: jsonEncode(body));
 
-    if (r.statusCode == 401) throw Exception('401: التوكن غير صالح — أدخل توكن صحيح');
+    if (r.statusCode == 401) throw Exception('401: التوكن غير صالح');
     if (r.statusCode != 200 && r.statusCode != 201) {
       throw Exception('PUT ${r.statusCode}');
     }
@@ -220,7 +207,8 @@ class ImagesService {
     Map<String, dynamic> m = {};
     if (sha0 != null) {
       final r = await http.get(
-          Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$kImagesPath'),
+          Uri.parse(
+              'https://api.github.com/repos/$kOwner/$kRepo/contents/$kImagesPath'),
           headers: _h(tk));
       if (r.statusCode == 200) {
         final b64 = (jsonDecode(r.body)['content'] as String).replaceAll('\n', '');
@@ -237,9 +225,7 @@ class ImagesService {
       'content': base64Encode(utf8.encode(jsonEncode(m))),
       'branch': kBranch,
     };
-    if (sha0 != null) {
-      body2['sha'] = sha0;
-    }
+    if (sha0 != null) body2['sha'] = sha0;
 
     final r2 = await http.put(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$kImagesPath'),
