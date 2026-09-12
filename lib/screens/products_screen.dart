@@ -18,16 +18,13 @@ Future<Map<String, dynamic>> _loadImgs() async {
   try {
     final r = await http.get(Uri.parse(
         '$_base/assets/assets/data/images.json?t=${DateTime.now().millisecondsSinceEpoch}'));
-    if (r.statusCode == 200) {
-      return Map<String, dynamic>.from(jsonDecode(r.body));
-    }
+    if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
   } catch (_) {}
   return {};
 }
 
-String _imgUrl(String p) {
-  return '$_base/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
-}
+String _imgUrl(String p) =>
+    '$_base/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -61,14 +58,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   Future<void> _uploadProduct(String pid, String pname) async {
+    String tk = await ImagesService.resolveToken();
+    if (tk.isEmpty) {
+      final t = await ImagesService.askGitHubToken(context);
+      if (t == null) return;
+      tk = t;
+    }
     final f = await ImagePicker().pickImage(
         source: ImageSource.gallery, imageQuality: 80, maxWidth: 1000);
     if (f == null) return;
     final bytes = await f.readAsBytes();
     try {
       final path = 'assets/images/prod_$pid.png';
-      await ImagesService.putBytes(path, bytes, kUploadToken, 'product $pid');
-      await ImagesService.setMapping('products', pid, path, kUploadToken);
+      await ImagesService.putBytes(path, bytes, tk, 'product $pid');
+      await ImagesService.setMapping('products', pid, path, tk);
       final m = await ImagesService.loadImages();
       if (mounted) {
         setState(() {
@@ -85,13 +88,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
-  List<Product> get _filtered {
-    return sampleProducts
-        .where((Product p) =>
-            (_brand == 'all' || p.brand == _brand) &&
-            (p.name.contains(_query) || p.desc.contains(_query)))
-        .toList();
-  }
+  List<Product> get _filtered => sampleProducts
+      .where((Product p) =>
+          (_brand == 'all' || p.brand == _brand) &&
+          (p.name.contains(_query) || p.desc.contains(_query)))
+      .toList();
 
   Widget _chip(String b, AppSettings s) {
     final bool sel = _brand == b;
@@ -291,8 +292,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         _query = v;
                       });
                     },
-                    style: TextStyle(
-                        color: dark ? Colors.white : AppColors.ink),
+                    style: TextStyle(color: dark ? Colors.white : AppColors.ink),
                     decoration: InputDecoration(
                       hintText: s.isArabic ? 'ابحث عن منتج...' : 'Search...',
                       prefixIcon:
