@@ -14,28 +14,29 @@ const String _base = 'https://ahmedbrzan.github.io/FAWORI';
 const int _kPages = 10000;
 const int _kStart = 1000;
 
-class _CachedImage {
-  final String url;
-  final ImageProvider provider;
-  _CachedImage(this.url, this.provider);
-}
-
-class _ImageCacheManager {
-  final Map<String, _CachedImage> _cache = {};
+// 🚀 نظام كاش متقدم للصور
+class _AdvancedImageCache {
+  final Map<String, ImageProvider> _cache = {};
   
   ImageProvider getProvider(String url) {
     if (_cache.containsKey(url)) {
-      return _cache[url]!.provider;
+      return _cache[url]!;
     }
     final provider = NetworkImage(url);
-    _cache[url] = _CachedImage(url, provider);
+    _cache[url] = provider;
     return provider;
   }
   
-  void clear() => _cache.clear();
+  void preload(String url) {
+    if (!_cache.containsKey(url)) {
+      precacheImage(NetworkImage(url), _dummyContext);
+    }
+  }
+  
+  static final BuildContext _dummyContext = GlobalKey().currentContext!;
 }
 
-final _ImageCacheManager _imageCache = _ImageCacheManager();
+final _AdvancedImageCache _imgCache = _AdvancedImageCache();
 
 Future<Map<String, dynamic>> _loadImgs() async {
   try {
@@ -62,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _idx = 0;
   List<String> _homeImages = [];
   Map<String, String> _brandMap = {};
+  bool _imagesLoaded = false;
 
   static const List<String> _defaultBanners = <String>[
     'assets/images/as1.PNG',
@@ -93,20 +95,28 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _homeImages = List<String>.from(m['home'] ?? []);
         _brandMap = Map<String, String>.from(m['brands'] ?? {});
+        _imagesLoaded = true;
       });
-      for (final img in _homeImages.take(5)) {
-        precacheImage(NetworkImage(_imgUrl(img)), context);
+      
+      // 🚀 تحميل فوري للبانر الأول
+      if (_homeImages.isNotEmpty) {
+        _imgCache.preload(_imgUrl(_homeImages[0]));
+      }
+      
+      // تحميل مسبق للباقي
+      for (final img in _homeImages.skip(1).take(4)) {
+        _imgCache.preload(_imgUrl(img));
       }
     }
   }
 
   void _startAuto() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_ctrl.hasClients) return;
       _ctrl.nextPage(
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeInOutCubicEmphasized,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
       );
     });
   }
@@ -119,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
       tk = t;
     }
     final f = await ImagePicker().pickImage(
-        source: ImageSource.gallery, imageQuality: 85, maxWidth: 800);
+        source: ImageSource.gallery, imageQuality: 80, maxWidth: 600);
     if (f == null) return;
     final bytes = await f.readAsBytes();
     try {
@@ -142,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 🎯 بانر سريع التحميل
   Widget _banner(int real) {
     String url;
     if (_homeImages.isNotEmpty) {
@@ -153,40 +164,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.orange.withAlpha(80),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
+        color: AppColors.orange.withAlpha(20),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         child: Image(
-          image: _imageCache.getProvider(url),
+          image: _imgCache.getProvider(url),
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return Container(
-              color: AppColors.orange.withAlpha(30),
-              child: Center(
-                child: CircularProgressIndicator(
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-                  color: AppColors.orange,
-                  strokeWidth: 3,
-                ),
+              color: AppColors.orange.withAlpha(20),
+              child: const Center(
+                child: FaworiLogo(size: 60),
               ),
             );
           },
-          errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) =>
-              const _Fallback(),
+          errorBuilder: (context, error, stackTrace) =>
+              const Center(child: FaworiLogo(size: 60)),
         ),
       ),
     );
@@ -253,13 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: <Color>[c, c.withAlpha(180)]),
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: c.withAlpha(60),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Icon(ic, color: Colors.white, size: 24),
             ),
@@ -275,83 +266,47 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _brandText(String en, String ar, Color c) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        Text(en,
-            style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 4),
-        Text(ar, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-      ],
-    );
-  }
-
+  // 🎯 علامة ثابتة - لا تتقلب
   Widget _brand(String key, String ar, String en, Color c, bool isAdmin) {
     final String? img = _brandMap[key];
     return Pressable(
       onTap: widget.onOpenProducts,
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[
-              c.withAlpha(35),
-              Theme.of(context).colorScheme.surface
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: BorderRadius.circular(20),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: c.withAlpha(100), width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: c.withAlpha(40),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         child: Stack(
           children: <Widget>[
+            // صورة العلامة - ثابتة
             ClipRRect(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
               child: AspectRatio(
-                aspectRatio: 1.15,
+                aspectRatio: 1.0,
                 child: img != null
                     ? Image(
-                        image: _imageCache.getProvider(_imgUrl(img)),
+                        image: _imgCache.getProvider(_imgUrl(img)),
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Container(
-                            color: c.withAlpha(30),
+                            color: c.withAlpha(20),
                             child: Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                                color: c,
-                                strokeWidth: 2,
-                              ),
+                              child: Text(en,
+                                  style: TextStyle(
+                                      color: c,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900)),
                             ),
                           );
                         },
-                        // ✅ هنا تم التصحيح: تمرير اللون c بدلاً من متغير الـ context
-                        errorBuilder: (context, error, stackTrace) => _brandText(en, ar, c),
+                        errorBuilder: (context, error, stackTrace) =>
+                            _brandText(en, ar, c),
                       )
                     : _brandText(en, ar, c),
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withAlpha(60),
-                  width: 1,
-                ),
               ),
             ),
             if (isAdmin)
@@ -365,14 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.orange,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(40),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: const Icon(Icons.photo_camera_rounded,
                         size: 18, color: Colors.white),
@@ -381,6 +329,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _brandText(String en, String ar, Color c) {
+    return Container(
+      color: c.withAlpha(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(en,
+              style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 4),
+          Text(ar, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+        ],
       ),
     );
   }
@@ -422,8 +385,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 44,
                         height: 44,
                         fit: BoxFit.cover,
-                        errorBuilder: (BuildContext c, Object o, StackTrace? st) =>
-                            const FaworiLogo(size: 44),
                       ),
                     ),
                   ),
@@ -437,8 +398,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 18),
+              // 🎯 البانر المتقلب فقط
               SizedBox(
-                height: 200,
+                height: 180,
                 child: PageView.builder(
                   controller: _ctrl,
                   itemCount: _kPages,
@@ -458,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: active ? 26 : 8,
+                    width: active ? 24 : 8,
                     height: 8,
                     decoration: BoxDecoration(
                       gradient: active
@@ -467,15 +429,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           : null,
                       color: active ? null : Colors.grey.shade600,
                       borderRadius: BorderRadius.circular(4),
-                      boxShadow: active
-                          ? [
-                              BoxShadow(
-                                color: AppColors.orange.withAlpha(80),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
                     ),
                   );
                 }),
@@ -505,13 +458,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 26),
               _secTitle(s.isArabic ? 'العلامات' : 'Brands'),
+              //  العلامات ثابتة - لا تتقلب
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 0.87,
+                childAspectRatio: 1.0,
                 children: <Widget>[
                   _brand('fawori', 'فاوري', 'FAWORI', AppColors.orange, isAdmin),
                   _brand('gifts', 'الهدايا', 'GIFTS', AppColors.teal, isAdmin),
@@ -523,17 +477,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Fallback extends StatelessWidget {
-  const _Fallback();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.orange.withAlpha(40),
-      child: const Center(child: FaworiLogo(size: 80)),
     );
   }
 }
