@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 const String kSiteBase = 'https://ahmedbrzan.github.io/FAWORI';
 const String kOwner = 'AHMEDBRZAN';
 const String kRepo = 'FAWORI';
 const String kBranch = 'main';
 
-/// ⚠️ ضع هنا توكن GitHub حقيقي (صلاحية repo) وإلا لن يعمل أي رفع
+/// ضع هنا توكن GitHub صحيح (صلاحية repo) كاحتياط، أو اتركه وأدخله من التطبيق
 const String kUploadToken = 'PASTE_YOUR_GITHUB_TOKEN_HERE';
 
 class User {
@@ -87,6 +89,7 @@ class StoreService {
 }
 
 class ImagesService {
+  static const String _tokenKey = 'gh_upload_token';
   static const String kImagesPath = 'assets/data/images.json';
 
   static Map<String, String> _h(String t) => {
@@ -97,6 +100,58 @@ class ImagesService {
 
   static String remoteUrl(String path) =>
       '$kSiteBase/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}';
+
+  static Future<String?> getToken() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getString(_tokenKey);
+  }
+
+  static Future<void> saveToken(String t) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_tokenKey, t);
+  }
+
+  /// يرجع التوكن المحفوظ، وإلا الثابت إن كان صحيحاً، وإلا نص فارغ
+  static Future<String> resolveToken() async {
+    final stored = await getToken();
+    if (stored != null && stored.isNotEmpty) return stored;
+    if (kUploadToken.isNotEmpty && kUploadToken != 'PASTE_YOUR_GITHUB_TOKEN_HERE') {
+      return kUploadToken;
+    }
+    return '';
+  }
+
+  /// نافذة إدخال التوكن وحفظه
+  static Future<String?> askGitHubToken(BuildContext context) async {
+    final c = TextEditingController();
+    final r = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF23232B),
+        title: const Text('توكن GitHub', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: c,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+              hintText: 'ghp_...',
+              hintStyle: TextStyle(color: Colors.grey)),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('إلغاء', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, c.text.trim()),
+              child: const Text('حفظ')),
+        ],
+      ),
+    );
+    if (r != null && r.isNotEmpty) {
+      await saveToken(r);
+      return r;
+    }
+    return null;
+  }
 
   static Future<Map<String, dynamic>> loadImages() async {
     try {
@@ -115,25 +170,44 @@ class ImagesService {
     return null;
   }
 
-  static Future<void> putBytes(String path, List<int> bytes, String token, String msg) async {
-    final sha = await _sha(path, token);
+  static Future<void> putBytes(
+      String path, List<int> bytes, String token, String msg) async {
+    String tk = token;
+    if (tk.isEmpty || tk == 'PASTE_YOUR_GITHUB_TOKEN_HERE') {
+      tk = await resolveToken();
+    }
+    if (tk.isEmpty) {
+      throw Exception('لا يوجد توكن GitHub — أدخله أولاً');
+    }
+    final sha = await _sha(path, tk);
     final r = await http.put(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$path'),
-        headers: _h(token),
+        headers: _h(tk),
         body: jsonEncode({
           'message': msg, 'content': base64Encode(bytes),
           if (sha != null) 'sha': sha, 'branch': kBranch,
         }));
-    if (r.statusCode != 200 && r.statusCode != 201) throw Exception('PUT ${r.statusCode}');
+    if (r.statusCode == 401) {
+      throw Exception('401: التوكن غير صالح — أدخل توكن صحيح');
+    }
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw Exception('PUT ${r.statusCode}');
+    }
   }
 
-  static Future<void> setMapping(String section, String key, String path, String token) async {
-    final sha0 = await _sha(kImagesPath, token);
+  static Future<void> setMapping(
+      String section, String key, String path, String token) async {
+    String tk = token;
+    if (tk.isEmpty || tk == 'PASTE_YOUR_GITHUB_TOKEN_HERE') {
+      tk = await resolveToken();
+    }
+    if (tk.isEmpty) throw Exception('لا يوجد توكن GitHub — أدخله أولاً');
+    final sha0 = await _sha(kImagesPath, tk);
     Map<String, dynamic> m = {};
     if (sha0 != null) {
       final r = await http.get(
           Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$kImagesPath'),
-          headers: _h(token));
+          headers: _h(tk));
       if (r.statusCode == 200) {
         final b64 = (jsonDecode(r.body)['content'] as String).replaceAll('\n', '');
         m = Map<String, dynamic>.from(jsonDecode(utf8.decode(base64Decode(b64))));
@@ -144,12 +218,15 @@ class ImagesService {
     m[section] = sec;
     final r2 = await http.put(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$kImagesPath'),
-        headers: _h(token),
+        headers: _h(tk),
         body: jsonEncode({
           'message': 'update images.json',
           'content': base64Encode(utf8.encode(jsonEncode(m))),
           if (sha0 != null) 'sha': sha0, 'branch': kBranch,
         }));
-    if (r2.statusCode != 200 && r2.statusCode != 201) throw Exception('PUT images ${r2.statusCode}');
+    if (r2.statusCode == 401) throw Exception('401: التوكن غير صالح');
+    if (r2.statusCode != 200 && r2.statusCode != 201) {
+      throw Exception('PUT images ${r2.statusCode}');
+    }
   }
 }
