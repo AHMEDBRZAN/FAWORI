@@ -63,27 +63,31 @@ class StoreService {
 
   static Future<List<User>> loadUsers() async {
     try {
-      return (jsonDecode(await _fetchRaw('users.json')) as List<dynamic>)
-          .map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+      final List<dynamic> list = jsonDecode(await _fetchRaw('users.json')) as List<dynamic>;
+      return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       try {
         final t = await rootBundle.loadString('assets/data/users.json');
-        return (jsonDecode(t) as List<dynamic>)
-            .map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
-      } catch (_) { return []; }
+        final List<dynamic> list = jsonDecode(t) as List<dynamic>;
+        return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+      } catch (_) {
+        return [];
+      }
     }
   }
 
   static Future<List<Invoice>> loadInvoices() async {
     try {
-      return (jsonDecode(await _fetchRaw('invoices.json')) as List<dynamic>)
-          .map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
+      final List<dynamic> list = jsonDecode(await _fetchRaw('invoices.json')) as List<dynamic>;
+      return list.map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       try {
         final t = await rootBundle.loadString('assets/data/invoices.json');
-        return (jsonDecode(t) as List<dynamic>)
-            .map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
-      } catch (_) { return []; }
+        final List<dynamic> list = jsonDecode(t) as List<dynamic>;
+        return list.map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
+      } catch (_) {
+        return [];
+      }
     }
   }
 }
@@ -92,14 +96,17 @@ class ImagesService {
   static const String _tokenKey = 'gh_upload_token';
   static const String kImagesPath = 'assets/data/images.json';
 
-  static Map<String, String> _h(String t) => {
-        'Authorization': 'Bearer $t',
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      };
+  static Map<String, String> _h(String t) {
+    return {
+      'Authorization': 'Bearer $t',
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    };
+  }
 
-  static String remoteUrl(String path) =>
-      '$kSiteBase/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
+  static String remoteUrl(String path) {
+    return '$kSiteBase/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
+  }
 
   static Future<String?> getToken() async {
     final p = await SharedPreferences.getInstance();
@@ -155,7 +162,9 @@ class ImagesService {
     try {
       final r = await http.get(Uri.parse(
           '$kSiteBase/assets/assets/data/images.json?t=${DateTime.now().millisecondsSinceEpoch}'));
-      if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
+      if (r.statusCode == 200) {
+        return Map<String, dynamic>.from(jsonDecode(r.body));
+      }
     } catch (_) {}
     return {};
   }
@@ -164,7 +173,9 @@ class ImagesService {
     final r = await http.get(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$path'),
         headers: _h(token));
-    if (r.statusCode == 200) return jsonDecode(r.body)['sha'] as String?;
+    if (r.statusCode == 200) {
+      return jsonDecode(r.body)['sha'] as String?;
+    }
     return null;
   }
 
@@ -175,16 +186,22 @@ class ImagesService {
       tk = await resolveToken();
     }
     if (tk.isEmpty) throw Exception('لا يوجد توكن GitHub — أدخله أولاً');
+
     final sha = await _sha(path, tk);
+    final Map<String, dynamic> body = {
+      'message': msg,
+      'content': base64Encode(bytes),
+      'branch': kBranch,
+    };
+    if (sha != null) {
+      body['sha'] = sha;
+    }
+
     final r = await http.put(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$path'),
         headers: _h(tk),
-        body: jsonEncode({
-          'message': msg,
-          'content': base64Encode(bytes),
-          if (sha != null) 'sha': sha,
-          'branch': kBranch,
-        }));
+        body: jsonEncode(body));
+
     if (r.statusCode == 401) throw Exception('401: التوكن غير صالح — أدخل توكن صحيح');
     if (r.statusCode != 200 && r.statusCode != 201) {
       throw Exception('PUT ${r.statusCode}');
@@ -198,6 +215,7 @@ class ImagesService {
       tk = await resolveToken();
     }
     if (tk.isEmpty) throw Exception('لا يوجد توكن GitHub — أدخله أولاً');
+
     final sha0 = await _sha(kImagesPath, tk);
     Map<String, dynamic> m = {};
     if (sha0 != null) {
@@ -209,18 +227,25 @@ class ImagesService {
         m = Map<String, dynamic>.from(jsonDecode(utf8.decode(base64Decode(b64))));
       }
     }
+
     final sec = Map<String, dynamic>.from(m[section] ?? {});
     sec[key] = path;
     m[section] = sec;
+
+    final Map<String, dynamic> body2 = {
+      'message': 'update images.json',
+      'content': base64Encode(utf8.encode(jsonEncode(m))),
+      'branch': kBranch,
+    };
+    if (sha0 != null) {
+      body2['sha'] = sha0;
+    }
+
     final r2 = await http.put(
         Uri.parse('https://api.github.com/repos/$kOwner/$kRepo/contents/$kImagesPath'),
         headers: _h(tk),
-        body: jsonEncode({
-          'message': 'update images.json',
-          'content': base64Encode(utf8.encode(jsonEncode(m))),
-          if (sha0 != null) 'sha': sha0,
-          'branch': kBranch,
-        }));
+        body: jsonEncode(body2));
+
     if (r2.statusCode == 401) throw Exception('401: التوكن غير صالح');
     if (r2.statusCode != 200 && r2.statusCode != 201) {
       throw Exception('PUT images ${r2.statusCode}');
