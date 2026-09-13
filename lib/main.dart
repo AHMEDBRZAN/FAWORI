@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'core/app_settings.dart';
 import 'core/favorites.dart';
 import 'core/theme.dart';
-import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/login_screen.dart';
+import 'widgets/smart_logo.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final settings = AppSettings();
-  await settings.restoreSession();
-  runApp(MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: settings),
-      ChangeNotifierProvider(create: (_) => Favorites()),
-    ],
-    child: const FaworiApp(),
-  ));
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppSettings()),
+        ChangeNotifierProvider(create: (_) => Favorites()),
+      ],
+      child: const FaworiApp(),
+    ),
+  );
 }
 
 class FaworiApp extends StatelessWidget {
@@ -26,17 +25,113 @@ class FaworiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
     return MaterialApp(
-      title: 'Fawori',
+      title: 'FAWORI',
       debugShowCheckedModeBanner: false,
-      theme: s.isDark ? AppTheme.dark() : AppTheme.light(),
-      locale: s.isArabic ? const Locale('ar') : const Locale('en'),
-      supportedLocales: const [Locale('ar'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: s.isLoggedIn ? const MainScreen() : const LoginScreen(),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
+      home: const SplashGate(),
+    );
+  }
+}
+
+/// بوابة البداية: تعرض Splash ثم توجه للشاشة الصحيحة
+class SplashGate extends StatefulWidget {
+  const SplashGate({super.key});
+  @override
+  State<SplashGate> createState() => _SplashGateState();
+}
+
+class _SplashGateState extends State<SplashGate> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final s = context.read<AppSettings>();
+    await s.restoreSession();
+    await Future.delayed(const Duration(milliseconds: 1400));
+    if (mounted) setState(() => _ready = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    if (!_ready) return const SplashView();
+    return s.isLoggedIn ? const MainScreen() : const LoginScreen();
+  }
+}
+
+/// شاشة البداية مع اللوجو الذكي
+class SplashView extends StatelessWidget {
+  const SplashView({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: dark
+                ? const <Color>[Color(0xFF141419), Color(0xFF1B1B21)]
+                : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: AppColors.orange, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.teal.withAlpha(50),
+                      blurRadius: 45,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: const SmartLogo(size: 140),
+                ),
+              ),
+              const SizedBox(height: 26),
+              ShaderMask(
+                shaderCallback: (Rect r) => const LinearGradient(
+                        colors: <Color>[AppColors.teal, AppColors.orange])
+                    .createShader(r),
+                child: const Text(
+                  'شركة فاوري',
+                  style: TextStyle(
+                      fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 28),
+              const SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AppColors.orange,
+                  backgroundColor: Color(0xFF3A3A40),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
