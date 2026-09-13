@@ -2,126 +2,165 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/theme.dart';
+import '../widgets/smart_logo.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
-    final ar = s.isArabic;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: Text(ar ? 'حول التطبيق' : 'About'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: Text(s.isArabic ? 'حول التطبيق' : 'About'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.border(context)),
-            ),
-            child: Column(children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Image.asset('assets/images/logo.png',
-                    width: 140, height: 140, fit: BoxFit.cover),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                ar ? 'شركة فاوري | Fawori Company' : 'Fawori Company',
-                style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.orange),
-                textAlign: TextAlign.center,
-              ),
-            ]),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: dark
+                ? const <Color>[Color(0xFF23232B), Color(0xFF2B2B34)]
+                : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.border(context)),
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: <Color>[AppColors.orange, AppColors.teal]),
+                  borderRadius: BorderRadius.circular(26),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.orange.withAlpha(80),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: const SmartLogo(size: 96),
+                ),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _p(ar
-                    ? 'تطبيق شركة فاوري هو منصّتك الذكية التي تسهّل عليك كل شيء!'
-                    : 'Fawori Company app is your smart platform that makes everything easy!'),
-                _p(ar
-                    ? 'سوّيناه حتى نخلي شغلك أسهل، أرباحك أكثر، وتعاملك أسرع!'
-                    : 'We built it to make your work easier, your profits bigger, and your experience faster!'),
-                const SizedBox(height: 6),
-                _bullet(
-                    ar ? 'اشترِ، جمّع، واربح!' : 'Buy, collect, and win!',
-                    ar
-                        ? 'كل عملية شراء من منتجات فاوري تعطيك نقاط، وكل نقطة تقرّبك من هدية مميزة!'
-                        : 'Every purchase of Fawori products gives you points, and every point brings you closer to a special gift!'),
-                _bullet(
-                    ar ? 'هدايا على كيفك!' : 'Gifts your way!',
-                    ar
-                        ? 'من أدوات احترافية، إلى خصومات وهدايا حصرية، كل شيء موجود بانتظارك!'
-                        : 'From professional tools to exclusive discounts and gifts, everything is waiting for you!'),
-                _bullet(
-                    ar ? 'تواصل سريع وسهل' : 'Fast and easy support',
-                    ar
-                        ? 'أي استفسار أو مشكلة تواجهك، فريق الدعم موجود بخدمتك من خلال التطبيق.'
-                        : 'Any question or problem, our support team is here for you through the app.'),
-                _bullet(
-                    ar ? 'أنت المميز ويانه!' : 'You are special to us!',
-                    ar
-                        ? 'كل عميل يتعامل ويانه له مكانة خاصة، ونظام النقاط معمول حتى نكافئك ونقدّر تعبك.'
-                        : 'Every customer has a special place with us, and the points system is made to reward you.'),
-              ],
+            const SizedBox(height: 16),
+            Center(
+              child: ShaderMask(
+                shaderCallback: (Rect r) => const LinearGradient(
+                        colors: <Color>[AppColors.orange, AppColors.teal])
+                    .createShader(r),
+                child: Text(
+                  s.isArabic ? 'شركة فاوري' : 'FAWORI Company',
+                  style: const TextStyle(
+                      fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
+                ),
+              ),
             ),
+            const SizedBox(height: 6),
+            Center(
+              child: Text(
+                s.isArabic
+                    ? 'وجهتك الأولى للدهانات والمواد الإنشائية'
+                    : 'Your first destination for paints & building materials',
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 26),
+            _section(
+              Icons.store_rounded,
+              s.isArabic ? 'من نحن' : 'Who we are',
+              s.isArabic
+                  ? 'شركة فاوري شركة رائدة في تجارة الدهانات والمواد الإنشائية، نجمع أبرز العلامات العالمية تحت سقف واحد لنمنحك جودة موثوقة وسعراً منافساً.'
+                  : 'FAWORI is a leading trader of paints & building materials, gathering top global brands under one roof for trusted quality and fair prices.',
+              AppColors.orange,
+            ),
+            _section(
+              Icons.stars_rounded,
+              s.isArabic ? 'كيف تربح النقاط' : 'How to earn points',
+              s.isArabic
+                  ? 'اشترِ أي منتج من شركاتنا المعتمدة، وكل 125,000 دينار من رصيدك المخزن تمنحك نقطة واحدة تلقائياً. النقاط تتراغم مع كل فاتورة.'
+                  : 'Buy any product from our approved companies; every 125,000 IQD of stored balance earns you 1 point automatically. Points stack with every invoice.',
+              AppColors.teal,
+            ),
+            _section(
+              Icons.account_balance_wallet_rounded,
+              s.isArabic ? 'الرصيد المخزن' : 'Stored balance',
+              s.isArabic
+                  ? 'كل فاتورة شراء تضيف رصيداً مخزناً يظهر في محفظتك، ويتحول تدريجياً إلى نقاط يمكنك متابعتها لحظة بلحظة.'
+                  : 'Every purchase invoice adds a stored balance shown in your wallet, gradually turning into points you can track in real time.',
+              const Color(0xFF9B59B6),
+            ),
+            _section(
+              Icons.handshake_rounded,
+              s.isArabic ? 'الشركات المعتمدة' : 'Approved companies',
+              s.isArabic
+                  ? 'فاوري، آيزومات، كادينز، سيباكس — علامات موثوقة نختارها بعناية لنضمن لك أفضل منتج وأفضل خدمة.'
+                  : 'FAWORI, ISOMAT, CADENCE, SIBAX — trusted brands we carefully select to guarantee the best product and service.',
+              const Color(0xFFC8961E),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _section(IconData ic, String title, String body, Color c) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[c.withAlpha(30), Theme.of(context).colorScheme.surface],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.withAlpha(80), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: <Color>[c, c.withAlpha(170)]),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(ic, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ShaderMask(
+                shaderCallback: (Rect r) =>
+                    LinearGradient(colors: <Color>[c, c.withAlpha(200)])
+                        .createShader(r),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white),
+                ),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Text(
+            body,
+            style: const TextStyle(
+                fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.7),
           ),
         ],
       ),
     );
   }
-
-  Widget _p(String t) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Text(t,
-            style: TextStyle(
-                color: Colors.grey.shade400, fontSize: 15, height: 1.7)),
-      );
-
-  Widget _bullet(String title, String desc) => Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                    width: 8, height: 8,
-                    decoration: const BoxDecoration(
-                        shape: BoxShape.circle, color: Color(0xFFF26B0F))),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(title,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 16))),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(start: 16),
-              child: Text(desc,
-                  style: TextStyle(
-                      color: Colors.grey.shade400, fontSize: 14, height: 1.7)),
-            ),
-          ],
-        ),
-      );
 }
