@@ -40,7 +40,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _guestLoginButton(BuildContext context, AppSettings s) {
+  Widget _guestLoginButton(AppSettings s) {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -61,7 +61,7 @@ class SettingsScreen extends StatelessWidget {
               backgroundColor: Colors.transparent,
               shadowColor: Colors.transparent,
               foregroundColor: Colors.white),
-          onPressed: () => _goLogin(context, s),
+          onPressed: () {},
           icon: const Icon(Icons.login_rounded, size: 26),
           label: Text(
             s.isArabic ? 'تسجيل الدخول' : 'Login',
@@ -72,7 +72,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _card(List<Widget> children) {
+  // ✅ تم التصحيح: تمرير context كوسيط
+  Widget _card(BuildContext context, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -96,10 +97,13 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           if (s.isGuest) ...[
-            _guestLoginButton(context, s),
+            InkWell(
+              onTap: () => _goLogin(context, s),
+              child: _guestLoginButton(s),
+            ),
             const SizedBox(height: 20),
           ],
-          _card([
+          _card(context, [
             ListTile(
               leading: const Icon(Icons.language, color: AppColors.teal),
               title: Text(s.tr('language')),
@@ -122,7 +126,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 12),
-          _card([
+          _card(context, [
             ListTile(
               leading: const Icon(Icons.info_outline, color: AppColors.teal),
               title: Text(s.tr('about')),
