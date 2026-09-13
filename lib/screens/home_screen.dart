@@ -8,9 +8,9 @@ import '../core/app_settings.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
-import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
 import 'products_screen.dart';
+import 'gifts_screen.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
 const int _kPages = 10000;
@@ -264,29 +264,36 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _companyPlaceholder(String key, Color c) {
+  Widget _companyText(String key, Color c) {
     return Container(
-      color: c.withAlpha(25),
-      child: Center(
-        child: Text(_companyEn[key] ?? key,
-            style: TextStyle(
-                color: c, fontSize: 22, fontWeight: FontWeight.w900)),
+      color: c.withAlpha(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(_companyEn[key] ?? key,
+              style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 4),
+          Text(_companyAr[key] ?? key,
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+        ],
       ),
     );
   }
 
-  // 🏢 بطاقة شركة: صورة بحواف متلاشية + اسم بالأسفل
-  Widget _company(String key, bool isAdmin) {
+  // 🏢 بطاقة شركة: صورة بحواف متلاشية + اسم الشركة أسفلها
+  Widget _company(String key, bool isAdmin, AppSettings s) {
     final Color c = _companyColor[key] ?? AppColors.orange;
     final String? img = _brandMap[key];
-    final AppSettings s = context.watch<AppSettings>();
-    final String name =
-        s.isArabic ? (_companyAr[key] ?? key) : (_companyEn[key] ?? key);
+    final String name = s.isArabic ? (_companyAr[key] ?? key) : (_companyEn[key] ?? key);
+    final IconData chev =
+        s.isArabic ? Icons.chevron_left_rounded : Icons.chevron_right_rounded;
     return Pressable(
-      onTap: () => Navigator.push(
+      onTap: () {
+        Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => ProductsScreen(initialBrand: key))),
+          MaterialPageRoute(builder: (_) => ProductsScreen(initialBrand: key)),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -308,54 +315,73 @@ class _HomeScreenState extends State<HomeScreen> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(10),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: (img != null && img.isNotEmpty)
-                          ? ShaderMask(
-                              // 🌫️ تلاشي الحواف تدريجياً مع الخلفية
-                              blendMode: BlendMode.dstIn,
-                              shaderCallback: (Rect r) => RadialGradient(
-                                center: Alignment.center,
-                                radius: 1.0,
-                                colors: <Color>[
-                                  Colors.black,
-                                  Colors.black.withAlpha(0),
-                                ],
-                                stops: const <double>[0.72, 1.0],
-                              ).createShader(r),
-                              child: Image.network(_imgUrl(img),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          colors: <Color>[c.withAlpha(45), c.withAlpha(8)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: (img != null && img.isNotEmpty)
+                            ? ShaderMask(
+                                // 🌫️ حواف متلاشية تدريجياً
+                                shaderCallback: (Rect r) => const RadialGradient(
+                                  center: Alignment.center,
+                                  radius: 1.0,
+                                  colors: <Color>[
+                                    Colors.white,
+                                    Colors.white,
+                                    Color(0x00FFFFFF),
+                                  ],
+                                  stops: <double>[0.55, 0.82, 1.0],
+                                ).createShader(r),
+                                blendMode: BlendMode.dstIn,
+                                child: Image(
+                                  image: _imgCache.getProvider(_imgUrl(img)),
                                   fit: BoxFit.cover,
                                   width: double.infinity,
+                                  height: double.infinity,
                                   gaplessPlayback: true,
-                                  errorBuilder: (c2, o, st) =>
-                                      _companyPlaceholder(key, c)),
-                            )
-                          : _companyPlaceholder(key, c),
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return _companyText(key, c);
+                                  },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      _companyText(key, c),
+                                ),
+                              )
+                            : _companyText(key, c),
+                      ),
                     ),
                   ),
                 ),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: <Color>[c.withAlpha(55), c.withAlpha(20)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(19)),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      Icon(Icons.storefront_rounded, color: c, size: 16),
-                      const SizedBox(width: 6),
-                      Text(name,
-                          style: TextStyle(
-                              color: c,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 14)),
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          gradient:
+                              LinearGradient(colors: <Color>[c, c.withAlpha(170)]),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(Icons.storefront_rounded,
+                            color: Colors.white, size: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(name,
+                            style: TextStyle(
+                                color: c,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15)),
+                      ),
+                      Icon(chev, color: c, size: 18),
                     ],
                   ),
                 ),
@@ -363,8 +389,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             if (isAdmin)
               Positioned(
-                bottom: 46,
-                right: 8,
+                top: 16,
+                right: 16,
                 child: InkWell(
                   onTap: () => _uploadBrand(key),
                   child: Container(
@@ -420,7 +446,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Image.asset('assets/images/logo.webp',
                           width: 44, height: 44, fit: BoxFit.cover,
                           gaplessPlayback: true,
-                          errorBuilder: (c, o, st) => const FaworiLogo(size: 44)),
+                          errorBuilder: (context, error, stackTrace) =>
+                              const FaworiLogo(size: 44)),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -486,10 +513,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Icons.redeem_rounded,
                       s.isArabic ? 'الهدايا' : 'Gifts',
                       AppColors.teal,
-                      () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const _GiftsPage())),
+                      () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const GiftsScreen())),
                     ),
                   ),
                 ],
@@ -504,39 +529,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: 12,
                 childAspectRatio: 0.85,
                 children: <Widget>[
-                  for (final key in _companyKeys) _company(key, isAdmin),
+                  for (final key in _companyKeys) _company(key, isAdmin, s),
                 ],
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-// 🎁 صفحة الهدايا
-class _GiftsPage extends StatelessWidget {
-  const _GiftsPage();
-  @override
-  Widget build(BuildContext context) {
-    final s = context.watch<AppSettings>();
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: ShaderMask(
-          shaderCallback: (Rect r) => const LinearGradient(
-                  colors: <Color>[AppColors.teal, AppColors.orange])
-              .createShader(r),
-          child: Text(
-            s.isArabic ? 'الهدايا' : 'Gifts',
-            style: const TextStyle(
-                fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
-          ),
-        ),
-      ),
-      body: const GiftsView(),
     );
   }
 }
