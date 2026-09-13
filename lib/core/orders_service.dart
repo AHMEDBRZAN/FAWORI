@@ -10,7 +10,7 @@ const int kPointUnit = 125000;
 
 /// 🔐 توكن سري مدمج — يستخدمه زر "إتمام الشراء" لرفع الفاتورة بدون إدخال توكن
 /// ضع هنا توكن GitHub حقيقي (صلاحية repo) مرة واحدة
-const String kSecretOrderToken = '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';
+const String kSecretOrderToken = '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';
 
 /// تنسيق بالألوف: 1,000
 String fmtThousands(num n) {
