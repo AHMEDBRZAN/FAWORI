@@ -8,6 +8,10 @@ const String _api = 'https://api.github.com/repos/$kOwner/$kRepo/contents';
 const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 
+/// 🔐 توكن سري مدمج — يستخدمه زر "إتمام الشراء" لرفع الفاتورة بدون إدخال توكن
+/// ضع هنا توكن GitHub حقيقي (صلاحية repo) مرة واحدة
+const String kSecretOrderToken = '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';
+
 /// تنسيق بالألوف: 1,000
 String fmtThousands(num n) {
   final s = n.toStringAsFixed(0);
@@ -107,6 +111,17 @@ class OrdersService {
         'Content-Type': 'application/json',
       };
 
+  /// 🔐 ترتيب حل التوكن: المحفوظ ← السري المدمج ← توكن الصور
+  static Future<String> _resolveOrderToken() async {
+    final stored = await ImagesService.getToken();
+    if (stored != null && stored.isNotEmpty) return stored;
+    if (kSecretOrderToken.isNotEmpty &&
+        kSecretOrderToken != 'PASTE_SECRET_TOKEN_HERE') {
+      return kSecretOrderToken;
+    }
+    return ImagesService.resolveToken();
+  }
+
   // ===== السلة (محلية محفوظة) =====
   static Future<List<CartItem>> loadCart(String uid) async {
     try {
@@ -122,7 +137,8 @@ class OrdersService {
 
   static Future<void> saveCart(String uid, List<CartItem> items) async {
     final p = await SharedPreferences.getInstance();
-    await p.setString('cart_$uid', jsonEncode(items.map((e) => e.toJson()).toList()));
+    await p.setString(
+        'cart_$uid', jsonEncode(items.map((e) => e.toJson()).toList()));
   }
 
   static Future<void> clearCart(String uid) async {
@@ -139,8 +155,8 @@ class OrdersService {
 
   static Future<dynamic> _fetchJson(String path) async {
     try {
-      final r = await http.get(
-          Uri.parse('$_base/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+      final r = await http.get(Uri.parse(
+          '$_base/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     return [];
@@ -169,16 +185,17 @@ class OrdersService {
     return [];
   }
 
+  /// 🛒 إرسال الفاتورة من المستخدم — يستخدم التوكن السري تلقائياً (بدون نافذة)
   static Future<void> submitOrder(Order o) async {
-    final tk = await ImagesService.resolveToken();
-    if (tk.isEmpty) throw Exception('لا يوجد توكن');
+    final tk = await _resolveOrderToken();
+    if (tk.isEmpty) throw Exception('لا يوجد توكن للرفع');
     final list = await loadOrders();
     list.add(o);
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList(), tk);
   }
 
   static Future<void> updateOrder(Order o) async {
-    final tk = await ImagesService.resolveToken();
+    final tk = await _resolveOrderToken();
     final list = await loadOrders();
     final i = list.indexWhere((x) => x.id == o.id);
     if (i >= 0) list[i] = o;
@@ -186,21 +203,20 @@ class OrdersService {
   }
 
   static Future<void> deleteOrder(String id) async {
-    final tk = await ImagesService.resolveToken();
+    final tk = await _resolveOrderToken();
     final list = await loadOrders();
     list.removeWhere((x) => x.id == id);
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList(), tk);
   }
 
-  /// قبول: يحتسب النقاط/الرصيد، ينشر الفاتورة، يحدّث نقاط المستخدم
+  /// ✅ قبول: يحتسب النقاط/الرصيد، ينشر الفاتورة، يحدّث نقاط المستخدم
   static Future<void> acceptOrder(Order o) async {
-    final tk = await ImagesService.resolveToken();
+    final tk = await _resolveOrderToken();
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
     o.status = 'accepted';
     await updateOrder(o);
 
-    // إضافة الفاتورة إلى invoices.json
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
       invs.add({
@@ -212,12 +228,13 @@ class OrdersService {
         'total': o.total,
         'points': o.points.toInt(),
         'stored': o.stored.toInt(),
-        'items': o.items.map((e) => {'name': e.name, 'price': 0, 'qty': e.qty}).toList(),
+        'items': o.items
+            .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
+            .toList(),
       });
       await _putJson('assets/data/invoices.json', invs, tk);
     }
 
-    // تحديث نقاط المستخدم في users.json
     final users = await _fetchJson('assets/data/users.json');
     if (users is List) {
       for (final u in users) {
@@ -230,7 +247,7 @@ class OrdersService {
     }
   }
 
-  /// رفض: حذف الطلب نهائياً
+  /// ❌ رفض: حذف الطلب نهائياً
   static Future<void> rejectOrder(Order o) async {
     await deleteOrder(o.id);
   }
