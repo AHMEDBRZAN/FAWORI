@@ -33,13 +33,7 @@ class _AdvancedImageCache {
     return provider;
   }
   
-  void preload(String url) {
-    if (!_cache.containsKey(url)) {
-      precacheImage(NetworkImage(url), _dummyContext);
-    }
-  }
-  
-  static final BuildContext _dummyContext = GlobalKey().currentContext!;
+  void clear() => _cache.clear();
 }
 
 final _AdvancedImageCache _imgCache = _AdvancedImageCache();
@@ -48,7 +42,9 @@ Future<Map<String, dynamic>> _loadImgs() async {
   try {
     final r = await http.get(Uri.parse(
         '$_base/assets/assets/data/images.json?t=$_cacheBuster'));
-    if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
+    if (r.statusCode == 200) {
+      return Map<String, dynamic>.from(jsonDecode(r.body));
+    }
   } catch (_) {}
   return {};
 }
@@ -67,23 +63,14 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> _homeImages = [];
   Map<String, String> _brandMap = {};
 
-  // ✅ طابع زمني ثابت
-final String _cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
-
-String _imgUrl(String p) => '$_base/assets/$p?t=$_cacheBuster';
-
-// ✅ البانر الجديد
-static const List<String> _defaultBanners = <String>[
-  'assets/images/BB-1.webp',
-  'assets/images/BB-2.webp',
-  'assets/images/BB-3.webp',
-  'assets/images/BB-4.webp',
-  'assets/images/BB-5.webp',
-];
-
-// ✅ اللوجو الجديد
-Image.asset('assets/images/logo.webp', ...)
-
+  // ✅ صور البانر الجديدة WebP (5 صور)
+  static const List<String> _defaultBanners = <String>[
+    'assets/images/BB-1.webp',
+    'assets/images/BB-2.webp',
+    'assets/images/BB-3.webp',
+    'assets/images/BB-4.webp',
+    'assets/images/BB-5.webp',
+  ];
 
   int get _count =>
       _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
@@ -109,16 +96,16 @@ Image.asset('assets/images/logo.webp', ...)
         _homeImages = List<String>.from(m['home'] ?? []);
         _brandMap = Map<String, String>.from(m['brands'] ?? {});
       });
-      
+
       // 🚀 تحميل فوري لجميع صور البانر
       for (final img in _homeImages.take(5)) {
-        _imgCache.preload(_imgUrl(img));
+        precacheImage(NetworkImage(_imgUrl(img)), context);
       }
-      
+
       // 🚀 تحميل فوري لجميع صور العلامات
-      _brandMap.values.forEach((img) {
-        _imgCache.preload(_imgUrl(img));
-      });
+      for (final img in _brandMap.values) {
+        precacheImage(NetworkImage(_imgUrl(img)), context);
+      }
     }
   }
 
@@ -164,6 +151,7 @@ Image.asset('assets/images/logo.webp', ...)
     }
   }
 
+  // 🎯 بانر سريع التحميل
   Widget _banner(int real) {
     String url;
     if (_homeImages.isNotEmpty) {
@@ -171,7 +159,7 @@ Image.asset('assets/images/logo.webp', ...)
     } else {
       url = _imgUrl(_defaultBanners[real % _defaultBanners.length]);
     }
-    
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -277,6 +265,7 @@ Image.asset('assets/images/logo.webp', ...)
     );
   }
 
+  // 🎯 علامة ثابتة - لا تتقلب
   Widget _brand(String key, String ar, String en, Color c, bool isAdmin) {
     final String? img = _brandMap[key];
     return Pressable(
@@ -390,7 +379,7 @@ Image.asset('assets/images/logo.webp', ...)
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(11),
                       child: Image.asset(
-                        'assets/images/logo.webp',
+                        'assets/images/logo.webp', // ✅ WebP
                         width: 44,
                         height: 44,
                         fit: BoxFit.cover,
