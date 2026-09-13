@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
+import '../core/store_service.dart';
 import '../core/theme.dart';
-import '../widgets/pressable.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -35,7 +35,7 @@ class _CartScreenState extends State<CartScreen> {
     setState(() {});
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({bool isRetry = false}) async {
     final s = context.read<AppSettings>();
     if (s.user == null || _cart.isEmpty) return;
     setState(() => _busy = true);
@@ -60,11 +60,19 @@ class _CartScreenState extends State<CartScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      if (!isRetry && e.toString().contains('401')) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل الإرسال: $e')));
+        final t = await ImagesService.askGitHubToken(context);
+        if (t != null && t.isNotEmpty) {
+          OrdersService.setRuntimeToken(t);
+          await _submit(isRetry: true);
+        }
+        return;
       }
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('فشل الإرسال: $e')));
     }
   }
 
@@ -185,7 +193,7 @@ class _CartScreenState extends State<CartScreen> {
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           foregroundColor: Colors.white),
-                      onPressed: _busy ? null : _submit,
+                      onPressed: _busy ? null : () => _submit(),
                       child: _busy
                           ? const SizedBox(
                               width: 20,
