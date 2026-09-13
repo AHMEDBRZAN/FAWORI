@@ -4,15 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'store_service.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
-const String _api = 'https://api.github.com/repos/$kOwner/$kRepo/contents';
 const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 
-/// 🔐 توكن سري مدمج — يستخدمه زر "إتمام الشراء" لرفع الفاتورة بدون إدخال توكن
-/// ضع هنا توكن GitHub حقيقي (صلاحية repo) مرة واحدة
-const String kSecretOrderToken = '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';
+/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
+const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
-/// تنسيق بالألوف: 1,000
 String fmtThousands(num n) {
   final s = n.toStringAsFixed(0);
   final out = StringBuffer();
@@ -105,21 +102,28 @@ class Order {
 }
 
 class OrdersService {
-  static Map<String, String> _h(String t) => {
-        'Authorization': 'Bearer $t',
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      };
-
-  /// 🔐 ترتيب حل التوكن: السري المدمج أولاً ← ثم resolveToken من ImagesService
-  static Future<String> _resolveOrderToken() async {
-    // الأولوية: التوكن السري المدمج
-    if (kSecretOrderToken.isNotEmpty &&
-        kSecretOrderToken != 'PASTE_SECRET_TOKEN_HERE') {
-      return kSecretOrderToken;
+  /// ✍️ كتابة عبر الوسيط — بدون أي توكن داخل التطبيق
+  static Future<void> _putJson(String path, dynamic data) async {
+    final r = await http.post(
+      Uri.parse(kWriteProxy),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'path': path,
+        'content': base64Encode(utf8.encode(jsonEncode(data))),
+      }),
+    );
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw Exception('PUT ${r.statusCode}');
     }
-    // احتياط: توكن من ImagesService
-    return await ImagesService.resolveToken();
+  }
+
+  static Future<dynamic> _fetchJson(String path) async {
+    try {
+      final r = await http.get(Uri.parse(
+          '$_base/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+      if (r.statusCode == 200) return jsonDecode(r.body);
+    } catch (_) {}
+    return [];
   }
 
   // ===== السلة (محلية محفوظة) =====
@@ -146,37 +150,7 @@ class OrdersService {
     await p.remove('cart_$uid');
   }
 
-  // ===== المستودع =====
-  static Future<String?> _sha(String path, String tk) async {
-    final r = await http.get(Uri.parse('$_api/$path'), headers: _h(tk));
-    if (r.statusCode == 200) return jsonDecode(r.body)['sha'] as String?;
-    return null;
-  }
-
-  static Future<dynamic> _fetchJson(String path) async {
-    try {
-      final r = await http.get(Uri.parse(
-          '$_base/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
-      if (r.statusCode == 200) return jsonDecode(r.body);
-    } catch (_) {}
-    return [];
-  }
-
-  static Future<void> _putJson(String path, dynamic data, String tk) async {
-    final sha = await _sha(path, tk);
-    final Map<String, dynamic> body = {
-      'message': 'update $path',
-      'content': base64Encode(utf8.encode(jsonEncode(data))),
-      'branch': kBranch,
-    };
-    if (sha != null) body['sha'] = sha;
-    final r = await http.put(Uri.parse('$_api/$path'),
-        headers: _h(tk), body: jsonEncode(body));
-    if (r.statusCode != 200 && r.statusCode != 201) {
-      throw Exception('PUT ${r.statusCode}');
-    }
-  }
-
+  // ===== الطلبات =====
   static Future<List<Order>> loadOrders() async {
     final d = await _fetchJson(kOrdersPath);
     if (d is List) {
@@ -185,33 +159,26 @@ class OrdersService {
     return [];
   }
 
-  /// 🛒 إرسال الفاتورة من المستخدم — يستخدم التوكن السري تلقائياً (بدون نافذة)
   static Future<void> submitOrder(Order o) async {
-    final tk = await _resolveOrderToken();
-    if (tk.isEmpty) throw Exception('لا يوجد توكن للرفع');
     final list = await loadOrders();
     list.add(o);
-    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList(), tk);
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
   static Future<void> updateOrder(Order o) async {
-    final tk = await _resolveOrderToken();
     final list = await loadOrders();
     final i = list.indexWhere((x) => x.id == o.id);
     if (i >= 0) list[i] = o;
-    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList(), tk);
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
   static Future<void> deleteOrder(String id) async {
-    final tk = await _resolveOrderToken();
     final list = await loadOrders();
     list.removeWhere((x) => x.id == id);
-    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList(), tk);
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
-  /// ✅ قبول: يحتسب النقاط/الرصيد، ينشر الفاتورة، يحدّث نقاط المستخدم
   static Future<void> acceptOrder(Order o) async {
-    final tk = await _resolveOrderToken();
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
     o.status = 'accepted';
@@ -232,7 +199,7 @@ class OrdersService {
             .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
             .toList(),
       });
-      await _putJson('assets/data/invoices.json', invs, tk);
+      await _putJson('assets/data/invoices.json', invs);
     }
 
     final users = await _fetchJson('assets/data/users.json');
@@ -243,11 +210,10 @@ class OrdersService {
           u['stored'] = ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
         }
       }
-      await _putJson('assets/data/users.json', users, tk);
+      await _putJson('assets/data/users.json', users);
     }
   }
 
-  /// ❌ رفض: حذف الطلب نهائياً
   static Future<void> rejectOrder(Order o) async {
     await deleteOrder(o.id);
   }
