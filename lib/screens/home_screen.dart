@@ -280,10 +280,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🖼️ صورة الشركة مع حواف متلاشية_into الخلفية
-  Widget _fadedImage(String key, String? img, Color c) {
+  Widget _fadedImage(String key, String? img, Color c, bool isAdmin) {
     final Color surface = Theme.of(context).colorScheme.surface;
-    final bool isAdmin = context.watch<AppSettings>().isImageAdmin;
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
       child: Stack(
@@ -297,7 +295,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   errorBuilder: (c2, o, st) => _companyText(key, c),
                 )
               : _companyText(key, c),
-          // تلاشي الحواف تدريجياً مع لون الخلفية
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: RadialGradient(
@@ -331,8 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🏢 بطاقة شركة: صورة بالأعلى + الاسم بالأسفل (مثل الصورة 3)
-  Widget _company(String key) {
+  Widget _company(String key, bool isAdmin) {
     final Color c = _companyColor[key] ?? AppColors.orange;
     final String? img = _brandMap[key];
     final AppSettings s = context.watch<AppSettings>();
@@ -356,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Column(
           children: <Widget>[
-            Expanded(child: _fadedImage(key, img, c)),
+            Expanded(child: _fadedImage(key, img, c, isAdmin)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
@@ -381,6 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final bool isAdmin = s.isImageAdmin;
 
     return Scaffold(
       body: Container(
@@ -501,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: 12,
                 childAspectRatio: 0.85,
                 children: <Widget>[
-                  for (final key in _companyKeys) _company(key),
+                  for (final key in _companyKeys) _company(key, isAdmin),
                 ],
               ),
             ],
