@@ -111,15 +111,15 @@ class OrdersService {
         'Content-Type': 'application/json',
       };
 
-  /// 🔐 ترتيب حل التوكن: المحفوظ ← السري المدمج ← توكن الصور
+  /// 🔐 ترتيب حل التوكن: السري المدمج أولاً ← ثم resolveToken من ImagesService
   static Future<String> _resolveOrderToken() async {
-    final stored = await ImagesService.getToken();
-    if (stored != null && stored.isNotEmpty) return stored;
+    // الأولوية: التوكن السري المدمج
     if (kSecretOrderToken.isNotEmpty &&
         kSecretOrderToken != 'PASTE_SECRET_TOKEN_HERE') {
       return kSecretOrderToken;
     }
-    return ImagesService.resolveToken();
+    // احتياط: توكن من ImagesService
+    return await ImagesService.resolveToken();
   }
 
   // ===== السلة (محلية محفوظة) =====
