@@ -61,11 +61,12 @@ class _CartScreenState extends State<CartScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      // 🛡️ عند 401: اطلب توكن (يُحفظ داخلياً في ImagesService._memToken)
+      // ثم أعد المحاولة — OrdersService._resolveOrderToken سيستعيده تلقائياً
       if (!isRetry && e.toString().contains('401')) {
         setState(() => _busy = false);
         final t = await ImagesService.askGitHubToken(context);
         if (t != null && t.isNotEmpty) {
-          OrdersService.setRuntimeToken(t);
           await _submit(isRetry: true);
         }
         return;
