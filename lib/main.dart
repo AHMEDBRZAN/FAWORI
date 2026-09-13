@@ -28,15 +28,13 @@ class FaworiApp extends StatelessWidget {
       title: 'FAWORI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-    darkTheme: AppTheme.dark(),
-
+      darkTheme: AppTheme.dark(),
       themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
       home: const SplashGate(),
     );
   }
 }
 
-/// بوابة البداية: تعرض Splash ثم توجه للشاشة الصحيحة
 class SplashGate extends StatefulWidget {
   const SplashGate({super.key});
   @override
@@ -55,7 +53,7 @@ class _SplashGateState extends State<SplashGate> {
   Future<void> _init() async {
     final s = context.read<AppSettings>();
     await s.restoreSession();
-    await Future.delayed(const Duration(milliseconds: 1400));
+    await Future.delayed(const Duration(milliseconds: 900));
     if (mounted) setState(() => _ready = true);
   }
 
@@ -67,7 +65,6 @@ class _SplashGateState extends State<SplashGate> {
   }
 }
 
-/// شاشة البداية مع اللوجو الذكي
 class SplashView extends StatelessWidget {
   const SplashView({super.key});
   @override
@@ -116,7 +113,9 @@ class SplashView extends StatelessWidget {
                 child: const Text(
                   'شركة فاوري',
                   style: TextStyle(
-                      fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white),
                 ),
               ),
               const SizedBox(height: 28),
