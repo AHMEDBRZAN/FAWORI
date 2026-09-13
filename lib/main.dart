@@ -30,6 +30,13 @@ class FaworiApp extends StatelessWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
+      // 🌍 اتجاه عام لكل النظام: عربي = يمين ، إنكليزي = يسار
+      builder: (context, child) {
+        return Directionality(
+          textDirection: s.isArabic ? TextDirection.rtl : TextDirection.ltr,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const SplashGate(),
     );
   }
