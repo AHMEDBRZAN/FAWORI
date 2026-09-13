@@ -1,16 +1,1 @@
-{
-  "home": [
-    "assets/images/BB-1.webp",
-    "assets/images/BB-2.webp",
-    "assets/images/BB-3.webp",
-    "assets/images/BB-4.webp",
-    "assets/images/BB-5.webp"
-  ],
-  "brands": {
-    "fawori": "assets/images/B-faw.webp",
-    "gifts": "assets/images/B-hh.webp",
-    "isomat": "assets/images/B-is.webp",
-    "cadence": "assets/images/B-c.webp"
-  },
-  "products": {}
-}
+{"home":["assets/images/BB-1.webp","assets/images/BB-2.webp","assets/images/BB-3.webp","assets/images/BB-4.webp","assets/images/BB-5.webp"],"brands":{"fawori":"assets/images/B-faw.webp","gifts":"assets/images/B-hh.webp","isomat":"assets/images/B-is.webp","cadence":"assets/images/B-c.webp","sibax":"assets/images/brand_sibax.webp"},"products":{}}
