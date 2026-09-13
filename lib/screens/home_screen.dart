@@ -67,13 +67,23 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> _homeImages = [];
   Map<String, String> _brandMap = {};
 
-  static const List<String> _defaultBanners = <String>[
-    'assets/images/BB-1.webp',
-    'assets/images/BB-2.webp',
-    'assets/images/BB-3.webp',
-    'assets/images/BB-4.webp',
-    'assets/images/BB-5.webp',
-  ];
+  // ✅ طابع زمني ثابت
+final String _cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+
+String _imgUrl(String p) => '$_base/assets/$p?t=$_cacheBuster';
+
+// ✅ البانر الجديد
+static const List<String> _defaultBanners = <String>[
+  'assets/images/BB-1.webp',
+  'assets/images/BB-2.webp',
+  'assets/images/BB-3.webp',
+  'assets/images/BB-4.webp',
+  'assets/images/BB-5.webp',
+];
+
+// ✅ اللوجو الجديد
+Image.asset('assets/images/logo.webp', ...)
+
 
   int get _count =>
       _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
