@@ -31,6 +31,7 @@ class Gift {
 }
 
 class GiftsService {
+  /// الاسم الأساسي
   static Future<List<Gift>> loadGifts() async {
     try {
       final r = await http.get(Uri.parse(
@@ -52,6 +53,9 @@ class GiftsService {
       return _fallback();
     }
   }
+
+  /// ✅ اسم بديل (alias) حتى تعمل النسخة القديمة من gifts_view.dart
+  static Future<List<Gift>> load() => loadGifts();
 
   static List<Gift> _fallback() => <Gift>[
         Gift(
