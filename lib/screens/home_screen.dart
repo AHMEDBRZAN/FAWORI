@@ -14,6 +14,12 @@ const String _base = 'https://ahmedbrzan.github.io/FAWORI';
 const int _kPages = 10000;
 const int _kStart = 1000;
 
+// 🎯 طابع زمني ثابت - يُنشأ مرة واحدة فقط عند تشغيل التطبيق
+// هذا يمنع إعادة تحميل الصور عند كل rebuild
+final String _cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+
+String _imgUrl(String p) => '$_base/assets/$p?t=$_cacheBuster';
+
 // 🚀 نظام كاش متقدم للصور
 class _AdvancedImageCache {
   final Map<String, ImageProvider> _cache = {};
@@ -41,14 +47,11 @@ final _AdvancedImageCache _imgCache = _AdvancedImageCache();
 Future<Map<String, dynamic>> _loadImgs() async {
   try {
     final r = await http.get(Uri.parse(
-        '$_base/assets/assets/data/images.json?t=${DateTime.now().millisecondsSinceEpoch}'));
+        '$_base/assets/assets/data/images.json?t=$_cacheBuster'));
     if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
   } catch (_) {}
   return {};
 }
-
-String _imgUrl(String p) =>
-    '$_base/assets/$p?t=${DateTime.now().millisecondsSinceEpoch}';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onOpenProducts;
@@ -63,9 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _idx = 0;
   List<String> _homeImages = [];
   Map<String, String> _brandMap = {};
-  bool _imagesLoaded = false;
 
-  // ✅ تم التحديث: صور البانر الجديدة WebP
   static const List<String> _defaultBanners = <String>[
     'assets/images/BB-1.webp',
     'assets/images/BB-2.webp',
@@ -97,18 +98,17 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _homeImages = List<String>.from(m['home'] ?? []);
         _brandMap = Map<String, String>.from(m['brands'] ?? {});
-        _imagesLoaded = true;
       });
       
-      // 🚀 تحميل فوري للبانر الأول
-      if (_homeImages.isNotEmpty) {
-        _imgCache.preload(_imgUrl(_homeImages[0]));
-      }
-      
-      // تحميل مسبق للباقي
-      for (final img in _homeImages.skip(1).take(4)) {
+      // 🚀 تحميل فوري لجميع صور البانر
+      for (final img in _homeImages.take(5)) {
         _imgCache.preload(_imgUrl(img));
       }
+      
+      // 🚀 تحميل فوري لجميع صور العلامات
+      _brandMap.values.forEach((img) {
+        _imgCache.preload(_imgUrl(img));
+      });
     }
   }
 
@@ -154,13 +154,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // 🎯 بانر سريع التحميل
   Widget _banner(int real) {
     String url;
     if (_homeImages.isNotEmpty) {
       url = _imgUrl(_homeImages[real % _homeImages.length]);
     } else {
-      url = _defaultBanners[real % _defaultBanners.length];
+      url = _imgUrl(_defaultBanners[real % _defaultBanners.length]);
     }
     
     return Container(
@@ -268,7 +267,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 🎯 علامة ثابتة - لا تتقلب
   Widget _brand(String key, String ar, String en, Color c, bool isAdmin) {
     final String? img = _brandMap[key];
     return Pressable(
@@ -281,7 +279,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Stack(
           children: <Widget>[
-            // صورة العلامة - ثابتة
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: AspectRatio(
@@ -383,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(11),
                       child: Image.asset(
-                        'assets/images/logo.webp', // ✅ تم التحديث: WebP
+                        'assets/images/logo.webp',
                         width: 44,
                         height: 44,
                         fit: BoxFit.cover,
@@ -400,7 +397,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 18),
-              // 🎯 البانر المتقلب فقط
               SizedBox(
                 height: 180,
                 child: PageView.builder(
@@ -460,7 +456,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 26),
               _secTitle(s.isArabic ? 'العلامات' : 'Brands'),
-              //  العلامات ثابتة - لا تتقلب
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
