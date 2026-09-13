@@ -17,10 +17,12 @@ class SmartLogo extends StatelessWidget {
       child: Image.asset(
         'assets/images/logo.webp',
         fit: BoxFit.cover,
+        gaplessPlayback: true,
         errorBuilder: (context, error, stackTrace) {
           return Image.network(
             _networkUrl,
             fit: BoxFit.cover,
+            gaplessPlayback: true,
             loadingBuilder: (context, child, progress) {
               if (progress == null) return child;
               return const Center(
