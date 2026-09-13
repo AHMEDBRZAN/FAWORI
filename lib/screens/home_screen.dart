@@ -10,6 +10,7 @@ import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
+import 'orders_screen.dart';
 import 'products_screen.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
@@ -379,129 +380,134 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final bool isAdmin = s.isImageAdmin;
 
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: dark
-                ? const <Color>[Color(0xFF23232B), Color(0xFF2B2B34)]
-                : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
+    return Directionality(
+      textDirection: s.isArabic ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: dark
+                  ? const <Color>[Color(0xFF23232B), Color(0xFF2B2B34)]
+                  : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
+            ),
           ),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
-                      borderRadius: BorderRadius.circular(14),
+          child: SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Image.asset('assets/images/logo.webp',
+                            width: 44, height: 44, fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            errorBuilder: (c, o, st) => const FaworiLogo(size: 44)),
+                      ),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(11),
-                      child: Image.asset('assets/images/logo.webp',
-                          width: 44, height: 44, fit: BoxFit.cover,
-                          gaplessPlayback: true,
-                          errorBuilder: (c, o, st) => const FaworiLogo(size: 44)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _gradText(s.tr('appName'), 18)),
+                    // 🔔 الجرس يفتح إشعارات الطلبات
+                    IconButton(
+                      icon: const Icon(Icons.notifications_none_rounded,
+                          color: AppColors.orange),
+                      onPressed: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const OrdersScreen())),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(child: _gradText(s.tr('appName'), 18)),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded,
-                        color: AppColors.orange),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                height: 180,
-                child: PageView.builder(
-                  controller: _ctrl,
-                  itemCount: _kPages,
-                  onPageChanged: (int i) {
-                    setState(() {
-                      _idx = i % _count;
-                    });
-                  },
-                  itemBuilder: (BuildContext c, int i) => _banner(i),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_count, (int i) {
-                  final bool active = i == _idx;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: active ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      gradient: active
-                          ? const LinearGradient(colors: <Color>[
-                              AppColors.orange, Color(0xFFF26B0F)
-                            ])
+                const SizedBox(height: 18),
+                SizedBox(
+                  height: 180,
+                  child: PageView.builder(
+                    controller: _ctrl,
+                    itemCount: _kPages,
+                    onPageChanged: (int i) {
+                      setState(() {
+                        _idx = i % _count;
+                      });
+                    },
+                    itemBuilder: (BuildContext c, int i) => _banner(i),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(_count, (int i) {
+                    final bool active = i == _idx;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: active ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        gradient: active
+                            ? const LinearGradient(colors: <Color>[
+                                AppColors.orange, Color(0xFFF26B0F)
+                              ])
                             : null,
-                      color: active ? null : Colors.grey.shade600,
-                      borderRadius: BorderRadius.circular(4),
+                        color: active ? null : Colors.grey.shade600,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 24),
+                _secTitle(s.isArabic ? 'الوصول السريع' : 'Quick access'),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _quick(
+                        Icons.inventory_2_rounded,
+                        s.isArabic ? 'المنتجات' : 'Products',
+                        AppColors.orange,
+                        widget.onOpenProducts,
+                      ),
                     ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 24),
-              _secTitle(s.isArabic ? 'الوصول السريع' : 'Quick access'),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _quick(
-                      Icons.inventory_2_rounded,
-                      s.isArabic ? 'المنتجات' : 'Products',
-                      AppColors.orange,
-                      widget.onOpenProducts,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _quick(
+                        Icons.redeem_rounded,
+                        s.isArabic ? 'الهدايا' : 'Gifts',
+                        AppColors.teal,
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => Scaffold(
+                                      appBar: AppBar(
+                                          title: Text(
+                                              s.isArabic ? 'الهدايا' : 'Gifts')),
+                                      body: const GiftsView(),
+                                    ))),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _quick(
-                      Icons.redeem_rounded,
-                      s.isArabic ? 'الهدايا' : 'Gifts',
-                      AppColors.teal,
-                      () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => Scaffold(
-                                    appBar: AppBar(
-                                        title: Text(
-                                            s.isArabic ? 'الهدايا' : 'Gifts')),
-                                    body: const GiftsView(),
-                                  ))),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 26),
-              _secTitle(s.isArabic ? 'الشركات' : 'Companies'),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.85,
-                children: <Widget>[
-                  for (final key in _companyKeys) _company(key, isAdmin),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 26),
+                _secTitle(s.isArabic ? 'الشركات' : 'Companies'),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.85,
+                  children: <Widget>[
+                    for (final key in _companyKeys) _company(key, isAdmin),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
