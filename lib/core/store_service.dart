@@ -8,7 +8,7 @@ const String kOwner = 'AHMEDBRZAN';
 const String kRepo = 'FAWORI';
 const String kBranch = 'main';
 
-const String kUploadToken = 'PASTE_YOUR_GITHUB_TOKEN_HERE';
+const String kUploadToken = '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';
 
 class User {
   final String id, name, phone, password, role;
