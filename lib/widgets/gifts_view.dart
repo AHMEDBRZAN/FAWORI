@@ -16,6 +16,7 @@ class GiftsView extends StatefulWidget {
 }
 
 class _GiftsViewState extends State<GiftsView> {
+  // ✅ تم التصحيح: loadGifts بدلاً من load
   late Future<List<Gift>> _future = GiftsService.loadGifts();
 
   void _snack(String m) =>
