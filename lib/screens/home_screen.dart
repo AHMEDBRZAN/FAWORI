@@ -8,9 +8,9 @@ import '../core/app_settings.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
+import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
 import 'products_screen.dart';
-import 'gifts_screen.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
 const int _kPages = 10000;
@@ -58,6 +58,12 @@ const Map<String, Color> _companyColor = {
   'isomat': Color(0xFFE5484D),
   'cadence': Color(0xFF9B59B6),
   'sibax': Color(0xFFC8961E),
+};
+const Map<String, IconData> _companyIcon = {
+  'fawori': Icons.inventory_2_rounded,
+  'isomat': Icons.grid_view_rounded,
+  'cadence': Icons.palette_rounded,
+  'sibax': Icons.build_rounded,
 };
 
 class HomeScreen extends StatefulWidget {
@@ -267,33 +273,73 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _companyText(String key, Color c) {
     return Container(
       color: c.withAlpha(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Center(
+        child: Text(_companyEn[key] ?? key,
+            style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+
+  // 🖼️ صورة الشركة مع حواف متلاشية_into الخلفية
+  Widget _fadedImage(String key, String? img, Color c) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    final bool isAdmin = context.watch<AppSettings>().isImageAdmin;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+      child: Stack(
+        fit: StackFit.expand,
         children: <Widget>[
-          Text(_companyEn[key] ?? key,
-              style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text(_companyAr[key] ?? key,
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+          (img != null && img.isNotEmpty)
+              ? Image(
+                  image: _imgCache.getProvider(_imgUrl(img)),
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  errorBuilder: (c2, o, st) => _companyText(key, c),
+                )
+              : _companyText(key, c),
+          // تلاشي الحواف تدريجياً مع لون الخلفية
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 0.95,
+                colors: <Color>[Colors.transparent, surface.withAlpha(210)],
+                stops: const <double>[0.55, 1.0],
+              ),
+            ),
+          ),
+          if (isAdmin)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: InkWell(
+                onTap: () => _uploadBrand(key),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(Icons.photo_camera_rounded,
+                      size: 18, color: Colors.white),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // 🏢 بطاقة شركة: صورة بحواف متلاشية + اسم الشركة أسفلها
-  Widget _company(String key, bool isAdmin, AppSettings s) {
+  // 🏢 بطاقة شركة: صورة بالأعلى + الاسم بالأسفل (مثل الصورة 3)
+  Widget _company(String key) {
     final Color c = _companyColor[key] ?? AppColors.orange;
     final String? img = _brandMap[key];
+    final AppSettings s = context.watch<AppSettings>();
     final String name = s.isArabic ? (_companyAr[key] ?? key) : (_companyEn[key] ?? key);
-    final IconData chev =
-        s.isArabic ? Icons.chevron_left_rounded : Icons.chevron_right_rounded;
     return Pressable(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ProductsScreen(initialBrand: key)),
-        );
-      },
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ProductsScreen(initialBrand: key))),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -302,109 +348,29 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomCenter,
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: c.withAlpha(90), width: 1.5),
+          border: Border.all(color: c.withAlpha(80), width: 1.5),
           boxShadow: [
             BoxShadow(
                 color: c.withAlpha(30), blurRadius: 14, offset: const Offset(0, 6)),
           ],
         ),
-        child: Stack(
+        child: Column(
           children: <Widget>[
-            Column(
-              children: <Widget>[
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          colors: <Color>[c.withAlpha(45), c.withAlpha(8)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: (img != null && img.isNotEmpty)
-                            ? ShaderMask(
-                                // 🌫️ حواف متلاشية تدريجياً
-                                shaderCallback: (Rect r) => const RadialGradient(
-                                  center: Alignment.center,
-                                  radius: 1.0,
-                                  colors: <Color>[
-                                    Colors.white,
-                                    Colors.white,
-                                    Color(0x00FFFFFF),
-                                  ],
-                                  stops: <double>[0.55, 0.82, 1.0],
-                                ).createShader(r),
-                                blendMode: BlendMode.dstIn,
-                                child: Image(
-                                  image: _imgCache.getProvider(_imgUrl(img)),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  gaplessPlayback: true,
-                                  loadingBuilder: (context, child, progress) {
-                                    if (progress == null) return child;
-                                    return _companyText(key, c);
-                                  },
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      _companyText(key, c),
-                                ),
-                              )
-                            : _companyText(key, c),
-                      ),
-                    ),
+            Expanded(child: _fadedImage(key, img, c)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: <Widget>[
+                  Icon(_companyIcon[key] ?? Icons.store_rounded, color: c, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(name,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 14, color: c)),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: Row(
-                    children: <Widget>[
-                      Container(
-                        padding: const EdgeInsets.all(7),
-                        decoration: BoxDecoration(
-                          gradient:
-                              LinearGradient(colors: <Color>[c, c.withAlpha(170)]),
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: const Icon(Icons.storefront_rounded,
-                            color: Colors.white, size: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(name,
-                            style: TextStyle(
-                                color: c,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15)),
-                      ),
-                      Icon(chev, color: c, size: 18),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (isAdmin)
-              Positioned(
-                top: 16,
-                right: 16,
-                child: InkWell(
-                  onTap: () => _uploadBrand(key),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.orange,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Icon(Icons.photo_camera_rounded,
-                        size: 18, color: Colors.white),
-                  ),
-                ),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -415,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
-    final bool isAdmin = s.isImageAdmin;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -446,8 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Image.asset('assets/images/logo.webp',
                           width: 44, height: 44, fit: BoxFit.cover,
                           gaplessPlayback: true,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const FaworiLogo(size: 44)),
+                          errorBuilder: (c, o, st) => const FaworiLogo(size: 44)),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -488,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? const LinearGradient(colors: <Color>[
                               AppColors.orange, Color(0xFFF26B0F)
                             ])
-                          : null,
+                            : null,
                       color: active ? null : Colors.grey.shade600,
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -513,8 +478,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       Icons.redeem_rounded,
                       s.isArabic ? 'الهدايا' : 'Gifts',
                       AppColors.teal,
-                      () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const GiftsScreen())),
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => Scaffold(
+                                    appBar: AppBar(
+                                        title: Text(
+                                            s.isArabic ? 'الهدايا' : 'Gifts')),
+                                    body: const GiftsView(),
+                                  ))),
                     ),
                   ),
                 ],
@@ -529,7 +501,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisSpacing: 12,
                 childAspectRatio: 0.85,
                 children: <Widget>[
-                  for (final key in _companyKeys) _company(key, isAdmin, s),
+                  for (final key in _companyKeys) _company(key),
                 ],
               ),
             ],
