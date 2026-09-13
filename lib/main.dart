@@ -27,8 +27,9 @@ class FaworiApp extends StatelessWidget {
     return MaterialApp(
       title: 'FAWORI',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+
       themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
       home: const SplashGate(),
     );
