@@ -15,27 +15,56 @@ const String kUploadToken = '';
 
 class User {
   final String id, name, role;
-  final double points, stored;
-  User(
-      {required this.id,
-      required this.name,
-      required this.role,
-      this.points = 0,
-      this.stored = 0});
+  final String? phone;
+  final String? password;
+  final int points, stored;
+  User({
+    required this.id,
+    required this.name,
+    required this.role,
+    this.phone,
+    this.password,
+    this.points = 0,
+    this.stored = 0,
+  });
   factory User.fromJson(Map<String, dynamic> j) => User(
-      id: j['id'] ?? '',
-      name: j['name'] ?? '',
-      role: j['role'] ?? 'guest',
-      points: (j['points'] as num?)?.toDouble() ?? 0,
-      stored: (j['stored'] as num?)?.toDouble() ?? 0);
+        id: j['id']?.toString() ?? '',
+        name: j['name'] ?? '',
+        role: j['role'] ?? 'guest',
+        phone: j['phone']?.toString(),
+        password: j['password']?.toString(),
+        points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
+      );
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'role': role,
+        if (phone != null) 'phone': phone,
+        if (password != null) 'password': password,
+        'points': points,
+        'stored': stored,
+      };
+}
+
+class InvoiceItem {
+  final String name;
+  final double price;
+  final int qty;
+  InvoiceItem({required this.name, this.price = 0, this.qty = 1});
+  factory InvoiceItem.fromJson(Map<String, dynamic> j) => InvoiceItem(
+        name: j['name'] ?? '',
+        price: (j['price'] as num?)?.toDouble() ?? 0,
+        qty: (j['qty'] as num?)?.toInt() ?? 1,
+      );
   Map<String, dynamic> toJson() =>
-      {'id': id, 'name': name, 'role': role, 'points': points, 'stored': stored};
+      {'name': name, 'price': price, 'qty': qty};
 }
 
 class Invoice {
   final String id, userId, date, type, no;
-  final double total, points, stored;
-  final List<Map<String, dynamic>> items;
+  final int total, points, stored;
+  final List<InvoiceItem> items;
   Invoice({
     required this.id,
     required this.userId,
@@ -48,16 +77,16 @@ class Invoice {
     this.items = const [],
   });
   factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(
-        id: j['id'] ?? '',
-        userId: j['userId'] ?? '',
+        id: j['id']?.toString() ?? '',
+        userId: j['userId']?.toString() ?? '',
         date: j['date'] ?? '',
         type: j['type'] ?? 'sale',
-        no: j['no'] ?? '',
-        total: (j['total'] as num?)?.toDouble() ?? 0,
-        points: (j['points'] as num?)?.toDouble() ?? 0,
-        stored: (j['stored'] as num?)?.toDouble() ?? 0,
+        no: j['no']?.toString() ?? '',
+        total: (j['total'] as num?)?.toInt() ?? 0,
+        points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
         items: (j['items'] as List<dynamic>? ?? [])
-            .map((e) => Map<String, dynamic>.from(e as Map))
+            .map((e) => InvoiceItem.fromJson(e as Map<String, dynamic>))
             .toList(),
       );
   Map<String, dynamic> toJson() => {
@@ -69,14 +98,14 @@ class Invoice {
         'total': total,
         'points': points,
         'stored': stored,
-        'items': items,
+        'items': items.map((e) => e.toJson()).toList(),
       };
 }
 
 /// للإشارات القديمة في الكود (alias)
 class UserInfo {
   final String id, name, role;
-  final double points, stored;
+  final int points, stored;
   UserInfo(
       {required this.id,
       required this.name,
@@ -84,13 +113,19 @@ class UserInfo {
       this.points = 0,
       this.stored = 0});
   factory UserInfo.fromJson(Map<String, dynamic> j) => UserInfo(
-      id: j['id'] ?? '',
-      name: j['name'] ?? '',
-      role: j['role'] ?? 'guest',
-      points: (j['points'] as num?)?.toDouble() ?? 0,
-      stored: (j['stored'] as num?)?.toDouble() ?? 0);
-  Map<String, dynamic> toJson() =>
-      {'id': id, 'name': name, 'role': role, 'points': points, 'stored': stored};
+        id: j['id'] ?? '',
+        name: j['name'] ?? '',
+        role: j['role'] ?? 'guest',
+        points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
+      );
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'role': role,
+        'points': points,
+        'stored': stored,
+      };
 }
 
 /// ✍️ خدمة الكتابة عبر الوسيط — بدون أي توكن
@@ -127,7 +162,8 @@ class StoreService {
   }
 
   static Future<void> saveUsers(List<User> users) async {
-    await _putViaProxy('assets/data/users.json', users.map((e) => e.toJson()).toList());
+    await _putViaProxy(
+        'assets/data/users.json', users.map((e) => e.toJson()).toList());
   }
 
   static Future<void> upsertUser(User u) async {
@@ -150,7 +186,8 @@ class StoreService {
   }
 
   static Future<void> saveInvoices(List<Invoice> invs) async {
-    await _putViaProxy('assets/data/invoices.json', invs.map((e) => e.toJson()).toList());
+    await _putViaProxy(
+        'assets/data/invoices.json', invs.map((e) => e.toJson()).toList());
   }
 
   static Future<void> addInvoice(Invoice inv) async {
