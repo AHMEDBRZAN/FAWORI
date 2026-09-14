@@ -7,9 +7,10 @@ const String kRepo = 'FAWORI';
 const String kBranch = 'main';
 const String kSite = 'https://ahmedbrzan.github.io/FAWORI';
 
-/// 📡 قراءة حية مباشرة من المستودع (ليست نسخة الموقع القديمة)
+/// 📡 قراءة حية مباشرة من المستودع
 const String kRaw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
 
+/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 const String kUploadToken = '';
 
@@ -140,10 +141,22 @@ Future<void> _putViaProxy(String path, dynamic data) async {
   }
 }
 
+/// 📡 قراءة ذكية: مستودع مباشر ← ثم نسخة الموقع ← مع مهلة 8 ثوانٍ
 Future<dynamic> _fetchJson(String path) async {
+  // 1) مباشر من المستودع (الأحدث)
   try {
-    final r = await http.get(Uri.parse(
-        '$kRaw/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+    final r = await http
+        .get(Uri.parse(
+            '$kRaw/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+        .timeout(const Duration(seconds: 8));
+    if (r.statusCode == 200) return jsonDecode(r.body);
+  } catch (_) {}
+  // 2) احتياط: نسخة الموقع المبنية
+  try {
+    final r = await http
+        .get(Uri.parse(
+            '$kSite/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+        .timeout(const Duration(seconds: 8));
     if (r.statusCode == 200) return jsonDecode(r.body);
   } catch (_) {}
   return [];
@@ -235,8 +248,10 @@ class ImagesService {
 
   static Future<Map<String, dynamic>> loadImages() async {
     try {
-      final r = await http.get(Uri.parse(
-          '${remoteUrl('assets/data/images.json')}?t=${DateTime.now().millisecondsSinceEpoch}'));
+      final r = await http
+          .get(Uri.parse(
+              '${remoteUrl('assets/data/images.json')}?t=${DateTime.now().millisecondsSinceEpoch}'))
+          .timeout(const Duration(seconds: 8));
       if (r.statusCode == 200) {
         return Map<String, dynamic>.from(jsonDecode(r.body));
       }
@@ -258,8 +273,10 @@ class ImagesService {
 
   static Future<void> setMapping(
       String group, String key, String path, String token) async {
-    final r = await http.get(Uri.parse(
-        '${remoteUrl('assets/data/images.json')}?t=${DateTime.now().millisecondsSinceEpoch}'));
+    final r = await http
+        .get(Uri.parse(
+            '${remoteUrl('assets/data/images.json')}?t=${DateTime.now().millisecondsSinceEpoch}'))
+        .timeout(const Duration(seconds: 8));
     Map<String, dynamic> m = {};
     if (r.statusCode == 200) {
       try {
