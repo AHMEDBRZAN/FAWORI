@@ -38,6 +38,32 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
+  /// ✅ المصدر الحقيقي للنقاط: مجموع الفواتير المقبولة للمستخدم
+  Future<User> _withInvoiceTotals(User base) async {
+    try {
+      final invs = await StoreService.loadInvoices();
+      int pts = 0;
+      int st = 0;
+      for (final i in invs) {
+        if (i.userId == base.id) {
+          pts += i.points;
+          st += i.stored;
+        }
+      }
+      return User(
+        id: base.id,
+        name: base.name,
+        role: base.role,
+        phone: base.phone,
+        password: base.password,
+        points: pts,
+        stored: st,
+      );
+    } catch (_) {
+      return base;
+    }
+  }
+
   void toggleLanguage() {
     _isArabic = !_isArabic;
     _savePrefs();
@@ -61,14 +87,15 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> loginAsUser(User u) async {
-    _user = u;
+    _user = await _withInvoiceTotals(u);
     _isImageAdmin = (u.role == 'admin');
-    await StoreService.upsertUser(u);
+    try {
+      await StoreService.upsertUser(u);
+    } catch (_) {}
     await _savePrefs();
     notifyListeners();
   }
 
-  /// 🔑 دخول كمدير — يبحث عن أول مستخدم admin أو ينشئ واحد افتراضي
   Future<void> loginAsAdmin() async {
     final users = await StoreService.loadUsers();
     final admins = users.where((u) => u.role == 'admin').toList();
@@ -83,9 +110,11 @@ class AppSettings extends ChangeNotifier {
         phone: '0000000000',
         password: 'admin',
       );
-      await StoreService.upsertUser(admin);
+      try {
+        await StoreService.upsertUser(admin);
+      } catch (_) {}
     }
-    _user = admin;
+    _user = await _withInvoiceTotals(admin);
     _isImageAdmin = true;
     await _savePrefs();
     notifyListeners();
@@ -108,16 +137,17 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔄 يعيد تحميل المستخدم الحالي من المستودع (لتحديث النقاط/الرصيد)
+  /// 🔄 تحديث المستخدم: من users.json ثم مزامنة النقاط من الفواتير
   Future<void> refreshUser() async {
     if (_user == null) return;
-    final users = await StoreService.loadUsers();
-    final found = users.where((u) => u.id == _user!.id).toList();
-    if (found.isNotEmpty) {
-      _user = found.first;
+    try {
+      final users = await StoreService.loadUsers();
+      final found = users.where((u) => u.id == _user!.id).toList();
+      final base = found.isNotEmpty ? found.first : _user!;
+      _user = await _withInvoiceTotals(base);
       await _savePrefs();
       notifyListeners();
-    }
+    } catch (_) {}
   }
 
   Future<void> addPoints(int delta) async {
@@ -132,7 +162,9 @@ class AppSettings extends ChangeNotifier {
       stored: _user!.stored,
     );
     _user = newUser;
-    await StoreService.upsertUser(newUser);
+    try {
+      await StoreService.upsertUser(newUser);
+    } catch (_) {}
     await _savePrefs();
     notifyListeners();
   }
@@ -149,7 +181,9 @@ class AppSettings extends ChangeNotifier {
       stored: _user!.stored + delta,
     );
     _user = newUser;
-    await StoreService.upsertUser(newUser);
+    try {
+      await StoreService.upsertUser(newUser);
+    } catch (_) {}
     await _savePrefs();
     notifyListeners();
   }
@@ -184,15 +218,14 @@ class AppSettings extends ChangeNotifier {
     if (id != null && id.isNotEmpty) {
       final users = await StoreService.loadUsers();
       final found = users.where((u) => u.id == id).toList();
-      if (found.isNotEmpty) {
-        _user = found.first;
-      } else {
-        _user = User(
-          id: id,
-          name: p.getString('userName') ?? '',
-          role: p.getString('userRole') ?? 'guest',
-        );
-      }
+      final base = found.isNotEmpty
+          ? found.first
+          : User(
+              id: id,
+              name: p.getString('userName') ?? '',
+              role: p.getString('userRole') ?? 'guest',
+            );
+      _user = await _withInvoiceTotals(base);
       _isImageAdmin = (_user!.role == 'admin');
     }
     notifyListeners();
