@@ -17,6 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _busy = false;
   String? _err;
 
+  /// 🔑 متغير الإعدادات متاح في كل مكان داخل الـ State
+  AppSettings get s => context.read<AppSettings>();
+
   void _go() {
     if (!mounted) return;
     setState(() => _busy = false);
@@ -30,7 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _busy = true;
       _err = null;
     });
-    final s = context.read<AppSettings>();
     try {
       final ph = _phone.text.trim();
       final pw = _pass.text.trim();
@@ -81,7 +83,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _guest() async {
     if (_busy) return;
     setState(() => _busy = true);
-    final s = context.read<AppSettings>();
     try {
       await s.loginAsGuest();
       _go();
@@ -97,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppSettings>();
+    final settings = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Container(
@@ -142,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           colors: <Color>[AppColors.teal, AppColors.orange])
                       .createShader(r),
                   child: Text(
-                    s.isArabic ? 'شركة فاوري' : 'FAWORI',
+                    settings.isArabic ? 'شركة فاوري' : 'FAWORI',
                     style: const TextStyle(fontSize: 24,
                         fontWeight: FontWeight.w900, color: Colors.white),
                   ),
@@ -154,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.phone,
                 style: TextStyle(color: dark ? Colors.white : AppColors.ink),
                 decoration: InputDecoration(
-                  hintText: s.isArabic ? 'رقم الهاتف' : 'Phone',
+                  hintText: settings.isArabic ? 'رقم الهاتف' : 'Phone',
                   prefixIcon: const Icon(Icons.phone_rounded,
                       color: AppColors.orange),
                   filled: true,
@@ -169,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: true,
                 style: TextStyle(color: dark ? Colors.white : AppColors.ink),
                 decoration: InputDecoration(
-                  hintText: s.isArabic ? 'كلمة المرور' : 'Password',
+                  hintText: settings.isArabic ? 'كلمة المرور' : 'Password',
                   prefixIcon:
                       const Icon(Icons.lock_outline_rounded, color: AppColors.orange),
                   filled: true,
@@ -207,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
                         : Text(
-                            s.isArabic ? 'تسجيل الدخول' : 'Login',
+                            settings.isArabic ? 'تسجيل الدخول' : 'Login',
                             style: const TextStyle(
                                 fontSize: 17, fontWeight: FontWeight.w900)),
                   ),
@@ -224,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _busy ? null : _guest,
                   icon: const Icon(Icons.person_outline_rounded, size: 22),
                   label: Text(
-                    s.isArabic ? 'الدخول كضيف' : 'Continue as guest',
+                    settings.isArabic ? 'الدخول كضيف' : 'Continue as guest',
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
