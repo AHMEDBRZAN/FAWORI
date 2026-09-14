@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
-import '../core/store_service.dart';
 import '../core/theme.dart';
 
 class CartScreen extends StatefulWidget {
@@ -35,7 +34,7 @@ class _CartScreenState extends State<CartScreen> {
     setState(() {});
   }
 
-  Future<void> _submit({bool isRetry = false}) async {
+  Future<void> _submit() async {
     final s = context.read<AppSettings>();
     if (s.user == null || _cart.isEmpty) return;
     setState(() => _busy = true);
@@ -61,19 +60,15 @@ class _CartScreenState extends State<CartScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      // 🛡️ عند 401: اطلب توكن (يُحفظ داخلياً في ImagesService._memToken)
-      // ثم أعد المحاولة — OrdersService._resolveOrderToken سيستعيده تلقائياً
-      if (!isRetry && e.toString().contains('401')) {
-        setState(() => _busy = false);
-        final t = await ImagesService.askGitHubToken(context);
-        if (t != null && t.isNotEmpty) {
-          await _submit(isRetry: true);
-        }
-        return;
-      }
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('فشل الإرسال: $e')));
+      String msg = 'فشل الإرسال: $e';
+      if (e.toString().contains('401')) {
+        msg = 'خدمة الكتابة رفضت الطلب (401) — حدّث سر GH_TOKEN في Cloudflare';
+      } else if (e.toString().contains('Failed host lookup') ||
+          e.toString().contains('SocketException')) {
+        msg = 'تحقق من اتصال الإنترنت';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -194,7 +189,7 @@ class _CartScreenState extends State<CartScreen> {
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
                           foregroundColor: Colors.white),
-                      onPressed: _busy ? null : () => _submit(),
+                      onPressed: _busy ? null : _submit,
                       child: _busy
                           ? const SizedBox(
                               width: 20,
