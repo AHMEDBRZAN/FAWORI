@@ -5,14 +5,14 @@ import '../core/orders_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
 
-/// ✅ تاريخ بصيغة سنة-شهر-يوم مع أصفار: 2026-09-14
+/// ✅ تاريخ بصيغة يوم-شهر-سنة مع أصفار: 14-09-2026
 String dmy(String iso) {
   try {
     final p = iso.split('-');
     final day = p[2].padLeft(2, '0');
     final month = p[1].padLeft(2, '0');
     final year = p[0];
-    return '$year-$month-$day';
+    return '$day-$month-$year';  // ✅ يوم-شهر-سنة
   } catch (_) {
     return iso;
   }
@@ -62,13 +62,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   String _statusAr(String st) {
     if (st == 'accepted') return 'مقبولة';
-    if (st == 'rejected') return 'مرفوضة'; // ✅ إضافة حالة الرفض
+    if (st == 'rejected') return 'مرفوضة';
     return 'قيد المراجعة';
   }
 
   String _statusEn(String st) {
     if (st == 'accepted') return 'Accepted';
-    if (st == 'rejected') return 'Rejected'; // ✅ إضافة حالة الرفض
+    if (st == 'rejected') return 'Rejected';
     return 'Pending';
   }
 
@@ -369,7 +369,6 @@ class _OrderDetailState extends State<_OrderDetail> {
           ),
           const SizedBox(height: 18),
           
-          // ===== حالة قيد المراجعة (للمدير) =====
           if (widget.isAdmin && o.status == 'pending') ...[
             _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total, '250000'),
             const SizedBox(height: 12),
@@ -454,8 +453,6 @@ class _OrderDetailState extends State<_OrderDetail> {
               ],
             ),
           ] 
-          
-          // ===== حالة مقبولة =====
           else if (o.status == 'accepted') ...[
             Container(
               padding: const EdgeInsets.all(16),
@@ -478,8 +475,6 @@ class _OrderDetailState extends State<_OrderDetail> {
               ),
             ),
           ]
-          
-          // ✅ ===== حالة مرفوضة (للمستخدم) =====
           else if (o.status == 'rejected') ...[
             Container(
               padding: const EdgeInsets.all(20),
