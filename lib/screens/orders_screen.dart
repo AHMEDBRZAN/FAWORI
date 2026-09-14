@@ -12,12 +12,11 @@ String dmy(String iso) {
     final day = p[2].padLeft(2, '0');
     final month = p[1].padLeft(2, '0');
     final year = p[0];
-    return '$year-$month-$day';  // ✅ سنة-شهر-يوم
+    return '$year-$month-$day';
   } catch (_) {
     return iso;
   }
 }
-
 
 /// ✅ وقت بصيغة 12 ساعة مع ص/م: 9:15 ص
 String time12(String idMillis) {
@@ -39,19 +38,45 @@ class OrdersScreen extends StatefulWidget {
   State<OrdersScreen> createState() => _OrdersScreenState();
 }
 
-class _OrdersScreenState extends State<OrdersScreen> {
+class _OrdersScreenState extends State<OrdersScreen>
+    with SingleTickerProviderStateMixin {
   late Future<List<Order>> _future = OrdersService.loadOrders();
+  TabController? _tabCtrl;
+  String _filter = 'pending';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        final s = context.read<AppSettings>();
+        final isAdmin = s.isAdmin || s.isImageAdmin;
+        if (isAdmin) {
+          _tabCtrl = TabController(length: 4, vsync: this);
+          _tabCtrl!.addListener(() {
+            if (!_tabCtrl!.indexIsChanging) {
+              setState(() {
+                switch (_tabCtrl!.index) {
+                  case 0: _filter = 'pending'; break;
+                  case 1: _filter = 'all'; break;
+                  case 2: _filter = 'accepted'; break;
+                  case 3: _filter = 'rejected'; break;
+                }
+              });
+            }
+          });
+        }
         setState(() {
           _future = OrdersService.loadOrders();
         });
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl?.dispose();
+    super.dispose();
   }
 
   String _roleAr(String r) {
@@ -84,6 +109,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
         title: Text(isAdmin
             ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
             : (s.isArabic ? 'طلباتي' : 'My orders')),
+        bottom: isAdmin && _tabCtrl != null
+            ? TabBar(
+                controller: _tabCtrl,
+                indicatorColor: AppColors.orange,
+                labelColor: AppColors.orange,
+                unselectedLabelColor: Colors.grey.shade500,
+                labelStyle:
+                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                tabs: [
+                  Tab(text: s.isArabic ? 'معلقة' : 'Pending'),
+                  Tab(text: s.isArabic ? 'الكل' : 'All'),
+                  Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
+                  Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
+                ],
+              )
+            : null,
       ),
       body: RefreshIndicator(
         color: AppColors.orange,
@@ -105,11 +146,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
               );
             }
             var orders = snap.data ?? [];
+
             if (isAdmin) {
-              orders = orders.where((o) => o.status == 'pending').toList();
+              // ✅ المدير: فلتر حسب التبويب
+              if (_filter == 'pending') {
+                orders = orders.where((o) => o.status == 'pending').toList();
+              } else if (_filter == 'accepted') {
+                orders = orders.where((o) => o.status == 'accepted').toList();
+              } else if (_filter == 'rejected') {
+                orders = orders.where((o) => o.status == 'rejected').toList();
+              }
+              // 'all' لا يحتاج فلتر
             } else {
+              // المستخدم: جميع طلباته (بما فيها المرفوضة)
               orders = orders.where((o) => o.userId == s.user?.id).toList();
             }
+
             if (orders.isEmpty) {
               return ListView(
                 children: [
@@ -178,8 +230,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   decoration: BoxDecoration(
                       color: o.status == 'accepted'
                           ? AppColors.teal.withAlpha(45)
-                          : (o.status == 'rejected' 
-                              ? Colors.red.withAlpha(45) 
+                          : (o.status == 'rejected'
+                              ? Colors.red.withAlpha(45)
                               : AppColors.orange.withAlpha(45)),
                       borderRadius: BorderRadius.circular(12)),
                   child: Text(
@@ -194,7 +246,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              '${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${time12(o.id)}',
+              '${dmy(o.date)} • ${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${time12(o.id)}',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             ),
             const SizedBox(height: 8),
@@ -268,7 +320,7 @@ class _OrderDetailState extends State<_OrderDetail> {
       if (mounted) {
         setState(() => _busy = false);
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🗑️ تم رفض الفاتورة وحذفها')));
+            const SnackBar(content: Text('🗑️ تم رفض الفاتورة')));
         Navigator.pop(context);
       }
     } catch (e) {
@@ -369,7 +421,7 @@ class _OrderDetailState extends State<_OrderDetail> {
             ),
           ),
           const SizedBox(height: 18),
-          
+
           if (widget.isAdmin && o.status == 'pending') ...[
             _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total, '250000'),
             const SizedBox(height: 12),
@@ -486,25 +538,25 @@ class _OrderDetailState extends State<_OrderDetail> {
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline_rounded, 
-                      color: Colors.red, size: 48),
+                  const Icon(Icons.error_outline_rounded,
+                      color: Colors.red, size: 56),
                   const SizedBox(height: 12),
                   Text(
                     s.isArabic ? 'مرفوضة' : 'Rejected',
                     style: const TextStyle(
-                        color: Colors.red, 
-                        fontSize: 20, 
+                        color: Colors.red,
+                        fontSize: 22,
                         fontWeight: FontWeight.w900),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 14),
                   Text(
-                    s.isArabic 
-                        ? 'ملاحظة / راجع الإدارة للاستفسار' 
-                        : 'Note: Contact administration for inquiry',
-                    style: TextStyle(
-                        color: Colors.grey.shade700, 
-                        fontSize: 15, 
-                        fontWeight: FontWeight.w600),
+                    s.isArabic
+                        ? 'تم رفض الفاتورة للاستفسار يرجى مراجعة شركة فاوري'
+                        : 'Invoice rejected. Please contact FAWORI company for inquiry.',
+                    style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700),
                     textAlign: TextAlign.center,
                   ),
                 ],
