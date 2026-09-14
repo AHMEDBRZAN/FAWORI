@@ -114,60 +114,90 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              // زر تبديل الثيم
+              // زر تبديل الوضع (عربي)
               Positioned(
-                top: 20,
-                left: 20,
-                child: IconButton(
-                  icon: Icon(
-                    dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                    color: AppColors.orange,
-                    size: 28,
+                top: 16,
+                left: 16,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFF26262E) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.orange.withAlpha(60)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.orange.withAlpha(20),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
-                  onPressed: () => context.read<AppSettings>().toggleDark(),
+                  child: IconButton(
+                    icon: Icon(
+                      dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      color: AppColors.orange,
+                      size: 22,
+                    ),
+                    onPressed: () => context.read<AppSettings>().toggleDark(),
+                  ),
                 ),
               ),
               // المحتوى
               ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 children: [
-                  const SizedBox(height: 120),
-                  // الشعار
+                  const SizedBox(height: 80),
+                  // شعار FAWORI
                   Center(
                     child: Container(
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: <Color>[Color(0xFFFFA500), Color(0xFFFF8C00)],
-                        ),
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.orange.withAlpha(100),
+                            color: AppColors.orange.withAlpha(80),
                             blurRadius: 30,
                             spreadRadius: 5,
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.store_rounded,
-                        color: Colors.white,
-                        size: 60,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: Image.asset(
+                          'assets/images/logo.webp',
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          errorBuilder: (c, o, st) => Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: <Color>[Color(0xFFFFA500), Color(0xFFFF8C00)],
+                              ),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'FAWORI',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // اسم الشركة
+                  const SizedBox(height: 24),
+                  // اسم الشركة بتدرج
                   Center(
                     child: ShaderMask(
                       shaderCallback: (Rect r) => const LinearGradient(
-                        colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
+                        colors: <Color>[AppColors.teal, AppColors.orange],
                       ).createShader(r),
                       child: Text(
                         'شركة فاورِي',
                         style: const TextStyle(
-                          fontSize: 28,
+                          fontSize: 32,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
@@ -179,7 +209,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     settings.isArabic ? 'سجّل دخولك للمتابعة' : 'Sign in to continue',
                     style: TextStyle(
                       color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                      fontSize: 14,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -191,12 +222,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: dark ? const Color(0xFF1E1E28) : Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color: AppColors.orange.withAlpha(60),
+                        color: AppColors.orange.withAlpha(40),
                         width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.orange.withAlpha(40),
+                          color: AppColors.orange.withAlpha(30),
                           blurRadius: 20,
                           spreadRadius: 2,
                         ),
@@ -277,15 +308,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // زر الدخول
+                        // زر login
                         Container(
                           width: double.infinity,
                           height: 54,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: <Color>[Color(0xFFFFA500), Color(0xFFFF8C00)],
+                              colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
                             ),
                             borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.orange.withAlpha(60),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -303,9 +341,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text(
-                                    'login',
-                                    style: TextStyle(
+                                : Text(
+                                    settings.isArabic ? 'تسجيل الدخول' : 'Login',
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w900,
                                     ),
@@ -345,10 +383,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   if (_err != null) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      _err!,
-                      style: const TextStyle(color: Colors.red, fontSize: 13),
-                      textAlign: TextAlign.center,
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withAlpha(20),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.withAlpha(60)),
+                      ),
+                      child: Text(
+                        _err!,
+                        style: const TextStyle(color: Colors.red, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ],
                 ],
