@@ -68,6 +68,29 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 🔑 دخول كمدير — يبحث عن أول مستخدم admin أو ينشئ واحد افتراضي
+  Future<void> loginAsAdmin() async {
+    final users = await StoreService.loadUsers();
+    final admins = users.where((u) => u.role == 'admin').toList();
+    User admin;
+    if (admins.isNotEmpty) {
+      admin = admins.first;
+    } else {
+      admin = User(
+        id: 'admin_001',
+        name: 'المدير',
+        role: 'admin',
+        phone: '0000000000',
+        password: 'admin',
+      );
+      await StoreService.upsertUser(admin);
+    }
+    _user = admin;
+    _isImageAdmin = true;
+    await _savePrefs();
+    notifyListeners();
+  }
+
   Future<void> loginAsGuest() async {
     _user = User(
         id: 'guest_${DateTime.now().millisecondsSinceEpoch}',
@@ -83,6 +106,18 @@ class AppSettings extends ChangeNotifier {
   void syncUser(User u) {
     _user = u;
     notifyListeners();
+  }
+
+  /// 🔄 يعيد تحميل المستخدم الحالي من المستودع (لتحديث النقاط/الرصيد)
+  Future<void> refreshUser() async {
+    if (_user == null) return;
+    final users = await StoreService.loadUsers();
+    final found = users.where((u) => u.id == _user!.id).toList();
+    if (found.isNotEmpty) {
+      _user = found.first;
+      await _savePrefs();
+      notifyListeners();
+    }
   }
 
   Future<void> addPoints(int delta) async {
