@@ -9,7 +9,7 @@ const String _site = 'https://ahmedbrzan.github.io/FAWORI';
 const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 
-/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
+/// 🔐 وسيط الكتابة (Cloudflare Worker)
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
 String fmtThousands(num n) {
@@ -104,7 +104,6 @@ class Order {
 }
 
 class OrdersService {
-  /// ✍️ كتابة عبر الوسيط — بدون أي توكن داخل التطبيق
   static Future<void> _putJson(String path, dynamic data) async {
     final r = await http.post(
       Uri.parse(kWriteProxy),
@@ -119,9 +118,7 @@ class OrdersService {
     }
   }
 
-  /// 📡 قراءة ذكية: مستودع مباشر ← ثم نسخة الموقع ← مع مهلة 8 ثوانٍ
   static Future<dynamic> _fetchJson(String path) async {
-    // 1) مباشر من المستودع (الأحدث)
     try {
       final r = await http
           .get(Uri.parse(
@@ -129,7 +126,6 @@ class OrdersService {
           .timeout(const Duration(seconds: 8));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
-    // 2) احتياط: نسخة الموقع المبنية
     try {
       final r = await http
           .get(Uri.parse(
@@ -140,7 +136,7 @@ class OrdersService {
     return [];
   }
 
-  // ===== السلة (محلية محفوظة) =====
+  // ===== السلة =====
   static Future<List<CartItem>> loadCart(String uid) async {
     try {
       final p = await SharedPreferences.getInstance();
@@ -192,7 +188,7 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
-  /// ✅ قبول: يحتسب النقاط/الرصيد، ينشر الفاتورة، يحدّث نقاط المستخدم
+  /// ✅ قبول: مطابقة ذكية بالنص بعد toString + بالاسم احتياطاً
   static Future<void> acceptOrder(Order o) async {
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
@@ -219,17 +215,24 @@ class OrdersService {
 
     final users = await _fetchJson('assets/data/users.json');
     if (users is List) {
+      bool matched = false;
       for (final u in users) {
-        if (u is Map && u['id'] == o.userId) {
-          u['points'] = ((u['points'] as num?)?.toInt() ?? 0) + o.points.toInt();
-          u['stored'] = ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
+        if (u is Map &&
+            (u['id']?.toString().trim() == o.userId ||
+                u['name']?.toString().trim() == o.userName.trim())) {
+          u['points'] =
+              ((u['points'] as num?)?.toInt() ?? 0) + o.points.toInt();
+          u['stored'] =
+              ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
+          matched = true;
         }
       }
-      await _putJson('assets/data/users.json', users);
+      if (matched) {
+        await _putJson('assets/data/users.json', users);
+      }
     }
   }
 
-  /// ❌ رفض: حذف الطلب نهائياً
   static Future<void> rejectOrder(Order o) async {
     await deleteOrder(o.id);
   }
