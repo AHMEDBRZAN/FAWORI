@@ -78,7 +78,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
             : (s.isArabic ? 'طلباتي' : 'My orders')),
       ),
-      // ✅ السحب للأسفل للتحديث — بدون زر
+      // ✅ السحب للأسفل للتحديث — بدون أي زر
       body: RefreshIndicator(
         color: AppColors.orange,
         backgroundColor: Theme.of(context).colorScheme.surface,
@@ -91,8 +91,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
           future: _future,
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return const ListView(
-                children: [
+              return ListView(
+                children: const [
                   SizedBox(height: 200),
                   Center(child: CircularProgressIndicator()),
                 ],
