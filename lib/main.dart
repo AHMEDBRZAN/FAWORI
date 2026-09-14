@@ -3,20 +3,16 @@ import 'package:provider/provider.dart';
 import 'core/app_settings.dart';
 import 'core/favorites.dart';
 import 'core/theme.dart';
-import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/main_screen.dart';
 import 'widgets/smart_logo.dart';
 
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppSettings()),
-        ChangeNotifierProvider(create: (_) => Favorites()),
-      ],
-      child: const FaworiApp(),
-    ),
-  );
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider(create: (_) => AppSettings()),
+    ChangeNotifierProvider(create: (_) => Favorites()),
+  ], child: const FaworiApp()));
 }
 
 class FaworiApp extends StatelessWidget {
@@ -27,17 +23,15 @@ class FaworiApp extends StatelessWidget {
     return MaterialApp(
       title: 'FAWORI',
       debugShowCheckedModeBanner: false,
+      // ✅ الثيم يشمل النظام كله ويتبدل فوراً
+      themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
-      // 🌍 اتجاه عام لكل النظام: عربي = يمين ، إنكليزي = يسار
-      builder: (context, child) {
-        return Directionality(
-          textDirection: s.isArabic ? TextDirection.rtl : TextDirection.ltr,
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
       home: const SplashGate(),
+      builder: (context, child) => Directionality(
+        textDirection: s.isArabic ? TextDirection.rtl : TextDirection.ltr,
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }
@@ -54,13 +48,18 @@ class _SplashGateState extends State<SplashGate> {
   @override
   void initState() {
     super.initState();
-    _init();
+    _boot();
   }
 
-  Future<void> _init() async {
-    final s = context.read<AppSettings>();
-    await s.restoreSession();
-    await Future.delayed(const Duration(milliseconds: 900));
+  Future<void> _boot() async {
+    // ✅ لا نعلق الإطلاق على الشبكة: مهلة 6 ثوانٍ + حماية من أي خطأ
+    try {
+      await context
+          .read<AppSettings>()
+          .restoreSession()
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {}
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (mounted) setState(() => _ready = true);
   }
 
@@ -76,67 +75,60 @@ class SplashView extends StatelessWidget {
   const SplashView({super.key});
   @override
   Widget build(BuildContext context) {
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: dark
-                ? const <Color>[Color(0xFF141419), Color(0xFF1B1B21)]
-                : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: AppColors.orange, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.teal.withAlpha(50),
-                      blurRadius: 45,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(26),
-                  child: const SmartLogo(size: 140),
-                ),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(34),
+                border: Border.all(color: AppColors.orange, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                      color: AppColors.teal.withAlpha(60), blurRadius: 40),
+                ],
               ),
-              const SizedBox(height: 26),
-              ShaderMask(
-                shaderCallback: (Rect r) => const LinearGradient(
-                        colors: <Color>[AppColors.teal, AppColors.orange])
-                    .createShader(r),
-                child: const Text(
-                  'شركة فاوري',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: Image.asset('assets/images/logo.webp',
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (c, o, st) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(colors: <Color>[
+                              Color(0xFFFFA500),
+                              Color(0xFFFF8C00)
+                            ]),
+                          ),
+                          child: const Center(
+                            child: Text('FAWORI',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900)),
+                          ),
+                        )),
+              ),
+            ),
+            const SizedBox(height: 22),
+            ShaderMask(
+              shaderCallback: (Rect r) => const LinearGradient(
+                      colors: <Color>[AppColors.teal, AppColors.orange])
+                  .createShader(r),
+              child: const Text('شركة فاورِي',
                   style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 30,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 28),
-              const SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: AppColors.orange,
-                  backgroundColor: Color(0xFF3A3A40),
-                ),
-              ),
-            ],
-          ),
+                      color: Colors.white)),
+            ),
+            const SizedBox(height: 26),
+            const CircularProgressIndicator(
+                color: AppColors.teal, backgroundColor: Color(0x33E8A33C)),
+          ],
         ),
       ),
     );
