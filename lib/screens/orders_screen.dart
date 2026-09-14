@@ -5,6 +5,29 @@ import '../core/orders_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
 
+/// ✅ تاريخ بصيغة يوم-شهر-سنة: 14-9-2026
+String dmy(String iso) {
+  try {
+    final p = iso.split('-');
+    return '${int.parse(p[2])}-${int.parse(p[1])}-${p[0]}';
+  } catch (_) {
+    return iso;
+  }
+}
+
+/// ✅ وقت بصيغة 12 ساعة: 3:10 بدون ثواني
+String time12(String idMillis) {
+  try {
+    final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
+    int h = dt.hour % 12;
+    if (h == 0) h = 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  } catch (_) {
+    return '';
+  }
+}
+
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
   @override
@@ -43,19 +66,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return 'Pending';
   }
 
-  /// ✅ وقت بصيغة 12 ساعة (3:10) بدون ثواني — مشتق من id الطلب
-  String _time12(String idMillis) {
-    try {
-      final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
-      int h = dt.hour % 12;
-      if (h == 0) h = 12;
-      final m = dt.minute.toString().padLeft(2, '0');
-      return '$h:$m';
-    } catch (_) {
-      return '';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
@@ -67,40 +77,51 @@ class _OrdersScreenState extends State<OrdersScreen> {
         title: Text(isAdmin
             ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
             : (s.isArabic ? 'طلباتي' : 'My orders')),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.orange),
-            onPressed: () {
-              setState(() {
-                _future = OrdersService.loadOrders();
-              });
-            },
-          ),
-        ],
       ),
-      body: FutureBuilder<List<Order>>(
-        future: _future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          var orders = snap.data ?? [];
-          if (isAdmin) {
-            orders = orders.where((o) => o.status == 'pending').toList();
-          } else {
-            orders = orders.where((o) => o.userId == s.user?.id).toList();
-          }
-          if (orders.isEmpty) {
-            return Center(
-                child: Text(s.isArabic ? 'لا توجد طلبات' : 'No orders'));
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: orders.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, i) => _card(orders[i], isAdmin, s),
-          );
+      // ✅ السحب للأسفل للتحديث — بدون زر
+      body: RefreshIndicator(
+        color: AppColors.orange,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        onRefresh: () async {
+          setState(() {
+            _future = OrdersService.loadOrders();
+          });
         },
+        child: FutureBuilder<List<Order>>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const ListView(
+                children: [
+                  SizedBox(height: 200),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              );
+            }
+            var orders = snap.data ?? [];
+            if (isAdmin) {
+              orders = orders.where((o) => o.status == 'pending').toList();
+            } else {
+              orders = orders.where((o) => o.userId == s.user?.id).toList();
+            }
+            if (orders.isEmpty) {
+              return ListView(
+                children: [
+                  const SizedBox(height: 120),
+                  Center(
+                      child: Text(
+                          s.isArabic ? 'لا توجد طلبات' : 'No orders')),
+                ],
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) => _card(orders[i], isAdmin, s),
+            );
+          },
+        ),
       ),
     );
   }
@@ -138,12 +159,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    isAdmin ? '${o.userName} (${_roleAr(o.userRole)})' : o.date,
-                    style:
-                        const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                    isAdmin
+                        ? '${o.userName} (${_roleAr(o.userRole)})'
+                        : dmy(o.date),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 15),
                   ),
                 ),
-                // ✅ شارة الحالة: خط 14 ولون أسود
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -163,9 +185,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ],
             ),
             const SizedBox(height: 6),
-            // ✅ عدد المواد + الوقت بصيغة 3:10
             Text(
-              '${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${_time12(o.id)}',
+              '${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${time12(o.id)}',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             ),
             const SizedBox(height: 8),
@@ -206,18 +227,6 @@ class _OrderDetailState extends State<_OrderDetail> {
     if (r == 'tech') return 'صباغ';
     if (r == 'admin') return 'مدير';
     return 'عميل';
-  }
-
-  String _time12(String idMillis) {
-    try {
-      final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
-      int h = dt.hour % 12;
-      if (h == 0) h = 12;
-      final m = dt.minute.toString().padLeft(2, '0');
-      return '$h:$m';
-    } catch (_) {
-      return '';
-    }
   }
 
   Future<void> _accept() async {
@@ -333,7 +342,7 @@ class _OrderDetailState extends State<_OrderDetail> {
                         fontWeight: FontWeight.w900, fontSize: 16)),
                 const SizedBox(height: 4),
                 Text(
-                    '${s.isArabic ? 'التاريخ' : 'Date'}: ${o.date} • ${_time12(o.id)}',
+                    '${s.isArabic ? 'التاريخ' : 'Date'}: ${dmy(o.date)} • ${time12(o.id)}',
                     style:
                         TextStyle(color: Colors.grey.shade500, fontSize: 12)),
                 const SizedBox(height: 10),
