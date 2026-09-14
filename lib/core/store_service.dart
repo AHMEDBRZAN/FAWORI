@@ -7,23 +7,20 @@ const String kRepo = 'FAWORI';
 const String kBranch = 'main';
 const String kSite = 'https://ahmedbrzan.github.io/FAWORI';
 
-/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
-
-/// لم نعد نستخدمه — الكتابة عبر الوسيط
 const String kUploadToken = '';
 
 class User {
   final String id, name, role;
-  final String? phone;
-  final String? password;
+  final String phone;
+  final String password;
   final int points, stored;
   User({
     required this.id,
     required this.name,
     required this.role,
-    this.phone,
-    this.password,
+    this.phone = '',
+    this.password = '',
     this.points = 0,
     this.stored = 0,
   });
@@ -31,8 +28,8 @@ class User {
         id: j['id']?.toString() ?? '',
         name: j['name'] ?? '',
         role: j['role'] ?? 'guest',
-        phone: j['phone']?.toString(),
-        password: j['password']?.toString(),
+        phone: j['phone']?.toString() ?? '',
+        password: j['password']?.toString() ?? '',
         points: (j['points'] as num?)?.toInt() ?? 0,
         stored: (j['stored'] as num?)?.toInt() ?? 0,
       );
@@ -40,8 +37,8 @@ class User {
         'id': id,
         'name': name,
         'role': role,
-        if (phone != null) 'phone': phone,
-        if (password != null) 'password': password,
+        'phone': phone,
+        'password': password,
         'points': points,
         'stored': stored,
       };
@@ -199,7 +196,6 @@ class ImagesService {
 
   static String remoteUrl(String path) => '$kSite/assets/$path';
 
-  /// 🔑 لا ترجع فارغة أبداً — لذلك لن تظهر أي نافذة توكن في التطبيق
   static Future<String> resolveToken() async {
     if (_memToken != null && _memToken!.isNotEmpty) return _memToken!;
     if (kUploadToken.isNotEmpty) return kUploadToken;
