@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _pass = TextEditingController();
   bool _busy = false;
   String? _err;
+  bool _obscure = true;
 
   void _go() {
     if (!mounted) return;
@@ -98,6 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -110,123 +112,246 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(24),
+          child: Stack(
             children: [
-              const SizedBox(height: 40),
-              Center(
-                child: Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.orange, width: 2),
+              // زر تبديل الثيم
+              Positioned(
+                top: 20,
+                left: 20,
+                child: IconButton(
+                  icon: Icon(
+                    dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                    color: AppColors.orange,
+                    size: 28,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: Image.asset('assets/images/logo.webp',
-                        fit: BoxFit.cover, gaplessPlayback: true,
-                        errorBuilder: (c, o, st) =>
-                            const Center(child: Text('FAWORI',
-                                style: TextStyle(color: Colors.white,
-                                    fontWeight: FontWeight.w900)))),
+                  onPressed: () => context.read<AppSettings>().toggleDark(),
+                ),
+              ),
+              // المحتوى
+              ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                children: [
+                  const SizedBox(height: 120),
+                  // الشعار
+                  Center(
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: <Color>[Color(0xFFFFA500), Color(0xFFFF8C00)],
+                        ),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.orange.withAlpha(100),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.store_rounded,
+                        color: Colors.white,
+                        size: 60,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Center(
-                child: ShaderMask(
-                  shaderCallback: (Rect r) => const LinearGradient(
-                          colors: <Color>[AppColors.teal, AppColors.orange])
-                      .createShader(r),
-                  child: Text(
-                    settings.isArabic ? 'شركة فاوري' : 'FAWORI',
-                    style: const TextStyle(fontSize: 24,
-                        fontWeight: FontWeight.w900, color: Colors.white),
+                  const SizedBox(height: 20),
+                  // اسم الشركة
+                  Center(
+                    child: ShaderMask(
+                      shaderCallback: (Rect r) => const LinearGradient(
+                        colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
+                      ).createShader(r),
+                      child: Text(
+                        'شركة فاورِي',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 30),
-              TextField(
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                style: TextStyle(color: dark ? Colors.white : AppColors.ink),
-                decoration: InputDecoration(
-                  hintText: settings.isArabic ? 'رقم الهاتف' : 'Phone',
-                  prefixIcon: const Icon(Icons.phone_rounded,
-                      color: AppColors.orange),
-                  filled: true,
-                  fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _pass,
-                obscureText: true,
-                style: TextStyle(color: dark ? Colors.white : AppColors.ink),
-                decoration: InputDecoration(
-                  hintText: settings.isArabic ? 'كلمة المرور' : 'Password',
-                  prefixIcon:
-                      const Icon(Icons.lock_outline_rounded, color: AppColors.orange),
-                  filled: true,
-                  fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (_err != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(_err!,
+                  const SizedBox(height: 8),
+                  Text(
+                    settings.isArabic ? 'سجّل دخولك للمتابعة' : 'Sign in to continue',
+                    style: TextStyle(
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 40),
+                  // بطاقة الحقول
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF1E1E28) : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: AppColors.orange.withAlpha(60),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.orange.withAlpha(40),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // حقل الهاتف
+                        TextField(
+                          controller: _phone,
+                          keyboardType: TextInputType.phone,
+                          style: TextStyle(
+                            color: dark ? Colors.white : AppColors.ink,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.right,
+                          decoration: InputDecoration(
+                            hintText: settings.isArabic ? 'رقم الهاتف' : 'Phone',
+                            hintStyle: TextStyle(
+                              color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.phone_rounded,
+                              color: AppColors.orange,
+                              size: 24,
+                            ),
+                            filled: true,
+                            fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFAFAFA),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // حقل كلمة المرور
+                        TextField(
+                          controller: _pass,
+                          obscureText: _obscure,
+                          style: TextStyle(
+                            color: dark ? Colors.white : AppColors.ink,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.right,
+                          decoration: InputDecoration(
+                            hintText: settings.isArabic ? 'كلمة المرور' : 'Password',
+                            hintStyle: TextStyle(
+                              color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.lock_rounded,
+                              color: AppColors.orange,
+                              size: 24,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                color: Colors.grey.shade500,
+                              ),
+                              onPressed: () {
+                                setState(() => _obscure = !_obscure);
+                              },
+                            ),
+                            filled: true,
+                            fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFAFAFA),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // زر الدخول
+                        Container(
+                          width: double.infinity,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: <Color>[Color(0xFFFFA500), Color(0xFFFF8C00)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: _busy ? null : _login,
+                            child: _busy
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'login',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // رابط الضيف
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        settings.isArabic ? 'لا تملك حساباً؟' : "Don't have an account?",
+                        style: TextStyle(
+                          color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _busy ? null : _guest,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child: Text(
+                          settings.isArabic ? 'دخول كضيف' : 'Enter as guest',
+                          style: const TextStyle(
+                            color: AppColors.orange,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_err != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _err!,
                       style: const TextStyle(color: Colors.red, fontSize: 13),
-                      textAlign: TextAlign.center),
-                ),
-              const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: Colors.white),
-                    onPressed: _busy ? null : _login,
-                    child: _busy
-                        ? const SizedBox(width: 20, height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
-                        : Text(
-                            settings.isArabic ? 'تسجيل الدخول' : 'Login',
-                            style: const TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.w900)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.teal,
-                      side: const BorderSide(color: AppColors.teal, width: 1.5)),
-                  onPressed: _busy ? null : _guest,
-                  icon: const Icon(Icons.person_outline_rounded, size: 22),
-                  label: Text(
-                    settings.isArabic ? 'الدخول كضيف' : 'Continue as guest',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
