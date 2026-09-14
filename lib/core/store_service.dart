@@ -10,7 +10,7 @@ const String kSite = 'https://ahmedbrzan.github.io/FAWORI';
 /// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
-/// يُترك فارغاً — لم نعد نحتاج توكن مدمجاً
+/// لم نعد نستخدمه — الكتابة عبر الوسيط
 const String kUploadToken = '';
 
 class User {
@@ -57,8 +57,7 @@ class InvoiceItem {
         price: (j['price'] as num?)?.toDouble() ?? 0,
         qty: (j['qty'] as num?)?.toInt() ?? 1,
       );
-  Map<String, dynamic> toJson() =>
-      {'name': name, 'price': price, 'qty': qty};
+  Map<String, dynamic> toJson() => {'name': name, 'price': price, 'qty': qty};
 }
 
 class Invoice {
@@ -102,7 +101,6 @@ class Invoice {
       };
 }
 
-/// للإشارات القديمة في الكود (alias)
 class UserInfo {
   final String id, name, role;
   final int points, stored;
@@ -128,7 +126,6 @@ class UserInfo {
       };
 }
 
-/// ✍️ خدمة الكتابة عبر الوسيط — بدون أي توكن
 Future<void> _putViaProxy(String path, dynamic data) async {
   final r = await http.post(
     Uri.parse(kWriteProxy),
@@ -202,9 +199,11 @@ class ImagesService {
 
   static String remoteUrl(String path) => '$kSite/assets/$path';
 
+  /// 🔑 لا ترجع فارغة أبداً — لذلك لن تظهر أي نافذة توكن في التطبيق
   static Future<String> resolveToken() async {
     if (_memToken != null && _memToken!.isNotEmpty) return _memToken!;
-    return kUploadToken;
+    if (kUploadToken.isNotEmpty) return kUploadToken;
+    return 'worker-proxy';
   }
 
   static Future<String?> getToken() async => _memToken;
@@ -246,7 +245,6 @@ class ImagesService {
     return {};
   }
 
-  /// ✍️ رفع بايتات عبر الوسيط — بدون أي توكن
   static Future<void> putBytes(
       String path, List<int> bytes, String token, String message) async {
     final r = await http.post(
@@ -259,7 +257,6 @@ class ImagesService {
     }
   }
 
-  /// ✍️ تحديث images.json عبر الوسيط — بدون أي توكن
   static Future<void> setMapping(
       String group, String key, String path, String token) async {
     final r = await http.get(Uri.parse(
