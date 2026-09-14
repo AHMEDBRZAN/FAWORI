@@ -17,9 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _busy = false;
   String? _err;
 
-  /// 🔑 متغير الإعدادات متاح في كل مكان داخل الـ State
-  AppSettings get s => context.read<AppSettings>();
-
   void _go() {
     if (!mounted) return;
     setState(() => _busy = false);
@@ -28,7 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_busy) return;
+    if (_busy || !mounted) return;
+    final settings = context.read<AppSettings>();
     setState(() {
       _busy = true;
       _err = null;
@@ -39,13 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (ph.isEmpty || pw.isEmpty) {
         setState(() {
           _busy = false;
-          _err = s.isArabic ? 'أدخل الهاتف وكلمة المرور' : 'Enter phone & password';
+          _err = settings.isArabic ? 'أدخل الهاتف وكلمة المرور' : 'Enter phone & password';
         });
         return;
       }
-      // اختصار المدير
       if (ph == '1' && pw == '2') {
-        await s.loginAsAdmin();
+        await settings.loginAsAdmin();
         _go();
         return;
       }
@@ -60,37 +57,38 @@ class _LoginScreenState extends State<LoginScreen> {
       if (found == null || found.password != pw) {
         setState(() {
           _busy = false;
-          _err = s.isArabic ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials';
+          _err = settings.isArabic ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials';
         });
         return;
       }
       try {
-        await s.loginAsUser(found);
+        await settings.loginAsUser(found);
       } catch (_) {
-        s.syncUser(found);
+        settings.syncUser(found);
       }
       _go();
     } catch (e) {
       if (mounted) {
         setState(() {
           _busy = false;
-          _err = s.isArabic ? 'تعذر الدخول: $e' : 'Login failed: $e';
+          _err = settings.isArabic ? 'تعذر الدخول: $e' : 'Login failed: $e';
         });
       }
     }
   }
 
   Future<void> _guest() async {
-    if (_busy) return;
+    if (_busy || !mounted) return;
+    final settings = context.read<AppSettings>();
     setState(() => _busy = true);
     try {
-      await s.loginAsGuest();
+      await settings.loginAsGuest();
       _go();
     } catch (e) {
       if (mounted) {
         setState(() {
           _busy = false;
-          _err = s.isArabic ? 'تعذر دخول الضيف: $e' : 'Guest failed: $e';
+          _err = settings.isArabic ? 'تعذر دخول الضيف: $e' : 'Guest failed: $e';
         });
       }
     }
