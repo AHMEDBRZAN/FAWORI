@@ -21,7 +21,6 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   List<Invoice> _invoices = [];
-  bool _loading = true;
 
   @override
   void initState() {
@@ -29,8 +28,8 @@ class _WalletScreenState extends State<WalletScreen> {
     _load();
   }
 
+  /// ✅ تحديث شامل: نقاط المستخدم + الفواتير
   Future<void> _load() async {
-    setState(() => _loading = true);
     try {
       await context.read<AppSettings>().refreshUser();
     } catch (_) {}
@@ -38,7 +37,6 @@ class _WalletScreenState extends State<WalletScreen> {
     if (mounted) {
       setState(() {
         _invoices = invs;
-        _loading = false;
       });
     }
   }
@@ -53,169 +51,157 @@ class _WalletScreenState extends State<WalletScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    s.isArabic ? 'المحفظة' : 'Wallet',
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w900),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.orange.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('${mine.length}',
-                      style: const TextStyle(
-                          color: AppColors.orange,
-                          fontWeight: FontWeight.w900)),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.teal.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: IconButton(
-                    icon: _loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppColors.teal))
-                        : const Icon(Icons.refresh_rounded,
-                            color: AppColors.teal, size: 22),
-                    onPressed: _loading ? null : _load,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: <Color>[Color(0xFFF26B0F), Color(0xFFE8A33C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                      color: AppColors.orange.withAlpha(60),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8)),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        // ✅ السحب للأسفل للتحديث
+        child: RefreshIndicator(
+          color: AppColors.teal,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          onRefresh: _load,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          s.user?.name ?? (s.isArabic ? 'ضيف' : 'Guest'),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(40),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.monetization_on_rounded,
-                            color: Colors.white, size: 26),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        fmtThousands(s.points),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 40,
-                            fontWeight: FontWeight.w900,
-                            height: 1.1),
-                      ),
-                      const SizedBox(width: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          s.isArabic ? 'نقطة' : 'points',
-                          style: TextStyle(
-                              color: Colors.white.withAlpha(220),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: progress.clamp(0.0, 1.0),
-                      minHeight: 8,
-                      backgroundColor: Colors.white.withAlpha(60),
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.white),
+                  Expanded(
+                    child: Text(
+                      s.isArabic ? 'المحفظة' : 'Wallet',
+                      style: const TextStyle(
+                          fontSize: 22, fontWeight: FontWeight.w900),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${s.isArabic ? 'رصيد مخزن' : 'Stored'}: ${fmtThousands(s.stored)}',
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.orange.withAlpha(30),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text('${mine.length}',
+                        style: const TextStyle(
+                            color: AppColors.orange,
+                            fontWeight: FontWeight.w900)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: <Color>[Color(0xFFF26B0F), Color(0xFFE8A33C)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.orange.withAlpha(60),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            s.user?.name ?? (s.isArabic ? 'ضيف' : 'Guest'),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(40),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.monetization_on_rounded,
+                              color: Colors.white, size: 26),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          fmtThousands(s.points),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 40,
+                              fontWeight: FontWeight.w900,
+                              height: 1.1),
+                        ),
+                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            s.isArabic ? 'نقطة' : 'points',
+                            style: TextStyle(
+                                color: Colors.white.withAlpha(220),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress.clamp(0.0, 1.0),
+                        minHeight: 8,
+                        backgroundColor: Colors.white.withAlpha(60),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${s.isArabic ? 'رصيد مخزن' : 'Stored'}: ${fmtThousands(s.stored)}',
+                            style: TextStyle(
+                                color: Colors.white.withAlpha(230),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        Text(
+                          '${s.isArabic ? 'متبقي' : 'Remaining'} ${fmtThousands(remaining)} ${s.isArabic ? 'للنقطة القادمة' : 'to next point'}',
                           style: TextStyle(
                               color: Colors.white.withAlpha(230),
                               fontSize: 12,
                               fontWeight: FontWeight.w700),
                         ),
-                      ),
-                      Text(
-                        '${s.isArabic ? 'متبقي' : 'Remaining'} ${fmtThousands(remaining)} ${s.isArabic ? 'للنقطة القادمة' : 'to next point'}',
-                        style: TextStyle(
-                            color: Colors.white.withAlpha(230),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              s.isArabic ? 'الفواتير' : 'Invoices',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 12),
-            if (mine.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: Text(s.isArabic ? 'لا توجد فواتير' : 'No invoices',
-                      style: TextStyle(color: Colors.grey.shade500)),
+                      ],
+                    ),
+                  ],
                 ),
-              )
-            else
-              ...mine.reversed.map((inv) => _tile(s, inv)),
-          ],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                s.isArabic ? 'الفواتير' : 'Invoices',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 12),
+              if (mine.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Text(s.isArabic ? 'لا توجد فواتير' : 'No invoices',
+                        style: TextStyle(color: Colors.grey.shade500)),
+                  ),
+                )
+              else
+                ...mine.reversed.map((inv) => _tile(s, inv)),
+            ],
+          ),
         ),
       ),
     );
@@ -417,7 +403,6 @@ class _WalletScreenState extends State<WalletScreen> {
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
-  /// ✅ إضافة منتج للسلة من المفضلة
   Future<void> _addToCart(BuildContext context, Product p) async {
     final s = context.read<AppSettings>();
     final uid = s.user?.id ?? '';
