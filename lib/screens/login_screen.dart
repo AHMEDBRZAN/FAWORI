@@ -98,8 +98,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    
+    // ✅ الإصلاح: نقرأ isDark مباشرة من settings بدلاً من Theme
+    final bool dark = settings.isDark;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -114,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              // زر تبديل الوضع (عربي)
+              // زر تبديل الوضع
               Positioned(
                 top: 16,
                 left: 16,
@@ -136,16 +137,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.orange,
                       size: 22,
                     ),
-                    onPressed: () => context.read<AppSettings>().toggleDark(),
+                    onPressed: () {
+                      // ✅ toggleDark() تُعيد بناء الصفحة لأننا نستخدم context.watch
+                      context.read<AppSettings>().toggleDark();
+                    },
                   ),
                 ),
               ),
-              // المحتوى
               ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 children: [
                   const SizedBox(height: 80),
-                  // شعار FAWORI
                   Center(
                     child: Container(
                       width: 120,
@@ -188,7 +190,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // اسم الشركة بتدرج
                   Center(
                     child: ShaderMask(
                       shaderCallback: (Rect r) => const LinearGradient(
@@ -215,7 +216,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
-                  // بطاقة الحقول
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -235,7 +235,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Column(
                       children: [
-                        // حقل الهاتف
                         TextField(
                           controller: _phone,
                           keyboardType: TextInputType.phone,
@@ -267,7 +266,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // حقل كلمة المرور
                         TextField(
                           controller: _pass,
                           obscureText: _obscure,
@@ -308,7 +306,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // زر login
                         Container(
                           width: double.infinity,
                           height: 54,
@@ -354,7 +351,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // رابط الضيف
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
