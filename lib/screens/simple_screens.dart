@@ -417,6 +417,25 @@ class _WalletScreenState extends State<WalletScreen> {
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
+  /// ✅ إضافة منتج للسلة من المفضلة
+  Future<void> _addToCart(BuildContext context, Product p) async {
+    final s = context.read<AppSettings>();
+    final uid = s.user?.id ?? '';
+    if (uid.isEmpty) return;
+    final cart = await OrdersService.loadCart(uid);
+    final exist = cart.where((c) => c.id == p.id).toList();
+    if (exist.isNotEmpty) {
+      exist.first.qty++;
+    } else {
+      cart.add(CartItem(id: p.id, name: p.name, image: '', brand: p.brand));
+    }
+    await OrdersService.saveCart(uid, cart);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.isArabic ? '✅ أُضيف إلى السلة' : 'Added to cart')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
@@ -451,7 +470,8 @@ class FavoritesScreen extends StatelessWidget {
                       MaterialPageRoute(
                           builder: (_) => ProductDetailScreen(
                                 product: p,
-                                canBuy: canBuy, // ✅ الحل: تمرير canBuy
+                                canBuy: canBuy,
+                                onAdd: () => _addToCart(context, p),
                               ))),
                   child: Container(
                     padding: const EdgeInsets.all(14),
