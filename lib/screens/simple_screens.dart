@@ -29,7 +29,6 @@ class _WalletScreenState extends State<WalletScreen> {
     _load();
   }
 
-  /// ✅ تحديث شامل: نقاط المستخدم + الفواتير
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
@@ -57,7 +56,6 @@ class _WalletScreenState extends State<WalletScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // ===== الترويسة: العنوان + زر تحديث يسار =====
             Row(
               children: [
                 Expanded(
@@ -67,7 +65,6 @@ class _WalletScreenState extends State<WalletScreen> {
                         fontSize: 22, fontWeight: FontWeight.w900),
                   ),
                 ),
-                // عدّاد الفواتير
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -81,7 +78,6 @@ class _WalletScreenState extends State<WalletScreen> {
                           fontWeight: FontWeight.w900)),
                 ),
                 const SizedBox(width: 8),
-                // ✅ زر التحديث في الزاوية اليسرى العليا
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.teal.withAlpha(30),
@@ -102,7 +98,6 @@ class _WalletScreenState extends State<WalletScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            // ===== بطاقة النقاط =====
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -205,7 +200,6 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // ===== الفواتير =====
             Text(
               s.isArabic ? 'الفواتير' : 'Invoices',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
@@ -352,7 +346,6 @@ class _WalletScreenState extends State<WalletScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            // ===== المواد: الكمية واضحة بشارة ×عدد =====
             ...inv.items.map((it) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
@@ -429,6 +422,7 @@ class FavoritesScreen extends StatelessWidget {
     final AppSettings s = context.watch<AppSettings>();
     final favs = context.watch<Favorites>();
     final list = sampleData.where((p) => favs.contains(p.id)).toList();
+    final bool canBuy = s.user != null && s.user!.role != 'guest';
 
     return Scaffold(
       appBar: AppBar(
@@ -455,7 +449,10 @@ class FavoritesScreen extends StatelessWidget {
                   onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => ProductDetailScreen(product: p))),
+                          builder: (_) => ProductDetailScreen(
+                                product: p,
+                                canBuy: canBuy, // ✅ الحل: تمرير canBuy
+                              ))),
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
