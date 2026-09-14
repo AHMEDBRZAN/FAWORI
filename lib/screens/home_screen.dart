@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
+import '../core/orders_service.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
@@ -417,12 +418,36 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(child: _gradText(s.tr('appName'), 18)),
-                    // 🔔 الجرس يفتح إشعارات الطلبات
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none_rounded,
-                          color: AppColors.orange),
-                      onPressed: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const OrdersScreen())),
+                    // 🔔 الجرس مع badge
+                    FutureBuilder<List<Order>>(
+                      future: OrdersService.loadOrders(),
+                      builder: (context, snap) {
+                        final pendingCount = (snap.data ?? [])
+                            .where((o) => o.status == 'pending')
+                            .length;
+                        return Stack(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications_none_rounded,
+                                  color: AppColors.orange),
+                              onPressed: () => Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const OrdersScreen())),
+                            ),
+                            if (pendingCount > 0)
+                              Positioned(
+                                right: 6,
+                                top: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                      color: Colors.red, shape: BoxShape.circle),
+                                  child: Text('$pendingCount',
+                                      style: const TextStyle(color: Colors.white, fontSize: 10)),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
