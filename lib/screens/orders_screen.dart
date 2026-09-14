@@ -18,7 +18,7 @@ String dmy(String iso) {
   }
 }
 
-/// ✅ وقت بصيغة 12 ساعة: 3:10 بدون ثواني
+/// ✅ وقت بصيغة 12 ساعة: 9:15 بدون ثواني
 String time12(String idMillis) {
   try {
     final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
@@ -81,7 +81,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
             : (s.isArabic ? 'طلباتي' : 'My orders')),
       ),
-      // ✅ السحب للأسفل للتحديث — بدون أي زر
       body: RefreshIndicator(
         color: AppColors.orange,
         backgroundColor: Theme.of(context).colorScheme.surface,
