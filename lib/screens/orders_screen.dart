@@ -5,28 +5,28 @@ import '../core/orders_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
 
-/// ✅ تاريخ بصيغة يوم-شهر-سنة مع أصفار: 14-09-2026
+/// ✅ تاريخ بصيغة سنة-شهر-يوم مع أصفار: 2026-09-14
 String dmy(String iso) {
   try {
     final p = iso.split('-');
     final day = p[2].padLeft(2, '0');
     final month = p[1].padLeft(2, '0');
     final year = p[0];
-    return '$year-$month-$day';  // ✅ سنة-شهر-يوم
+    return '$year-$month-$day';
   } catch (_) {
     return iso;
   }
 }
 
-
-/// ✅ وقت بصيغة 12 ساعة: 9:15 بدون ثواني
+/// ✅ وقت بصيغة 12 ساعة مع ص/م: 9:15 ص
 String time12(String idMillis) {
   try {
     final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
     int h = dt.hour % 12;
     if (h == 0) h = 12;
     final m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+    final period = dt.hour < 12 ? 'ص' : 'م';
+    return '$h:$m $period';
   } catch (_) {
     return '';
   }
@@ -62,11 +62,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   String _statusAr(String st) {
     if (st == 'accepted') return 'مقبولة';
+    if (st == 'rejected') return 'مرفوضة'; // ✅ إضافة حالة الرفض
     return 'قيد المراجعة';
   }
 
   String _statusEn(String st) {
     if (st == 'accepted') return 'Accepted';
+    if (st == 'rejected') return 'Rejected'; // ✅ إضافة حالة الرفض
     return 'Pending';
   }
 
@@ -175,7 +177,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   decoration: BoxDecoration(
                       color: o.status == 'accepted'
                           ? AppColors.teal.withAlpha(45)
-                          : AppColors.orange.withAlpha(45),
+                          : (o.status == 'rejected' 
+                              ? Colors.red.withAlpha(45) 
+                              : AppColors.orange.withAlpha(45)),
                       borderRadius: BorderRadius.circular(12)),
                   child: Text(
                     s.isArabic ? _statusAr(o.status) : _statusEn(o.status),
@@ -364,6 +368,8 @@ class _OrderDetailState extends State<_OrderDetail> {
             ),
           ),
           const SizedBox(height: 18),
+          
+          // ===== حالة قيد المراجعة (للمدير) =====
           if (widget.isAdmin && o.status == 'pending') ...[
             _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total, '250000'),
             const SizedBox(height: 12),
@@ -447,7 +453,10 @@ class _OrderDetailState extends State<_OrderDetail> {
                 ),
               ],
             ),
-          ] else if (o.status == 'accepted') ...[
+          ] 
+          
+          // ===== حالة مقبولة =====
+          else if (o.status == 'accepted') ...[
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -465,6 +474,43 @@ class _OrderDetailState extends State<_OrderDetail> {
                       fmtThousands(o.points), AppColors.teal),
                   _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
                       fmtThousands(o.stored), AppColors.teal),
+                ],
+              ),
+            ),
+          ]
+          
+          // ✅ ===== حالة مرفوضة (للمستخدم) =====
+          else if (o.status == 'rejected') ...[
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(20),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.red.withAlpha(70)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline_rounded, 
+                      color: Colors.red, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    s.isArabic ? 'مرفوضة' : 'Rejected',
+                    style: const TextStyle(
+                        color: Colors.red, 
+                        fontSize: 20, 
+                        fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    s.isArabic 
+                        ? 'ملاحظة / راجع الإدارة للاستفسار' 
+                        : 'Note: Contact administration for inquiry',
+                    style: TextStyle(
+                        color: Colors.grey.shade700, 
+                        fontSize: 15, 
+                        fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             ),
