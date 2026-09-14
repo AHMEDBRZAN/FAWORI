@@ -3,11 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'store_service.dart';
 
-const String _base = 'https://ahmedbrzan.github.io/FAWORI';
+/// 📡 قراءة حية مباشرة من المستودع
+const String _raw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
 const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 
-/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
 String fmtThousands(num n) {
@@ -102,7 +102,6 @@ class Order {
 }
 
 class OrdersService {
-  /// ✍️ كتابة عبر الوسيط — بدون أي توكن داخل التطبيق
   static Future<void> _putJson(String path, dynamic data) async {
     final r = await http.post(
       Uri.parse(kWriteProxy),
@@ -120,13 +119,12 @@ class OrdersService {
   static Future<dynamic> _fetchJson(String path) async {
     try {
       final r = await http.get(Uri.parse(
-          '$_base/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+          '$_raw/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     return [];
   }
 
-  // ===== السلة (محلية محفوظة) =====
   static Future<List<CartItem>> loadCart(String uid) async {
     try {
       final p = await SharedPreferences.getInstance();
@@ -150,7 +148,6 @@ class OrdersService {
     await p.remove('cart_$uid');
   }
 
-  // ===== الطلبات =====
   static Future<List<Order>> loadOrders() async {
     final d = await _fetchJson(kOrdersPath);
     if (d is List) {
