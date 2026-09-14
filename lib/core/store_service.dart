@@ -7,6 +7,9 @@ const String kRepo = 'FAWORI';
 const String kBranch = 'main';
 const String kSite = 'https://ahmedbrzan.github.io/FAWORI';
 
+/// 📡 قراءة حية مباشرة من المستودع (ليست نسخة الموقع القديمة)
+const String kRaw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
+
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 const String kUploadToken = '';
 
@@ -140,7 +143,7 @@ Future<void> _putViaProxy(String path, dynamic data) async {
 Future<dynamic> _fetchJson(String path) async {
   try {
     final r = await http.get(Uri.parse(
-        '$kSite/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+        '$kRaw/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
     if (r.statusCode == 200) return jsonDecode(r.body);
   } catch (_) {}
   return [];
