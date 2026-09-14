@@ -1,313 +1,473 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:html' as html;
-import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'orders_service.dart';
-import 'store_service.dart';
+import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
+import '../core/orders_service.dart';
+import '../core/theme.dart';
+import '../widgets/pressable.dart';
 
-class AppSettings extends ChangeNotifier {
-  bool _isArabic = true;
-  bool _isDark = false;
-  bool _isImageAdmin = false;
-  User? _user;
-
-  Timer? _pollTimer;
-  int _lastPending = -1;
-  String? _beepUrl;
-
-  bool get isArabic => _isArabic;
-  bool get isDark => _isDark;
-  bool get isImageAdmin => _isImageAdmin;
-  bool get isLoggedIn => _user != null;
-  bool get isAdmin => _user?.role == 'admin';
-  bool get isGuest => _user == null || _user!.role == 'guest';
-  User? get user => _user;
-  int get points => _user?.points ?? 0;
-  int get stored => _user?.stored ?? 0;
-
-  String tr(String key) {
-    const Map<String, Map<String, String>> strings = {
-      'appName': {'ar': 'شركة فاوري', 'en': 'FAWORI'},
-      'settings': {'ar': 'الإعدادات', 'en': 'Settings'},
-      'language': {'ar': 'اللغة', 'en': 'Language'},
-      'about': {'ar': 'حول التطبيق', 'en': 'About'},
-      'logout': {'ar': 'تسجيل الخروج', 'en': 'Logout'},
-      'home': {'ar': 'الرئيسية', 'en': 'Home'},
-      'products': {'ar': 'المنتجات', 'en': 'Products'},
-      'wallet': {'ar': 'المحفظة', 'en': 'Wallet'},
-      'favorites': {'ar': 'المفضلة', 'en': 'Favorites'},
-      'profile': {'ar': 'ملف الشخصي', 'en': 'Profile'},
-      'invoices': {'ar': 'الفواتير', 'en': 'Invoices'},
-      'gifts': {'ar': 'الهدايا', 'en': 'Gifts'},
-    };
-    final m = strings[key];
-    if (m == null) return key;
-    return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
+/// ✅ تاريخ بصيغة يوم-شهر-سنة: 14-9-2026
+String dmy(String iso) {
+  try {
+    final p = iso.split('-');
+    return '${int.parse(p[2])}-${int.parse(p[1])}-${p[0]}';
+  } catch (_) {
+    return iso;
   }
+}
 
-  /// 🔔 توليد نغمة WAV قصيرة داخل الكود (بدون ملفات أو مكتبات)
-  String _buildBeepUrl() {
-    if (_beepUrl != null) return _beepUrl!;
-    const sampleRate = 22050;
-    const seconds = 0.35;
-    const freq = 880.0;
-    final n = (sampleRate * seconds).toInt();
-    final dataSize = n * 2;
-
-    final bytes = BytesBuilder();
-    void addStr(String s) => bytes.add(s.codeUnits);
-    void add32(int v) => bytes
-        .add((ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List());
-    void add16(int v) => bytes
-        .add((ByteData(2)..setUint16(0, v, Endian.little)).buffer.asUint8List());
-
-    addStr('RIFF');
-    add32(36 + dataSize);
-    addStr('WAVE');
-    addStr('fmt ');
-    add32(16);
-    add16(1);
-    add16(1);
-    add32(sampleRate);
-    add32(sampleRate * 2);
-    add16(2);
-    add16(16);
-    addStr('data');
-    add32(dataSize);
-
-    final pcm = ByteData(dataSize);
-    for (int i = 0; i < n; i++) {
-      final t = i / sampleRate;
-      final env = (1 - t / seconds).clamp(0.0, 1.0);
-      final v = (math.sin(2 * math.pi * freq * t) * env * 0.6 * 32767).round();
-      pcm.setInt16(i * 2, v, Endian.little);
-    }
-    bytes.add(pcm.buffer.asUint8List());
-
-    _beepUrl = 'data:audio/wav;base64,' + base64Encode(bytes.toBytes());
-    return _beepUrl!;
+/// ✅ وقت بصيغة 12 ساعة: 3:10 بدون ثواني
+String time12(String idMillis) {
+  try {
+    final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
+    int h = dt.hour % 12;
+    if (h == 0) h = 12;
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  } catch (_) {
+    return '';
   }
+}
 
-  /// 🔔 تشغيل نغمة الإشعار
-  void playBeep() {
-    try {
-      final a = html.AudioElement(_buildBeepUrl());
-      a.volume = 0.8;
-      a.play();
-    } catch (_) {}
-  }
+class OrdersScreen extends StatefulWidget {
+  const OrdersScreen({super.key});
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
 
-  /// 🔔 فحص الطلبات المعلقة كل 30 ثانية — نغمة عند وصول طلب جديد
-  void startOrderPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
-      if (_user == null || _user!.role != 'admin') return;
-      try {
-        final orders = await OrdersService.loadOrders();
-        final pending = orders.where((o) => o.status == 'pending').length;
-        if (_lastPending >= 0 && pending > _lastPending) {
-          playBeep();
-        }
-        _lastPending = pending;
-      } catch (_) {}
+class _OrdersScreenState extends State<OrdersScreen> {
+  late Future<List<Order>> _future = OrdersService.loadOrders();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _future = OrdersService.loadOrders();
+        });
+      }
     });
   }
 
-  Future<User> _withInvoiceTotals(User base) async {
-    try {
-      final invs = await StoreService.loadInvoices();
-      int pts = 0;
-      int st = 0;
-      for (final i in invs) {
-        if (i.userId == base.id) {
-          pts += i.points;
-          st += i.stored;
-        }
-      }
-      return User(
-        id: base.id,
-        name: base.name,
-        role: base.role,
-        phone: base.phone,
-        password: base.password,
-        points: pts,
-        stored: st,
-      );
-    } catch (_) {
-      return base;
-    }
+  String _roleAr(String r) {
+    if (r == 'agent') return 'وكيل';
+    if (r == 'tech') return 'صباغ';
+    if (r == 'admin') return 'مدير';
+    return 'عميل';
   }
 
-  void toggleLanguage() {
-    _isArabic = !_isArabic;
-    _savePrefs();
-    notifyListeners();
+  String _statusAr(String st) {
+    if (st == 'accepted') return 'مقبولة';
+    return 'قيد المراجعة';
   }
 
-  void toggleDark() {
-    _isDark = !_isDark;
-    _savePrefs();
-    notifyListeners();
+  String _statusEn(String st) {
+    if (st == 'accepted') return 'Accepted';
+    return 'Pending';
   }
 
-  void toggleImageAdmin() {
-    _isImageAdmin = !_isImageAdmin;
-    notifyListeners();
-  }
-
-  void setImageAdmin(bool v) {
-    _isImageAdmin = v;
-    notifyListeners();
-  }
-
-  Future<void> loginAsUser(User u) async {
-    _user = await _withInvoiceTotals(u);
-    _isImageAdmin = (u.role == 'admin');
-    try {
-      await StoreService.upsertUser(u);
-    } catch (_) {}
-    await _savePrefs();
-    startOrderPolling();
-    notifyListeners();
-  }
-
-  Future<void> loginAsAdmin() async {
-    final users = await StoreService.loadUsers();
-    final admins = users.where((u) => u.role == 'admin').toList();
-    User admin;
-    if (admins.isNotEmpty) {
-      admin = admins.first;
-    } else {
-      admin = User(
-        id: 'admin_001',
-        name: 'المدير',
-        role: 'admin',
-        phone: '0000000000',
-        password: 'admin',
-      );
-      try {
-        await StoreService.upsertUser(admin);
-      } catch (_) {}
-    }
-    _user = await _withInvoiceTotals(admin);
-    _isImageAdmin = true;
-    await _savePrefs();
-    startOrderPolling();
-    notifyListeners();
-  }
-
-  Future<void> loginAsGuest() async {
-    _user = User(
-        id: 'guest_${DateTime.now().millisecondsSinceEpoch}',
-        name: 'ضيف',
-        role: 'guest');
-    _isImageAdmin = false;
-    await _savePrefs();
-    notifyListeners();
-  }
-
-  Future<void> guestLogin() => loginAsGuest();
-
-  void syncUser(User u) {
-    _user = u;
-    notifyListeners();
-  }
-
-  Future<void> refreshUser() async {
-    if (_user == null) return;
-    try {
-      final users = await StoreService.loadUsers();
-      final found = users.where((u) => u.id == _user!.id).toList();
-      final base = found.isNotEmpty ? found.first : _user!;
-      _user = await _withInvoiceTotals(base);
-      await _savePrefs();
-      notifyListeners();
-    } catch (_) {}
-  }
-
-  Future<void> addPoints(int delta) async {
-    if (_user == null) return;
-    final newUser = User(
-      id: _user!.id,
-      name: _user!.name,
-      role: _user!.role,
-      phone: _user!.phone,
-      password: _user!.password,
-      points: _user!.points + delta,
-      stored: _user!.stored,
-    );
-    _user = newUser;
-    try {
-      await StoreService.upsertUser(newUser);
-    } catch (_) {}
-    await _savePrefs();
-    notifyListeners();
-  }
-
-  Future<void> addStored(int delta) async {
-    if (_user == null) return;
-    final newUser = User(
-      id: _user!.id,
-      name: _user!.name,
-      role: _user!.role,
-      phone: _user!.phone,
-      password: _user!.password,
-      points: _user!.points,
-      stored: _user!.stored + delta,
-    );
-    _user = newUser;
-    try {
-      await StoreService.upsertUser(newUser);
-    } catch (_) {}
-    await _savePrefs();
-    notifyListeners();
-  }
-
-  void logout() {
-    _user = null;
-    _isImageAdmin = false;
-    _pollTimer?.cancel();
-    _savePrefs();
-    notifyListeners();
-  }
-
-  Future<void> _savePrefs() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setBool('isArabic', _isArabic);
-    await p.setBool('isDark', _isDark);
-    if (_user != null) {
-      await p.setString('userId', _user!.id);
-      await p.setString('userName', _user!.name);
-      await p.setString('userRole', _user!.role);
-    } else {
-      await p.remove('userId');
-      await p.remove('userName');
-      await p.remove('userRole');
-    }
-  }
-
-  Future<void> restoreSession() async {
-    final p = await SharedPreferences.getInstance();
-    _isArabic = p.getBool('isArabic') ?? true;
-    _isDark = p.getBool('isDark') ?? false;
-    final id = p.getString('userId');
-    if (id != null && id.isNotEmpty) {
-      final users = await StoreService.loadUsers();
-      final found = users.where((u) => u.id == id).toList();
-      final base = found.isNotEmpty
-          ? found.first
-          : User(
-              id: id,
-              name: p.getString('userName') ?? '',
-              role: p.getString('userRole') ?? 'guest',
+  @override
+  Widget build(BuildContext context) {
+    final AppSettings s = context.watch<AppSettings>();
+    final bool isAdmin = s.isAdmin || s.isImageAdmin;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(isAdmin
+            ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
+            : (s.isArabic ? 'طلباتي' : 'My orders')),
+      ),
+      // ✅ السحب للأسفل للتحديث — بدون زر
+      body: RefreshIndicator(
+        color: AppColors.orange,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        onRefresh: () async {
+          setState(() {
+            _future = OrdersService.loadOrders();
+          });
+        },
+        child: FutureBuilder<List<Order>>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return ListView(
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              );
+            }
+            var orders = snap.data ?? [];
+            if (isAdmin) {
+              orders = orders.where((o) => o.status == 'pending').toList();
+            } else {
+              orders = orders.where((o) => o.userId == s.user?.id).toList();
+            }
+            if (orders.isEmpty) {
+              return ListView(
+                children: [
+                  const SizedBox(height: 120),
+                  Center(
+                      child: Text(
+                          s.isArabic ? 'لا توجد طلبات' : 'No orders')),
+                ],
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) => _card(orders[i], isAdmin, s),
             );
-      _user = await _withInvoiceTotals(base);
-      _isImageAdmin = (_user!.role == 'admin');
-      startOrderPolling();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _card(Order o, bool isAdmin, AppSettings s) {
+    return Pressable(
+      onTap: () async {
+        await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => _OrderDetail(order: o, isAdmin: isAdmin)));
+        if (mounted) {
+          setState(() {
+            _future = OrdersService.loadOrders();
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+              colors: <Color>[
+                AppColors.orange.withAlpha(25),
+                Theme.of(context).colorScheme.surface
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.orange.withAlpha(70)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    isAdmin
+                        ? '${o.userName} (${_roleAr(o.userRole)})'
+                        : dmy(o.date),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 15),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: o.status == 'accepted'
+                          ? AppColors.teal.withAlpha(45)
+                          : AppColors.orange.withAlpha(45),
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Text(
+                    s.isArabic ? _statusAr(o.status) : _statusEn(o.status),
+                    style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${time12(o.id)}',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              s.isArabic ? 'عرض المزيد من التفاصيل' : 'View more details',
+              style: const TextStyle(
+                  color: AppColors.teal,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderDetail extends StatefulWidget {
+  final Order order;
+  final bool isAdmin;
+  const _OrderDetail({required this.order, required this.isAdmin});
+  @override
+  State<_OrderDetail> createState() => _OrderDetailState();
+}
+
+class _OrderDetailState extends State<_OrderDetail> {
+  final _total = TextEditingController();
+  final _invNo = TextEditingController();
+  bool _busy = false;
+
+  double get _totalNum =>
+      double.tryParse(_total.text.replaceAll(',', '')) ?? 0;
+  int get _points => (_totalNum ~/ kPointUnit).toInt();
+  int get _stored => (_totalNum % kPointUnit).toInt();
+
+  String _roleAr(String r) {
+    if (r == 'agent') return 'وكيل';
+    if (r == 'tech') return 'صباغ';
+    if (r == 'admin') return 'مدير';
+    return 'عميل';
+  }
+
+  Future<void> _accept() async {
+    setState(() => _busy = true);
+    try {
+      widget.order.total = _totalNum;
+      widget.order.invoiceNo = _invNo.text.trim();
+      await OrdersService.acceptOrder(widget.order);
+      try {
+        await context.read<AppSettings>().refreshUser();
+      } catch (_) {}
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ تم قبول الفاتورة ونشرها')));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
     }
-    notifyListeners();
+  }
+
+  Future<void> _reject() async {
+    setState(() => _busy = true);
+    try {
+      await OrdersService.rejectOrder(widget.order);
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('🗑️ تم رفض الفاتورة وحذفها')));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
+    }
+  }
+
+  Widget _field(String label, TextEditingController c, String hint) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    return TextField(
+      controller: c,
+      keyboardType: TextInputType.number,
+      onChanged: (_) => setState(() {}),
+      style: TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 16),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _sumRow(String label, String value, Color c, {bool big = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontWeight: FontWeight.w800, fontSize: big ? 15 : 14)),
+          const Spacer(),
+          Text(value,
+              style: TextStyle(
+                  color: c,
+                  fontWeight: FontWeight.w900,
+                  fontSize: big ? 18 : 15)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppSettings s = context.watch<AppSettings>();
+    final o = widget.order;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(s.isArabic ? 'تفاصيل الفاتورة' : 'Invoice details'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  colors: <Color>[
+                    AppColors.teal.withAlpha(25),
+                    Theme.of(context).colorScheme.surface
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.teal.withAlpha(70)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${o.userName} (${_roleAr(o.userRole)})',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text(
+                    '${s.isArabic ? 'التاريخ' : 'Date'}: ${dmy(o.date)} • ${time12(o.id)}',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                const SizedBox(height: 10),
+                ...o.items.map((it) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(it.name)),
+                          Text('×${it.qty}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    )),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (widget.isAdmin && o.status == 'pending') ...[
+            _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total, '250000'),
+            const SizedBox(height: 12),
+            _field(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', _invNo, '0001'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.orange.withAlpha(70)),
+              ),
+              child: Column(
+                children: [
+                  _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
+                      fmtThousands(_totalNum), AppColors.orange, big: true),
+                  _sumRow(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
+                      fmtThousands(_points), AppColors.teal),
+                  _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
+                      fmtThousands(_stored), AppColors.teal),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: <Color>[
+                              Color(0xFF0D9668),
+                              Color(0xFF0AA87A)
+                            ]),
+                        borderRadius: BorderRadius.circular(14)),
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white),
+                        onPressed: _busy ? null : _accept,
+                        child: _busy
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : Text(s.isArabic ? 'قبول' : 'Accept',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: <Color>[
+                              Color(0xFFD63C3C),
+                              Color(0xFFB02A2A)
+                            ]),
+                        borderRadius: BorderRadius.circular(14)),
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white),
+                        onPressed: _busy ? null : _reject,
+                        child: Text(s.isArabic ? 'رفض' : 'Reject',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (o.status == 'accepted') ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.teal.withAlpha(70)),
+              ),
+              child: Column(
+                children: [
+                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                      o.invoiceNo, AppColors.orange),
+                  _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
+                      fmtThousands(o.total), AppColors.orange),
+                  _sumRow(s.isArabic ? 'النقاط' : 'Points',
+                      fmtThousands(o.points), AppColors.teal),
+                  _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
+                      fmtThousands(o.stored), AppColors.teal),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
