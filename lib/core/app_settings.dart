@@ -8,7 +8,6 @@ class AppSettings extends ChangeNotifier {
   bool _isImageAdmin = false;
   User? _user;
 
-  // ===== Getters =====
   bool get isArabic => _isArabic;
   bool get isDark => _isDark;
   bool get isImageAdmin => _isImageAdmin;
@@ -19,7 +18,6 @@ class AppSettings extends ChangeNotifier {
   int get points => _user?.points ?? 0;
   int get stored => _user?.stored ?? 0;
 
-  // ===== الترجمة =====
   String tr(String key) {
     const Map<String, Map<String, String>> strings = {
       'appName': {'ar': 'شركة فاوري', 'en': 'FAWORI'},
@@ -40,7 +38,6 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
-  // ===== التبديل =====
   void toggleLanguage() {
     _isArabic = !_isArabic;
     _savePrefs();
@@ -63,7 +60,6 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ===== تسجيل الدخول =====
   Future<void> loginAsUser(User u) async {
     _user = u;
     _isImageAdmin = (u.role == 'admin');
@@ -123,7 +119,6 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ===== الخروج =====
   void logout() {
     _user = null;
     _isImageAdmin = false;
@@ -131,7 +126,6 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ===== الحفظ والاستعادة =====
   Future<void> _savePrefs() async {
     final p = await SharedPreferences.getInstance();
     await p.setBool('isArabic', _isArabic);
