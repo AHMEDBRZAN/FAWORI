@@ -14,9 +14,12 @@ class Product {
     this.image = '',
     this.category = '',
   });
+
+  /// ✅ getter لـ desc لتوافق الكود الحالي في products_screen و product_detail_screen
+  String get desc => description;
 }
 
-/// ✅ المتغير المصدَّر الذي يستخدمه FavoritesScreen
+/// ✅ المتغير الأساسي (يستخدمه FavoritesScreen)
 final List<Product> sampleData = const <Product>[
   // ===== فاوري FAWORI =====
   Product(
@@ -110,3 +113,6 @@ final List<Product> sampleData = const <Product>[
     category: 'primer',
   ),
 ];
+
+/// ✅ مرادف لـ sampleData لتوافق products_screen.dart
+final List<Product> sampleProducts = sampleData;
