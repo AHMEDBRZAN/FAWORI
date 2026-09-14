@@ -136,7 +136,6 @@ class OrdersService {
     return [];
   }
 
-  // ===== السلة =====
   static Future<List<CartItem>> loadCart(String uid) async {
     try {
       final p = await SharedPreferences.getInstance();
@@ -160,7 +159,6 @@ class OrdersService {
     await p.remove('cart_$uid');
   }
 
-  // ===== الطلبات =====
   static Future<List<Order>> loadOrders() async {
     final d = await _fetchJson(kOrdersPath);
     if (d is List) {
@@ -188,7 +186,7 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
-  /// ✅ قبول: مطابقة ذكية بالنص بعد toString + بالاسم احتياطاً
+  /// ✅ قبول: يحتسب النقاط/الرصيد، ينشر الفاتورة، يحدّث نقاط المستخدم
   static Future<void> acceptOrder(Order o) async {
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
@@ -215,7 +213,6 @@ class OrdersService {
 
     final users = await _fetchJson('assets/data/users.json');
     if (users is List) {
-      bool matched = false;
       for (final u in users) {
         if (u is Map &&
             (u['id']?.toString().trim() == o.userId ||
@@ -224,16 +221,15 @@ class OrdersService {
               ((u['points'] as num?)?.toInt() ?? 0) + o.points.toInt();
           u['stored'] =
               ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
-          matched = true;
         }
       }
-      if (matched) {
-        await _putJson('assets/data/users.json', users);
-      }
+      await _putJson('assets/data/users.json', users);
     }
   }
 
+  /// ❌ رفض: يُحدّث الحالة إلى 'rejected' لتبقى عند المستخدم
   static Future<void> rejectOrder(Order o) async {
-    await deleteOrder(o.id);
+    o.status = 'rejected';
+    await updateOrder(o);
   }
 }
