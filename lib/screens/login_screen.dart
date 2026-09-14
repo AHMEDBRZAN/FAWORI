@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
+import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,269 +12,94 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phone = TextEditingController();
-  final TextEditingController _pass = TextEditingController();
-  bool _obscure = true;
+  final _phone = TextEditingController();
+  final _pass = TextEditingController();
   bool _busy = false;
-  String _err = '';
+  String? _err;
 
-  Future<void> _submit() async {
-    final AppSettings s = context.read<AppSettings>();
-    final String ph = _phone.text.trim();
-    final String pw = _pass.text;
+  void _go() {
+    if (!mounted) return;
+    setState(() => _busy = false);
+    Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainScreen()), (r) => false);
+  }
+
+  Future<void> _login() async {
+    if (_busy) return;
     setState(() {
-      _err = '';
       _busy = true;
+      _err = null;
     });
-
-    // مدير الصور: هاتف 1 و رمز 2 => يفتح التطبيق الطبيعي مع صلاحيات الرفع
-    if (ph == '1' && pw == '2') {
-      await s.loginAsAdmin();
-      if (mounted) setState(() { _busy = false; });
-      return;
-    }
-
-    final List<User> users = await StoreService.loadUsers();
-    User? found;
-    for (final User u in users) {
-      if (u.phone == ph) {
-        found = u;
-        break;
+    try {
+      final s = context.read<AppSettings>();
+      final ph = _phone.text.trim();
+      final pw = _pass.text.trim();
+      if (ph.isEmpty || pw.isEmpty) {
+        setState(() {
+          _busy = false;
+          _err = s.isArabic ? 'أدخل الهاتف وكلمة المرور' : 'Enter phone & password';
+        });
+        return;
+      }
+      // اختصار المدير
+      if (ph == '1' && pw == '2') {
+        await s.loginAsAdmin();
+        _go();
+        return;
+      }
+      final users = await StoreService.loadUsers();
+      User? found;
+      for (final u in users) {
+        if (u.phone == ph) {
+          found = u;
+          break;
+        }
+      }
+      if (found == null || found.password != pw) {
+        setState(() {
+          _busy = false;
+          _err = s.isArabic ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials';
+        });
+        return;
+      }
+      try {
+        await s.loginAsUser(found);
+      } catch (_) {
+        // إذا فشلت الكتابة البعيدة ندخل محلياً بدون تعليق
+        s.syncUser(found);
+      }
+      _go();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _err = s.isArabic ? 'تعذر الدخول: $e' : 'Login failed: $e';
+        });
       }
     }
-    if (!mounted) return;
-    if (found != null && found.password == pw) {
-      await s.loginAsUser(found);
-    } else {
-      setState(() {
-        _err = 'رقم الهاتف أو كلمة المرور غير صحيحة';
-        _busy = false;
-      });
+  }
+
+  Future<void> _guest() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final s = context.read<AppSettings>();
+      await s.loginAsGuest();
+      _go();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _err = s.isArabic ? 'تعذر دخول الضيف: $e' : 'Guest failed: $e';
+        });
+      }
     }
-  }
-
-  Widget _logo() {
-    return Container(
-      width: 108,
-      height: 108,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-            colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.orange.withAlpha(90),
-              blurRadius: 34,
-              offset: const Offset(0, 12)),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Image.asset(
-          'assets/images/logo.png',
-          width: 100,
-          height: 100,
-          fit: BoxFit.cover,
-          errorBuilder: (BuildContext c, Object o, StackTrace? st) {
-            return Container(
-              color: AppColors.orange.withAlpha(40),
-              child: const Icon(Icons.store_rounded,
-                  size: 46, color: AppColors.orange),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _title(AppSettings s) {
-    return ShaderMask(
-      shaderCallback: (Rect r) =>
-          const LinearGradient(colors: <Color>[AppColors.orange, Color(0xFFF26B0F)])
-              .createShader(r),
-      child: Text(
-        s.tr('appName'),
-        style: const TextStyle(
-            fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _fieldPhone(AppSettings s, bool dark) {
-    return TextField(
-      controller: _phone,
-      keyboardType: TextInputType.phone,
-      style: TextStyle(color: dark ? Colors.white : AppColors.ink),
-      decoration: InputDecoration(
-        labelText: s.isArabic ? 'رقم الهاتف' : 'Phone',
-        prefixIcon: const Icon(Icons.phone_rounded, color: AppColors.orange),
-        filled: true,
-        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.orange.withAlpha(90))),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.orange.withAlpha(70))),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.orange, width: 2)),
-      ),
-    );
-  }
-
-  Widget _fieldPass(AppSettings s, bool dark) {
-    return TextField(
-      controller: _pass,
-      obscureText: _obscure,
-      style: TextStyle(color: dark ? Colors.white : AppColors.ink),
-      decoration: InputDecoration(
-        labelText: s.isArabic ? 'كلمة المرور' : 'Password',
-        prefixIcon: const Icon(Icons.lock_rounded, color: AppColors.orange),
-        filled: true,
-        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.orange.withAlpha(90))),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: AppColors.orange.withAlpha(70))),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.orange, width: 2)),
-        suffixIcon: IconButton(
-          icon: Icon(
-              _obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-              color: Colors.grey),
-          onPressed: () {
-            setState(() {
-              _obscure = !_obscure;
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _button(AppSettings s) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-            colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.orange.withAlpha(90),
-              blurRadius: 18,
-              offset: const Offset(0, 7)),
-        ],
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              foregroundColor: Colors.white),
-          onPressed: _busy ? null : _submit,
-          child: _busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
-              : Text(
-                  s.tr('login'),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 16),
-                ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
+    final s = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
-
-    final List<Widget> kids = <Widget>[
-      Align(
-        alignment: Alignment.centerLeft,
-        child: IconButton(
-          tooltip: s.isArabic ? 'تبديل الوضع' : 'Toggle theme',
-          icon: Icon(
-              dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-              color: AppColors.orange),
-          onPressed: () => s.toggleDark(),
-        ),
-      ),
-      const SizedBox(height: 8),
-      _logo(),
-      const SizedBox(height: 18),
-      _title(s),
-      const SizedBox(height: 6),
-      Text(
-        s.isArabic ? 'سجّل دخولك للمتابعة' : 'Sign in to continue',
-        style: TextStyle(
-            color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-            fontSize: 13),
-      ),
-      const SizedBox(height: 24),
-      Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: dark ? const Color(0xFF23232B) : const Color(0xFFFFFDF9),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.orange.withAlpha(80)),
-          boxShadow: [
-            BoxShadow(
-                color: AppColors.orange.withAlpha(dark ? 40 : 25),
-                blurRadius: 24,
-                offset: const Offset(0, 10)),
-          ],
-        ),
-        child: Column(
-          children: <Widget>[
-            _fieldPhone(s, dark),
-            const SizedBox(height: 12),
-            _fieldPass(s, dark),
-            if (_err.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Text(
-                  _err,
-                  style: const TextStyle(color: Colors.red, fontSize: 13),
-                ),
-              ),
-            const SizedBox(height: 18),
-            _button(s),
-          ],
-        ),
-      ),
-      const SizedBox(height: 14),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Text(
-            s.isArabic ? 'لا تملك حساباً؟' : 'No account?',
-            style: TextStyle(
-                color: dark ? Colors.grey.shade400 : Colors.grey.shade600),
-          ),
-          TextButton(
-            onPressed: () => s.loginAsGuest(),
-            child: Text(
-              s.isArabic ? 'دخول كضيف' : 'Guest',
-              style: const TextStyle(
-                  color: AppColors.orange, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    ];
-
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -281,19 +107,130 @@ class _LoginScreenState extends State<LoginScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: dark
-                ? const <Color>[Color(0xFF23232B), Color(0xFF2B2B34)]
+                ? const <Color>[Color(0xFF141419), Color(0xFF1B1B21)]
                 : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(mainAxisSize: MainAxisSize.min, children: kids),
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              const SizedBox(height: 40),
+              Center(
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.orange, width: 2),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.asset('assets/images/logo.webp',
+                        fit: BoxFit.cover, gaplessPlayback: true,
+                        errorBuilder: (c, o, st) =>
+                            const Center(child: Text('FAWORI',
+                                style: TextStyle(color: Colors.white,
+                                    fontWeight: FontWeight.w900)))),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 18),
+              Center(
+                child: ShaderMask(
+                  shaderCallback: (Rect r) => const LinearGradient(
+                          colors: <Color>[AppColors.teal, AppColors.orange])
+                      .createShader(r),
+                  child: Text(
+                    s.isArabic ? 'شركة فاوري' : 'FAWORI',
+                    style: const TextStyle(fontSize: 24,
+                        fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+              TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                style: TextStyle(color: dark ? Colors.white : AppColors.ink),
+                decoration: InputDecoration(
+                  hintText: s.isArabic ? 'رقم الهاتف' : 'Phone',
+                  prefixIcon: const Icon(Icons.phone_rounded,
+                      color: AppColors.orange),
+                  filled: true,
+                  fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _pass,
+                obscureText: true,
+                style: TextStyle(color: dark ? Colors.white : AppColors.ink),
+                decoration: InputDecoration(
+                  hintText: s.isArabic ? 'كلمة المرور' : 'Password',
+                  prefixIcon:
+                      const Icon(Icons.lock_outline_rounded, color: AppColors.orange),
+                  filled: true,
+                  fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (_err != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(_err!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
+                      textAlign: TextAlign.center),
+                ),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white),
+                    onPressed: _busy ? null : _login,
+                    child: _busy
+                        ? const SizedBox(width: 20, height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : Text(
+                            s.isArabic ? 'تسجيل الدخول' : 'Login',
+                            style: const TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.teal,
+                      side: const BorderSide(color: AppColors.teal, width: 1.5)),
+                  onPressed: _busy ? null : _guest,
+                  icon: const Icon(Icons.person_outline_rounded, size: 22),
+                  label: Text(
+                    s.isArabic ? 'الدخول كضيف' : 'Continue as guest',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
