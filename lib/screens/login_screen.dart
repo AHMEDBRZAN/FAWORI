@@ -30,8 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _busy = true;
       _err = null;
     });
+    final s = context.read<AppSettings>();
     try {
-      final s = context.read<AppSettings>();
       final ph = _phone.text.trim();
       final pw = _pass.text.trim();
       if (ph.isEmpty || pw.isEmpty) {
@@ -65,7 +65,6 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         await s.loginAsUser(found);
       } catch (_) {
-        // إذا فشلت الكتابة البعيدة ندخل محلياً بدون تعليق
         s.syncUser(found);
       }
       _go();
@@ -82,8 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _guest() async {
     if (_busy) return;
     setState(() => _busy = true);
+    final s = context.read<AppSettings>();
     try {
-      final s = context.read<AppSettings>();
       await s.loginAsGuest();
       _go();
     } catch (e) {
