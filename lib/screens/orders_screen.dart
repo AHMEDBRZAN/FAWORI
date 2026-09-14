@@ -1,348 +1,217 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../core/app_settings.dart';
-import '../core/orders_service.dart';
-import '../core/store_service.dart';
-import '../core/theme.dart';
-import '../widgets/pressable.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'store_service.dart';
 
-class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
-  @override
-  State<OrdersScreen> createState() => _OrdersScreenState();
+/// 📡 قراءة حية مباشرة من المستودع
+const String _raw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
+const String kOrdersPath = 'assets/data/orders.json';
+const int kPointUnit = 125000;
+
+const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
+
+String fmtThousands(num n) {
+  final s = n.toStringAsFixed(0);
+  final out = StringBuffer();
+  int c = 0;
+  for (int i = s.length - 1; i >= 0; i--) {
+    out.write(s[i]);
+    c++;
+    if (c % 3 == 0 && i != 0) out.write(',');
+  }
+  return out.toString().split('').reversed.join();
 }
 
-class _OrdersScreenState extends State<OrdersScreen> {
-  late Future<List<Order>> _future = OrdersService.loadOrders();
+class CartItem {
+  final String id, name, image, brand;
+  int qty;
+  CartItem(
+      {required this.id,
+      required this.name,
+      required this.image,
+      required this.brand,
+      this.qty = 1});
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'name': name, 'image': image, 'brand': brand, 'qty': qty};
+  factory CartItem.fromJson(Map<String, dynamic> j) => CartItem(
+      id: j['id'] ?? '',
+      name: j['name'] ?? '',
+      image: j['image'] ?? '',
+      brand: j['brand'] ?? '',
+      qty: (j['qty'] as num?)?.toInt() ?? 1);
+}
 
-  String _roleAr(String r) {
-    if (r == 'agent') return 'وكيل';
-    if (r == 'tech') return 'صباغ';
-    if (r == 'admin') return 'مدير';
-    return 'عميل';
-  }
+class OrderItem {
+  final String name;
+  final int qty;
+  OrderItem({required this.name, required this.qty});
+  Map<String, dynamic> toJson() => {'name': name, 'qty': qty};
+  factory OrderItem.fromJson(Map<String, dynamic> j) =>
+      OrderItem(name: j['name'] ?? '', qty: (j['qty'] as num?)?.toInt() ?? 1);
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
-    final bool isAdmin = s.isImageAdmin;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(isAdmin
-            ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
-            : (s.isArabic ? 'طلباتي' : 'My orders')),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _future = OrdersService.loadOrders();
-          });
-        },
-        child: FutureBuilder<List<Order>>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            var orders = snap.data ?? [];
-            if (isAdmin) {
-              orders = orders.where((o) => o.status == 'pending').toList();
-            } else {
-              orders = orders.where((o) => o.userId == s.user?.id).toList();
-            }
-            if (orders.isEmpty) {
-              return const Center(child: Text('لا توجد طلبات'));
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _card(orders[i], isAdmin, s),
-            );
-          },
-        ),
-      ),
+class Order {
+  final String id, userId, userName, userRole, date;
+  final List<OrderItem> items;
+  String status;
+  double total;
+  double points;
+  double stored;
+  String invoiceNo;
+  Order({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.userRole,
+    required this.date,
+    required this.items,
+    this.status = 'pending',
+    this.total = 0,
+    this.points = 0,
+    this.stored = 0,
+    this.invoiceNo = '',
+  });
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'userId': userId,
+        'userName': userName,
+        'userRole': userRole,
+        'date': date,
+        'items': items.map((e) => e.toJson()).toList(),
+        'status': status,
+        'total': total,
+        'points': points,
+        'stored': stored,
+        'invoiceNo': invoiceNo,
+      };
+  factory Order.fromJson(Map<String, dynamic> j) => Order(
+        id: j['id'] ?? '',
+        userId: j['userId'] ?? '',
+        userName: j['userName'] ?? '',
+        userRole: j['userRole'] ?? '',
+        date: j['date'] ?? '',
+        items: (j['items'] as List<dynamic>? ?? [])
+            .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        status: j['status'] ?? 'pending',
+        total: (j['total'] as num?)?.toDouble() ?? 0,
+        points: (j['points'] as num?)?.toDouble() ?? 0,
+        stored: (j['stored'] as num?)?.toDouble() ?? 0,
+        invoiceNo: j['invoiceNo'] ?? '',
+      );
+}
+
+class OrdersService {
+  static Future<void> _putJson(String path, dynamic data) async {
+    final r = await http.post(
+      Uri.parse(kWriteProxy),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'path': path,
+        'content': base64Encode(utf8.encode(jsonEncode(data))),
+      }),
     );
-  }
-
-  Widget _card(Order o, bool isAdmin, AppSettings s) {
-    return Pressable(
-      onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => _OrderDetail(order: o, isAdmin: isAdmin))),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-              colors: <Color>[
-                AppColors.orange.withAlpha(25),
-                Theme.of(context).colorScheme.surface
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.orange.withAlpha(70)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    isAdmin ? '${o.userName} (${_roleAr(o.userRole)})' : o.date,
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: AppColors.orange.withAlpha(35),
-                      borderRadius: BorderRadius.circular(8)),
-                  child: Text(
-                    s.isArabic ? 'قيد المراجعة' : 'Pending',
-                    style: const TextStyle(
-                        color: AppColors.orange,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text('${o.items.length} ${s.isArabic ? 'مادة' : 'items'} • ${o.date}',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-            const SizedBox(height: 8),
-            Text(
-              s.isArabic ? 'عرض المزيد من التفاصيل' : 'View more details',
-              style: const TextStyle(
-                  color: AppColors.teal, fontWeight: FontWeight.w800, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OrderDetail extends StatefulWidget {
-  final Order order;
-  final bool isAdmin;
-  const _OrderDetail({required this.order, required this.isAdmin});
-  @override
-  State<_OrderDetail> createState() => _OrderDetailState();
-}
-
-class _OrderDetailState extends State<_OrderDetail> {
-  final _total = TextEditingController();
-  final _invNo = TextEditingController();
-  bool _busy = false;
-
-  double get _totalNum => double.tryParse(_total.text.replaceAll(',', '')) ?? 0;
-  int get _points => (_totalNum ~/ kPointUnit).toInt();
-  int get _stored => (_totalNum % kPointUnit).toInt();
-
-  String _roleAr(String r) {
-    if (r == 'agent') return 'وكيل';
-    if (r == 'tech') return 'صباغ';
-    if (r == 'admin') return 'مدير';
-    return 'عميل';
-  }
-
-  Future<void> _accept() async {
-    setState(() => _busy = true);
-    try {
-      widget.order.total = _totalNum;
-      widget.order.invoiceNo = _invNo.text.trim();
-      await OrdersService.acceptOrder(widget.order);
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('✅ تم قبول الفاتورة ونشرها')));
-        Navigator.pop(context);
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل: $e')));
-      }
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw Exception('PUT ${r.statusCode}');
     }
   }
 
-  Future<void> _reject() async {
-    setState(() => _busy = true);
+  static Future<dynamic> _fetchJson(String path) async {
     try {
-      await OrdersService.rejectOrder(widget.order);
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('🗑️ تم رفض الفاتورة وحذفها')));
-        Navigator.pop(context);
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل: $e')));
-      }
+      final r = await http.get(Uri.parse(
+          '$_raw/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+      if (r.statusCode == 200) return jsonDecode(r.body);
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<List<CartItem>> loadCart(String uid) async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final s = p.getString('cart_$uid');
+      if (s == null || s.isEmpty) return [];
+      final List<dynamic> l = jsonDecode(s) as List<dynamic>;
+      return l.map((e) => CartItem.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
     }
   }
 
-  Widget _field(String label, TextEditingController c, String hint) {
-    return TextField(
-      controller: c,
-      keyboardType: TextInputType.number,
-      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-      onChanged: (_) => setState(() {}),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        filled: true,
-        fillColor: const Color(0xFF26262E),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+  static Future<void> saveCart(String uid, List<CartItem> items) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(
+        'cart_$uid', jsonEncode(items.map((e) => e.toJson()).toList()));
   }
 
-  Widget _sumRow(String label, String value, Color c) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const Spacer(),
-          Text(value,
-              style: TextStyle(color: c, fontWeight: FontWeight.w900, fontSize: 15)),
-        ],
-      ),
-    );
+  static Future<void> clearCart(String uid) async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove('cart_$uid');
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
-    final o = widget.order;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(s.isArabic ? 'تفاصيل الفاتورة' : 'Invoice details'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: <Color>[
-                    AppColors.teal.withAlpha(25),
-                    Theme.of(context).colorScheme.surface
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.teal.withAlpha(70)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${o.userName} (${_roleAr(o.userRole)})',
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text('${s.isArabic ? 'التاريخ' : 'Date'}: ${o.date}',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-                const SizedBox(height: 10),
-                ...o.items.map((it) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          Expanded(child: Text(it.name)),
-                          Text('×${it.qty}',
-                              style: const TextStyle(fontWeight: FontWeight.w800)),
-                        ],
-                      ),
-                    )),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          if (widget.isAdmin) ...[
-            _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total, '1,000'),
-            const SizedBox(height: 12),
-            _field(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', _invNo, '0001'),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.orange.withAlpha(70)),
-              ),
-              child: Column(
-                children: [
-                  _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
-                      fmtThousands(_totalNum), AppColors.orange),
-                  _sumRow(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
-                      '${fmtThousands(_points)}', AppColors.teal),
-                  _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
-                      fmtThousands(_stored), AppColors.teal),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: <Color>[Color(0xFF0D9668), Color(0xFF0AA87A)]),
-                        borderRadius: BorderRadius.circular(14)),
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white),
-                        onPressed: _busy ? null : _accept,
-                        child: Text(s.isArabic ? 'قبول' : 'Accept',
-                            style: const TextStyle(fontWeight: FontWeight.w900)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: <Color>[Color(0xFFD63C3C), Color(0xFFB02A2A)]),
-                        borderRadius: BorderRadius.circular(14)),
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white),
-                        onPressed: _busy ? null : _reject,
-                        child: Text(s.isArabic ? 'رفض' : 'Reject',
-                            style: const TextStyle(fontWeight: FontWeight.w900)),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
+  static Future<List<Order>> loadOrders() async {
+    final d = await _fetchJson(kOrdersPath);
+    if (d is List) {
+      return d.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  static Future<void> submitOrder(Order o) async {
+    final list = await loadOrders();
+    list.add(o);
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+  }
+
+  static Future<void> updateOrder(Order o) async {
+    final list = await loadOrders();
+    final i = list.indexWhere((x) => x.id == o.id);
+    if (i >= 0) list[i] = o;
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+  }
+
+  static Future<void> deleteOrder(String id) async {
+    final list = await loadOrders();
+    list.removeWhere((x) => x.id == id);
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+  }
+
+  static Future<void> acceptOrder(Order o) async {
+    o.points = (o.total ~/ kPointUnit).toDouble();
+    o.stored = (o.total % kPointUnit).toDouble();
+    o.status = 'accepted';
+    await updateOrder(o);
+
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is List) {
+      invs.add({
+        'id': o.id,
+        'userId': o.userId,
+        'date': o.date,
+        'type': 'sale',
+        'no': o.invoiceNo,
+        'total': o.total,
+        'points': o.points.toInt(),
+        'stored': o.stored.toInt(),
+        'items': o.items
+            .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
+            .toList(),
+      });
+      await _putJson('assets/data/invoices.json', invs);
+    }
+
+    final users = await _fetchJson('assets/data/users.json');
+    if (users is List) {
+      for (final u in users) {
+        if (u is Map && u['id'] == o.userId) {
+          u['points'] = ((u['points'] as num?)?.toInt() ?? 0) + o.points.toInt();
+          u['stored'] = ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
+        }
+      }
+      await _putJson('assets/data/users.json', users);
+    }
+  }
+
+  static Future<void> rejectOrder(Order o) async {
+    await deleteOrder(o.id);
   }
 }
