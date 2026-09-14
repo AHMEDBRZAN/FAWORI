@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:web_audio' as wa;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'orders_service.dart';
 import 'store_service.dart';
 
 class AppSettings extends ChangeNotifier {
@@ -7,6 +10,9 @@ class AppSettings extends ChangeNotifier {
   bool _isDark = false;
   bool _isImageAdmin = false;
   User? _user;
+
+  Timer? _pollTimer;
+  int _lastPending = -1;
 
   bool get isArabic => _isArabic;
   bool get isDark => _isDark;
@@ -38,7 +44,42 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
-  /// ✅ المصدر الحقيقي للنقاط: مجموع الفواتير المقبولة للمستخدم
+  /// 🔔 نغمة إشعار قصيرة (بدون ملفات صوت)
+  void playBeep() {
+    try {
+      final ctx = wa.AudioContext();
+      if (ctx.state == 'suspended') {
+        ctx.resume();
+      }
+      final osc = ctx.createOscillator();
+      final gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.25;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    } catch (_) {}
+  }
+
+  /// 🔔 فحص الطلبات المعلقة كل 30 ثانية — نغمة عند وصول طلب جديد
+  void startOrderPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (_user == null || _user!.role != 'admin') return;
+      try {
+        final orders = await OrdersService.loadOrders();
+        final pending =
+            orders.where((o) => o.status == 'pending').length;
+        if (_lastPending >= 0 && pending > _lastPending) {
+          playBeep();
+        }
+        _lastPending = pending;
+      } catch (_) {}
+    });
+  }
+
   Future<User> _withInvoiceTotals(User base) async {
     try {
       final invs = await StoreService.loadInvoices();
@@ -93,6 +134,7 @@ class AppSettings extends ChangeNotifier {
       await StoreService.upsertUser(u);
     } catch (_) {}
     await _savePrefs();
+    startOrderPolling();
     notifyListeners();
   }
 
@@ -117,6 +159,7 @@ class AppSettings extends ChangeNotifier {
     _user = await _withInvoiceTotals(admin);
     _isImageAdmin = true;
     await _savePrefs();
+    startOrderPolling();
     notifyListeners();
   }
 
@@ -137,7 +180,6 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔄 تحديث المستخدم: من users.json ثم مزامنة النقاط من الفواتير
   Future<void> refreshUser() async {
     if (_user == null) return;
     try {
@@ -191,6 +233,7 @@ class AppSettings extends ChangeNotifier {
   void logout() {
     _user = null;
     _isImageAdmin = false;
+    _pollTimer?.cancel();
     _savePrefs();
     notifyListeners();
   }
@@ -227,6 +270,7 @@ class AppSettings extends ChangeNotifier {
             );
       _user = await _withInvoiceTotals(base);
       _isImageAdmin = (_user!.role == 'admin');
+      startOrderPolling();
     }
     notifyListeners();
   }
