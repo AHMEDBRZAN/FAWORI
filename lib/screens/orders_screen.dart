@@ -12,11 +12,12 @@ String dmy(String iso) {
     final day = p[2].padLeft(2, '0');
     final month = p[1].padLeft(2, '0');
     final year = p[0];
-    return '$day-$month-$year';
+    return '$year-$month-$day';  // ✅ سنة-شهر-يوم
   } catch (_) {
     return iso;
   }
 }
+
 
 /// ✅ وقت بصيغة 12 ساعة: 9:15 بدون ثواني
 String time12(String idMillis) {
