@@ -1,167 +1,275 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'store_service.dart';
+import 'package:http/http.dart' as http;
 
-class AppSettings extends ChangeNotifier {
-  bool _isArabic = true;
-  bool _isDark = false;
-  bool _isImageAdmin = false;
-  User? _user;
+const String kOwner = 'AHMEDBRZAN';
+const String kRepo = 'FAWORI';
+const String kBranch = 'main';
+const String kSite = 'https://ahmedbrzan.github.io/FAWORI';
 
-  // ===== Getters =====
-  bool get isArabic => _isArabic;
-  bool get isDark => _isDark;
-  bool get isImageAdmin => _isImageAdmin;
-  bool get isGuest => _user == null || _user!.role == 'guest';
-  User? get user => _user;
+/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
+const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
-  int get points => _user?.points ?? 0;
-  int get stored => _user?.stored ?? 0;
+/// لم نعد نستخدمه — الكتابة عبر الوسيط
+const String kUploadToken = '';
 
-  // ===== الترجمة =====
-  String tr(String key) {
-    final Map<String, Map<String, String>> _strings = {
-      'appName': {'ar': 'شركة فاوري', 'en': 'FAWORI'},
-      'settings': {'ar': 'الإعدادات', 'en': 'Settings'},
-      'language': {'ar': 'اللغة', 'en': 'Language'},
-      'about': {'ar': 'حول التطبيق', 'en': 'About'},
-      'logout': {'ar': 'تسجيل الخروج', 'en': 'Logout'},
-      'home': {'ar': 'الرئيسية', 'en': 'Home'},
-      'products': {'ar': 'المنتجات', 'en': 'Products'},
-      'wallet': {'ar': 'المحفظة', 'en': 'Wallet'},
-      'favorites': {'ar': 'المفضلة', 'en': 'Favorites'},
-      'profile': {'ar': 'ملفي', 'en': 'Profile'},
-      'invoices': {'ar': 'الفواتير', 'en': 'Invoices'},
-    };
-    final m = _strings[key];
-    if (m == null) return key;
-    return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
+class User {
+  final String id, name, role;
+  final String? phone;
+  final String? password;
+  final int points, stored;
+  User({
+    required this.id,
+    required this.name,
+    required this.role,
+    this.phone,
+    this.password,
+    this.points = 0,
+    this.stored = 0,
+  });
+  factory User.fromJson(Map<String, dynamic> j) => User(
+        id: j['id']?.toString() ?? '',
+        name: j['name'] ?? '',
+        role: j['role'] ?? 'guest',
+        phone: j['phone']?.toString(),
+        password: j['password']?.toString(),
+        points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
+      );
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'role': role,
+        if (phone != null) 'phone': phone,
+        if (password != null) 'password': password,
+        'points': points,
+        'stored': stored,
+      };
+}
+
+class InvoiceItem {
+  final String name;
+  final double price;
+  final int qty;
+  InvoiceItem({required this.name, this.price = 0, this.qty = 1});
+  factory InvoiceItem.fromJson(Map<String, dynamic> j) => InvoiceItem(
+        name: j['name'] ?? '',
+        price: (j['price'] as num?)?.toDouble() ?? 0,
+        qty: (j['qty'] as num?)?.toInt() ?? 1,
+      );
+  Map<String, dynamic> toJson() => {'name': name, 'price': price, 'qty': qty};
+}
+
+class Invoice {
+  final String id, userId, date, type, no;
+  final int total, points, stored;
+  final List<InvoiceItem> items;
+  Invoice({
+    required this.id,
+    required this.userId,
+    required this.date,
+    required this.type,
+    required this.no,
+    this.total = 0,
+    this.points = 0,
+    this.stored = 0,
+    this.items = const [],
+  });
+  factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(
+        id: j['id']?.toString() ?? '',
+        userId: j['userId']?.toString() ?? '',
+        date: j['date'] ?? '',
+        type: j['type'] ?? 'sale',
+        no: j['no']?.toString() ?? '',
+        total: (j['total'] as num?)?.toInt() ?? 0,
+        points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
+        items: (j['items'] as List<dynamic>? ?? [])
+            .map((e) => InvoiceItem.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'userId': userId,
+        'date': date,
+        'type': type,
+        'no': no,
+        'total': total,
+        'points': points,
+        'stored': stored,
+        'items': items.map((e) => e.toJson()).toList(),
+      };
+}
+
+class UserInfo {
+  final String id, name, role;
+  final int points, stored;
+  UserInfo(
+      {required this.id,
+      required this.name,
+      required this.role,
+      this.points = 0,
+      this.stored = 0});
+  factory UserInfo.fromJson(Map<String, dynamic> j) => UserInfo(
+        id: j['id'] ?? '',
+        name: j['name'] ?? '',
+        role: j['role'] ?? 'guest',
+        points: (j['points'] as num?)?.toInt() ?? 0,
+        stored: (j['stored'] as num?)?.toInt() ?? 0,
+      );
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'role': role,
+        'points': points,
+        'stored': stored,
+      };
+}
+
+Future<void> _putViaProxy(String path, dynamic data) async {
+  final r = await http.post(
+    Uri.parse(kWriteProxy),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'path': path,
+      'content': base64Encode(utf8.encode(jsonEncode(data))),
+    }),
+  );
+  if (r.statusCode != 200 && r.statusCode != 201) {
+    throw Exception('PUT ${r.statusCode}');
+  }
+}
+
+Future<dynamic> _fetchJson(String path) async {
+  try {
+    final r = await http.get(Uri.parse(
+        '$kSite/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+    if (r.statusCode == 200) return jsonDecode(r.body);
+  } catch (_) {}
+  return [];
+}
+
+class StoreService {
+  static Future<List<User>> loadUsers() async {
+    final d = await _fetchJson('assets/data/users.json');
+    if (d is List) {
+      return d.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
   }
 
-  // ===== التبديل =====
-  void toggleLanguage() {
-    _isArabic = !_isArabic;
-    _savePrefs();
-    notifyListeners();
+  static Future<void> saveUsers(List<User> users) async {
+    await _putViaProxy(
+        'assets/data/users.json', users.map((e) => e.toJson()).toList());
   }
 
-  void toggleDark() {
-    _isDark = !_isDark;
-    _savePrefs();
-    notifyListeners();
-  }
-
-  void toggleImageAdmin() {
-    _isImageAdmin = !_isImageAdmin;
-    notifyListeners();
-  }
-
-  // ===== تسجيل الدخول =====
-  Future<void> loginAsUser(User u) async {
-    _user = u;
-    final users = await StoreService.loadUsers();
-    final i = users.indexWhere((x) => x.id == u.id);
+  static Future<void> upsertUser(User u) async {
+    final list = await loadUsers();
+    final i = list.indexWhere((x) => x.id == u.id);
     if (i >= 0) {
-      users[i] = u;
+      list[i] = u;
     } else {
-      users.add(u);
+      list.add(u);
     }
-    await StoreService.saveUsers(users);
-    await _savePrefs();
-    notifyListeners();
+    await saveUsers(list);
   }
 
-  Future<void> loginAsGuest() async {
-    _user = User(id: 'guest_${DateTime.now().millisecondsSinceEpoch}',
-        name: 'ضيف', role: 'guest');
-    await _savePrefs();
-    notifyListeners();
-  }
-
-  void syncUser(User u) {
-    _user = u;
-    notifyListeners();
-  }
-
-  Future<void> addPoints(int delta) async {
-    if (_user == null) return;
-    final newPoints = _user!.points + delta;
-    final newUser = User(
-      id: _user!.id,
-      name: _user!.name,
-      role: _user!.role,
-      phone: _user!.phone,
-      password: _user!.password,
-      points: newPoints,
-      stored: _user!.stored,
-    );
-    _user = newUser;
-    await StoreService.upsertUser(newUser);
-    await _savePrefs();
-    notifyListeners();
-  }
-
-  Future<void> addStored(int delta) async {
-    if (_user == null) return;
-    final newStored = _user!.stored + delta;
-    final newUser = User(
-      id: _user!.id,
-      name: _user!.name,
-      role: _user!.role,
-      phone: _user!.phone,
-      password: _user!.password,
-      points: _user!.points,
-      stored: newStored,
-    );
-    _user = newUser;
-    await StoreService.upsertUser(newUser);
-    await _savePrefs();
-    notifyListeners();
-  }
-
-  // ===== الخروج =====
-  void logout() {
-    _user = null;
-    _savePrefs();
-    notifyListeners();
-  }
-
-  // ===== الحفظ والاستعادة =====
-  Future<void> _savePrefs() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setBool('isArabic', _isArabic);
-    await p.setBool('isDark', _isDark);
-    if (_user != null) {
-      await p.setString('user', _user.toString());
-      await p.setString('userId', _user!.id);
-      await p.setString('userName', _user!.name);
-      await p.setString('userRole', _user!.role);
-    } else {
-      await p.remove('user');
-      await p.remove('userId');
-      await p.remove('userName');
-      await p.remove('userRole');
+  static Future<List<Invoice>> loadInvoices() async {
+    final d = await _fetchJson('assets/data/invoices.json');
+    if (d is List) {
+      return d.map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
     }
+    return [];
   }
 
-  Future<void> restoreSession() async {
-    final p = await SharedPreferences.getInstance();
-    _isArabic = p.getBool('isArabic') ?? true;
-    _isDark = p.getBool('isDark') ?? false;
-    final id = p.getString('userId');
-    if (id != null && id.isNotEmpty) {
-      final users = await StoreService.loadUsers();
-      final found = users.where((u) => u.id == id).toList();
-      if (found.isNotEmpty) {
-        _user = found.first;
-      } else {
-        _user = User(
-          id: id,
-          name: p.getString('userName') ?? '',
-          role: p.getString('userRole') ?? 'guest',
-        );
+  static Future<void> saveInvoices(List<Invoice> invs) async {
+    await _putViaProxy(
+        'assets/data/invoices.json', invs.map((e) => e.toJson()).toList());
+  }
+
+  static Future<void> addInvoice(Invoice inv) async {
+    final list = await loadInvoices();
+    list.add(inv);
+    await saveInvoices(list);
+  }
+}
+
+class ImagesService {
+  static String? _memToken;
+
+  static String remoteUrl(String path) => '$kSite/assets/$path';
+
+  /// 🔑 لا ترجع فارغة أبداً — لذلك لن تظهر أي نافذة توكن في التطبيق
+  static Future<String> resolveToken() async {
+    if (_memToken != null && _memToken!.isNotEmpty) return _memToken!;
+    if (kUploadToken.isNotEmpty) return kUploadToken;
+    return 'worker-proxy';
+  }
+
+  static Future<String?> getToken() async => _memToken;
+
+  static Future<String?> askGitHubToken(BuildContext context) {
+    final c = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text('توكن GitHub'),
+        content: TextField(
+          controller: c,
+          decoration: const InputDecoration(hintText: 'ghp_...'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          ElevatedButton(
+            onPressed: () {
+              _memToken = c.text.trim();
+              Navigator.pop(ctx, _memToken);
+            },
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Future<Map<String, dynamic>> loadImages() async {
+    try {
+      final r = await http.get(Uri.parse(
+          '${remoteUrl('assets/data/images.json')}?t=${DateTime.now().millisecondsSinceEpoch}'));
+      if (r.statusCode == 200) {
+        return Map<String, dynamic>.from(jsonDecode(r.body));
       }
+    } catch (_) {}
+    return {};
+  }
+
+  static Future<void> putBytes(
+      String path, List<int> bytes, String token, String message) async {
+    final r = await http.post(
+      Uri.parse(kWriteProxy),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'path': path, 'content': base64Encode(bytes)}),
+    );
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw Exception('PUT ${r.statusCode}');
     }
-    notifyListeners();
+  }
+
+  static Future<void> setMapping(
+      String group, String key, String path, String token) async {
+    final r = await http.get(Uri.parse(
+        '${remoteUrl('assets/data/images.json')}?t=${DateTime.now().millisecondsSinceEpoch}'));
+    Map<String, dynamic> m = {};
+    if (r.statusCode == 200) {
+      try {
+        m = Map<String, dynamic>.from(jsonDecode(r.body));
+      } catch (_) {}
+    }
+    final g = Map<String, dynamic>.from(m[group] ?? {});
+    g[key] = path;
+    m[group] = g;
+    await _putViaProxy('assets/data/images.json', m);
   }
 }
