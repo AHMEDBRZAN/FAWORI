@@ -5,9 +5,11 @@ import 'store_service.dart';
 
 /// 📡 قراءة حية مباشرة من المستودع
 const String _raw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
+const String _site = 'https://ahmedbrzan.github.io/FAWORI';
 const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 
+/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
 String fmtThousands(num n) {
@@ -102,6 +104,7 @@ class Order {
 }
 
 class OrdersService {
+  /// ✍️ كتابة عبر الوسيط — بدون أي توكن داخل التطبيق
   static Future<void> _putJson(String path, dynamic data) async {
     final r = await http.post(
       Uri.parse(kWriteProxy),
@@ -116,15 +119,28 @@ class OrdersService {
     }
   }
 
+  /// 📡 قراءة ذكية: مستودع مباشر ← ثم نسخة الموقع ← مع مهلة 8 ثوانٍ
   static Future<dynamic> _fetchJson(String path) async {
+    // 1) مباشر من المستودع (الأحدث)
     try {
-      final r = await http.get(Uri.parse(
-          '$_raw/$path?t=${DateTime.now().millisecondsSinceEpoch}'));
+      final r = await http
+          .get(Uri.parse(
+              '$_raw/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+          .timeout(const Duration(seconds: 8));
+      if (r.statusCode == 200) return jsonDecode(r.body);
+    } catch (_) {}
+    // 2) احتياط: نسخة الموقع المبنية
+    try {
+      final r = await http
+          .get(Uri.parse(
+              '$_site/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+          .timeout(const Duration(seconds: 8));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     return [];
   }
 
+  // ===== السلة (محلية محفوظة) =====
   static Future<List<CartItem>> loadCart(String uid) async {
     try {
       final p = await SharedPreferences.getInstance();
@@ -148,6 +164,7 @@ class OrdersService {
     await p.remove('cart_$uid');
   }
 
+  // ===== الطلبات =====
   static Future<List<Order>> loadOrders() async {
     final d = await _fetchJson(kOrdersPath);
     if (d is List) {
@@ -175,6 +192,7 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
+  /// ✅ قبول: يحتسب النقاط/الرصيد، ينشر الفاتورة، يحدّث نقاط المستخدم
   static Future<void> acceptOrder(Order o) async {
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
@@ -211,6 +229,7 @@ class OrdersService {
     }
   }
 
+  /// ❌ رفض: حذف الطلب نهائياً
   static Future<void> rejectOrder(Order o) async {
     await deleteOrder(o.id);
   }
