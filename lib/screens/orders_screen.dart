@@ -132,21 +132,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                       color: o.status == 'accepted'
-                          ? AppColors.teal.withAlpha(35)
-                          : AppColors.orange.withAlpha(35),
-                      borderRadius: BorderRadius.circular(8)),
+                          ? AppColors.teal.withAlpha(45)
+                          : AppColors.orange.withAlpha(45),
+                      borderRadius: BorderRadius.circular(12)),
                   child: Text(
                     s.isArabic ? _statusAr(o.status) : _statusEn(o.status),
                     style: TextStyle(
                         color: o.status == 'accepted'
                             ? AppColors.teal
                             : AppColors.orange,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
