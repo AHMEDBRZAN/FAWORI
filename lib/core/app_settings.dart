@@ -1,5 +1,8 @@
 import 'dart:async';
-import 'dart:web_audio' as wa;
+import 'dart:convert';
+import 'dart:html' as html;
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'orders_service.dart';
@@ -13,6 +16,7 @@ class AppSettings extends ChangeNotifier {
 
   Timer? _pollTimer;
   int _lastPending = -1;
+  String? _beepUrl;
 
   bool get isArabic => _isArabic;
   bool get isDark => _isDark;
@@ -44,22 +48,55 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
-  /// 🔔 نغمة إشعار قصيرة (بدون ملفات صوت)
+  /// 🔔 توليد نغمة WAV قصيرة داخل الكود (بدون ملفات أو مكتبات)
+  String _buildBeepUrl() {
+    if (_beepUrl != null) return _beepUrl!;
+    const sampleRate = 22050;
+    const seconds = 0.35;
+    const freq = 880.0;
+    final n = (sampleRate * seconds).toInt();
+    final dataSize = n * 2;
+
+    final bytes = BytesBuilder();
+    void addStr(String s) => bytes.add(s.codeUnits);
+    void add32(int v) => bytes
+        .add((ByteData(4)..setUint32(0, v, Endian.little)).buffer.asUint8List());
+    void add16(int v) => bytes
+        .add((ByteData(2)..setUint16(0, v, Endian.little)).buffer.asUint8List());
+
+    addStr('RIFF');
+    add32(36 + dataSize);
+    addStr('WAVE');
+    addStr('fmt ');
+    add32(16);
+    add16(1);
+    add16(1);
+    add32(sampleRate);
+    add32(sampleRate * 2);
+    add16(2);
+    add16(16);
+    addStr('data');
+    add32(dataSize);
+
+    final pcm = ByteData(dataSize);
+    for (int i = 0; i < n; i++) {
+      final t = i / sampleRate;
+      final env = (1 - t / seconds).clamp(0.0, 1.0);
+      final v = (math.sin(2 * math.pi * freq * t) * env * 0.6 * 32767).round();
+      pcm.setInt16(i * 2, v, Endian.little);
+    }
+    bytes.add(pcm.buffer.asUint8List());
+
+    _beepUrl = 'data:audio/wav;base64,' + base64Encode(bytes.toBytes());
+    return _beepUrl!;
+  }
+
+  /// 🔔 تشغيل نغمة الإشعار
   void playBeep() {
     try {
-      final ctx = wa.AudioContext();
-      if (ctx.state == 'suspended') {
-        ctx.resume();
-      }
-      final osc = ctx.createOscillator();
-      final gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 880;
-      gain.gain.value = 0.25;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
+      final a = html.AudioElement(_buildBeepUrl());
+      a.volume = 0.8;
+      a.play();
     } catch (_) {}
   }
 
@@ -70,8 +107,7 @@ class AppSettings extends ChangeNotifier {
       if (_user == null || _user!.role != 'admin') return;
       try {
         final orders = await OrdersService.loadOrders();
-        final pending =
-            orders.where((o) => o.status == 'pending').length;
+        final pending = orders.where((o) => o.status == 'pending').length;
         if (_lastPending >= 0 && pending > _lastPending) {
           playBeep();
         }
