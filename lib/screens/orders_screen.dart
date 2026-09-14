@@ -17,7 +17,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void initState() {
     super.initState();
-    // تحديث تلقائي عند فتح الصفحة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
@@ -44,6 +43,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return 'Pending';
   }
 
+  /// ✅ وقت بصيغة 12 ساعة (3:10) بدون ثواني — مشتق من id الطلب
+  String _time12(String idMillis) {
+    try {
+      final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
+      int h = dt.hour % 12;
+      if (h == 0) h = 12;
+      final m = dt.minute.toString().padLeft(2, '0');
+      return '$h:$m';
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
@@ -55,42 +67,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
         title: Text(isAdmin
             ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
             : (s.isArabic ? 'طلباتي' : 'My orders')),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.orange),
+            onPressed: () {
+              setState(() {
+                _future = OrdersService.loadOrders();
+              });
+            },
+          ),
+        ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          setState(() {
-            _future = OrdersService.loadOrders();
-          });
+      body: FutureBuilder<List<Order>>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          var orders = snap.data ?? [];
+          if (isAdmin) {
+            orders = orders.where((o) => o.status == 'pending').toList();
+          } else {
+            orders = orders.where((o) => o.userId == s.user?.id).toList();
+          }
+          if (orders.isEmpty) {
+            return Center(
+                child: Text(s.isArabic ? 'لا توجد طلبات' : 'No orders'));
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: orders.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, i) => _card(orders[i], isAdmin, s),
+          );
         },
-        child: FutureBuilder<List<Order>>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            var orders = snap.data ?? [];
-            if (isAdmin) {
-              orders = orders.where((o) => o.status == 'pending').toList();
-            } else {
-              orders = orders.where((o) => o.userId == s.user?.id).toList();
-            }
-            if (orders.isEmpty) {
-              return ListView(
-                children: [
-                  const SizedBox(height: 120),
-                  Center(
-                      child: Text(s.isArabic ? 'لا توجد طلبات' : 'No orders')),
-                ],
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _card(orders[i], isAdmin, s),
-            );
-          },
-        ),
       ),
     );
   }
@@ -129,10 +139,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 Expanded(
                   child: Text(
                     isAdmin ? '${o.userName} (${_roleAr(o.userRole)})' : o.date,
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                    style:
+                        const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
                   ),
                 ),
-                                Container(
+                // ✅ شارة الحالة: خط 14 ولون أسود
+                Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
@@ -142,24 +154,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       borderRadius: BorderRadius.circular(12)),
                   child: Text(
                     s.isArabic ? _statusAr(o.status) : _statusEn(o.status),
-                    style: TextStyle(
-                        color: o.status == 'accepted'
-                            ? AppColors.teal
-                            : AppColors.orange,
-                        fontSize: 15,
+                    style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 14,
                         fontWeight: FontWeight.w900),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Text('${o.items.length} ${s.isArabic ? 'مادة' : 'items'} • ${o.date}',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+            // ✅ عدد المواد + الوقت بصيغة 3:10
+            Text(
+              '${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${_time12(o.id)}',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            ),
             const SizedBox(height: 8),
             Text(
               s.isArabic ? 'عرض المزيد من التفاصيل' : 'View more details',
               style: const TextStyle(
-                  color: AppColors.teal, fontWeight: FontWeight.w800, fontSize: 13),
+                  color: AppColors.teal,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13),
             ),
           ],
         ),
@@ -181,7 +196,8 @@ class _OrderDetailState extends State<_OrderDetail> {
   final _invNo = TextEditingController();
   bool _busy = false;
 
-  double get _totalNum => double.tryParse(_total.text.replaceAll(',', '')) ?? 0;
+  double get _totalNum =>
+      double.tryParse(_total.text.replaceAll(',', '')) ?? 0;
   int get _points => (_totalNum ~/ kPointUnit).toInt();
   int get _stored => (_totalNum % kPointUnit).toInt();
 
@@ -190,6 +206,18 @@ class _OrderDetailState extends State<_OrderDetail> {
     if (r == 'tech') return 'صباغ';
     if (r == 'admin') return 'مدير';
     return 'عميل';
+  }
+
+  String _time12(String idMillis) {
+    try {
+      final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
+      int h = dt.hour % 12;
+      if (h == 0) h = 12;
+      final m = dt.minute.toString().padLeft(2, '0');
+      return '$h:$m';
+    } catch (_) {
+      return '';
+    }
   }
 
   Future<void> _accept() async {
@@ -203,8 +231,8 @@ class _OrderDetailState extends State<_OrderDetail> {
       } catch (_) {}
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('✅ تم قبول الفاتورة ونشرها')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ تم قبول الفاتورة ونشرها')));
         Navigator.pop(context);
       }
     } catch (e) {
@@ -222,8 +250,8 @@ class _OrderDetailState extends State<_OrderDetail> {
       await OrdersService.rejectOrder(widget.order);
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('️ تم رفض الفاتورة وحذفها')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('🗑️ تم رفض الفاتورة وحذفها')));
         Navigator.pop(context);
       }
     } catch (e) {
@@ -241,7 +269,7 @@ class _OrderDetailState extends State<_OrderDetail> {
       controller: c,
       keyboardType: TextInputType.number,
       onChanged: (_) => setState(() {}),
-      style: TextStyle(color: dark ? Colors.white : AppColors.ink),
+      style: TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -252,15 +280,20 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
-  Widget _sumRow(String label, String value, Color c) {
+  Widget _sumRow(String label, String value, Color c, {bool big = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(label,
+              style: TextStyle(
+                  fontWeight: FontWeight.w800, fontSize: big ? 15 : 14)),
           const Spacer(),
           Text(value,
-              style: TextStyle(color: c, fontWeight: FontWeight.w900, fontSize: 15)),
+              style: TextStyle(
+                  color: c,
+                  fontWeight: FontWeight.w900,
+                  fontSize: big ? 18 : 15)),
         ],
       ),
     );
@@ -296,10 +329,13 @@ class _OrderDetailState extends State<_OrderDetail> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('${o.userName} (${_roleAr(o.userRole)})',
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 16)),
                 const SizedBox(height: 4),
-                Text('${s.isArabic ? 'التاريخ' : 'Date'}: ${o.date}',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                Text(
+                    '${s.isArabic ? 'التاريخ' : 'Date'}: ${o.date} • ${_time12(o.id)}',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 12)),
                 const SizedBox(height: 10),
                 ...o.items.map((it) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
@@ -307,7 +343,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                         children: [
                           Expanded(child: Text(it.name)),
                           Text('×${it.qty}',
-                              style: const TextStyle(fontWeight: FontWeight.w800)),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800)),
                         ],
                       ),
                     )),
@@ -330,7 +367,7 @@ class _OrderDetailState extends State<_OrderDetail> {
               child: Column(
                 children: [
                   _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
-                      fmtThousands(_totalNum), AppColors.orange),
+                      fmtThousands(_totalNum), AppColors.orange, big: true),
                   _sumRow(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
                       fmtThousands(_points), AppColors.teal),
                   _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
@@ -345,7 +382,10 @@ class _OrderDetailState extends State<_OrderDetail> {
                   child: Container(
                     decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                            colors: <Color>[Color(0xFF0D9668), Color(0xFF0AA87A)]),
+                            colors: <Color>[
+                              Color(0xFF0D9668),
+                              Color(0xFF0AA87A)
+                            ]),
                         borderRadius: BorderRadius.circular(14)),
                     child: SizedBox(
                       height: 50,
@@ -356,11 +396,14 @@ class _OrderDetailState extends State<_OrderDetail> {
                             foregroundColor: Colors.white),
                         onPressed: _busy ? null : _accept,
                         child: _busy
-                            ? const SizedBox(width: 18, height: 18,
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2, color: Colors.white))
                             : Text(s.isArabic ? 'قبول' : 'Accept',
-                                style: const TextStyle(fontWeight: FontWeight.w900)),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900)),
                       ),
                     ),
                   ),
@@ -370,7 +413,10 @@ class _OrderDetailState extends State<_OrderDetail> {
                   child: Container(
                     decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                            colors: <Color>[Color(0xFFD63C3C), Color(0xFFB02A2A)]),
+                            colors: <Color>[
+                              Color(0xFFD63C3C),
+                              Color(0xFFB02A2A)
+                            ]),
                         borderRadius: BorderRadius.circular(14)),
                     child: SizedBox(
                       height: 50,
@@ -381,7 +427,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                             foregroundColor: Colors.white),
                         onPressed: _busy ? null : _reject,
                         child: Text(s.isArabic ? 'رفض' : 'Reject',
-                            style: const TextStyle(fontWeight: FontWeight.w900)),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w900)),
                       ),
                     ),
                   ),
@@ -398,8 +445,8 @@ class _OrderDetailState extends State<_OrderDetail> {
               ),
               child: Column(
                 children: [
-                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', o.invoiceNo,
-                      AppColors.orange),
+                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                      o.invoiceNo, AppColors.orange),
                   _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
                       fmtThousands(o.total), AppColors.orange),
                   _sumRow(s.isArabic ? 'النقاط' : 'Points',
