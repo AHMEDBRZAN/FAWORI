@@ -23,7 +23,7 @@ class FaworiApp extends StatelessWidget {
     return MaterialApp(
       title: 'FAWORI',
       debugShowCheckedModeBanner: false,
-      // ✅ الثيم يشمل النظام كله ويتبدل فوراً
+      scaffoldMessengerKey: messengerKey,
       themeMode: s.isDark ? ThemeMode.dark : ThemeMode.light,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
@@ -52,7 +52,6 @@ class _SplashGateState extends State<SplashGate> {
   }
 
   Future<void> _boot() async {
-    // ✅ لا نعلق الإطلاق على الشبكة: مهلة 6 ثوانٍ + حماية من أي خطأ
     try {
       await context
           .read<AppSettings>()
@@ -88,8 +87,7 @@ class SplashView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(34),
                 border: Border.all(color: AppColors.orange, width: 2),
                 boxShadow: [
-                  BoxShadow(
-                      color: AppColors.teal.withAlpha(60), blurRadius: 40),
+                  BoxShadow(color: AppColors.teal.withAlpha(60), blurRadius: 40),
                 ],
               ),
               child: ClipRRect(
