@@ -1,12 +1,25 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'orders_service.dart';
 import 'store_service.dart';
+import 'theme.dart';
+
+/// 🔑 مفتاح عام لعرض SnackBar من أي مكان بدون context
+final GlobalKey<ScaffoldMessengerState> messengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 class AppSettings extends ChangeNotifier {
   bool _isArabic = true;
   bool _isDark = false;
   bool _isImageAdmin = false;
   User? _user;
+
+  Timer? _pollTimer;
+  int _lastPending = -1;
+  int _ordersVersion = 0;
+  String _lastSig = '';
+  int pendingCount = 0;
 
   bool get isArabic => _isArabic;
   bool get isDark => _isDark;
@@ -17,6 +30,7 @@ class AppSettings extends ChangeNotifier {
   User? get user => _user;
   int get points => _user?.points ?? 0;
   int get stored => _user?.stored ?? 0;
+  int get ordersVersion => _ordersVersion;
 
   String tr(String key) {
     const Map<String, Map<String, String>> strings = {
@@ -38,7 +52,53 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
-  /// ✅ المصدر الحقيقي للنقاط: مجموع الفواتير المقبولة للمستخدم
+  /// 🔄 فحص عام في الخلفية كل 20 ثانية (لكل الأدوار)
+  void startOrderPolling() {
+    _pollTimer?.cancel();
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 20), (_) => _pollTick());
+    _pollTick();
+  }
+
+  Future<void> _pollTick() async {
+    if (_user == null || _user!.role == 'guest') return;
+    try {
+      final orders = await OrdersService.loadOrders();
+      final pending = orders.where((o) => o.status == 'pending').length;
+      pendingCount = pending;
+
+      // 🔔 إشعار للمدير عند وصول طلبات جديدة (بدون نغمة)
+      if (_user!.role == 'admin' &&
+          _lastPending >= 0 &&
+          pending > _lastPending) {
+        final diff = pending - _lastPending;
+        messengerKey.currentState
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: Text(_isArabic
+                ? '🔔 وصل $diff طلب جديد!'
+                : '🔔 $diff new order(s)!'),
+            backgroundColor: AppColors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ));
+      }
+      _lastPending = pending;
+
+      // 🔁 تحديث صامت للشاشات عند أي تغيير
+      final mine = orders
+          .where((o) => o.userId == _user!.id)
+          .map((o) => o.status)
+          .join(',');
+      final sig = '$pending|${orders.length}|$mine';
+      if (sig != _lastSig) {
+        _lastSig = sig;
+        _ordersVersion++;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
   Future<User> _withInvoiceTotals(User base) async {
     try {
       final invs = await StoreService.loadInvoices();
@@ -93,6 +153,7 @@ class AppSettings extends ChangeNotifier {
       await StoreService.upsertUser(u);
     } catch (_) {}
     await _savePrefs();
+    startOrderPolling();
     notifyListeners();
   }
 
@@ -117,6 +178,7 @@ class AppSettings extends ChangeNotifier {
     _user = await _withInvoiceTotals(admin);
     _isImageAdmin = true;
     await _savePrefs();
+    startOrderPolling();
     notifyListeners();
   }
 
@@ -137,7 +199,6 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔄 تحديث المستخدم: من users.json ثم مزامنة النقاط من الفواتير
   Future<void> refreshUser() async {
     if (_user == null) return;
     try {
@@ -191,6 +252,8 @@ class AppSettings extends ChangeNotifier {
   void logout() {
     _user = null;
     _isImageAdmin = false;
+    _pollTimer?.cancel();
+    _lastPending = -1;
     _savePrefs();
     notifyListeners();
   }
@@ -227,6 +290,7 @@ class AppSettings extends ChangeNotifier {
             );
       _user = await _withInvoiceTotals(base);
       _isImageAdmin = (_user!.role == 'admin');
+      startOrderPolling();
     }
     notifyListeners();
   }
