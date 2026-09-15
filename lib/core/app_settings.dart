@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'messenger.dart';
@@ -16,6 +17,8 @@ class AppSettings extends ChangeNotifier {
   int _ordersVersion = 0;
   String _lastSig = '';
   int pendingCount = 0;
+
+  bool _listenersAttached = false;
 
   bool get isArabic => _isArabic;
   bool get isDark => _isDark;
@@ -48,10 +51,34 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
+  /// 🔄 فحص عام كل 20 ثانية + رصد أحداث المتصفح المباشرة
   void startOrderPolling() {
     _pollTimer?.cancel();
-    _pollTimer =
-        Timer.periodic(const Duration(seconds: 20), (_) => _pollTick());
+    _pollTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      _pollTick();
+    });
+
+    // 🎯 ربط أحداث المتصفح (مرة واحدة فقط)
+    if (!_listenersAttached) {
+      _listenersAttached = true;
+
+      // 1) عند عودة التبويب من الخلفية
+      html.document.addEventListener('visibilitychange', (_) {
+        if (html.document.visibilityState == 'visible') {
+          _pollTick();
+        }
+      });
+
+      // 2) عند تركيز النافذة (التبديل من تطبيق/نافذة أخرى)
+      html.window.addEventListener('focus', (_) {
+        _pollTick();
+      });
+
+      // 3) عند تفاعل المستخدم (click/key) — لضمان اليقظة
+      html.document.addEventListener('click', (_) => _pollTick());
+      html.document.addEventListener('keydown', (_) => _pollTick());
+    }
+
     _pollTick();
   }
 
@@ -92,11 +119,6 @@ class AppSettings extends ChangeNotifier {
         notifyListeners();
       }
     } catch (_) {}
-  }
-
-  /// 🔄 فحص فوري + إعادة تشغيل Timer — يُستدعى عند عودة التطبيق إلى المقدمة
-  void forceRefresh() {
-    startOrderPolling();
   }
 
   Future<User> _withInvoiceTotals(User base) async {
