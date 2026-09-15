@@ -26,11 +26,17 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   List<Invoice> _invoices = [];
+  int _lastVersion = -1;
 
   @override
-  void initState() {
-    super.initState();
-    _load();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 🔄 تحديث فوري مع كل تغيير من الفحص العام (مثل الإشعارات)
+    final v = context.watch<AppSettings>().ordersVersion;
+    if (v != _lastVersion) {
+      _lastVersion = v;
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -74,7 +80,10 @@ class _WalletScreenState extends State<WalletScreen> {
       final s1 = acc + i.stored;
       if (s1 > start && s0 < end) {
         final used = (s1 < end ? s1 : end) - (s0 > start ? s0 : start);
-        out.add({'no': i.no.isEmpty ? i.id : i.no, 'date': i.date, 'amt': used});
+        final no = i.no.isNotEmpty
+            ? i.no
+            : '#${i.id.length > 6 ? i.id.substring(i.id.length - 6) : i.id}';
+        out.add({'no': no, 'date': i.date, 'amt': used});
       }
       acc = s1;
       if (acc >= end) break;
@@ -266,6 +275,9 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
+    // ✅ فاتورة الرصيد المخزن تعرض 125,000 بدل الصفر
+    final num shownTotal =
+        inv.type == 'stored_point' ? kPointUnit : inv.total;
     return Pressable(
       onTap: () => _openDetails(s, inv),
       child: Container(
@@ -298,7 +310,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 12)),
                   const SizedBox(height: 4),
-                  Text(fmtThousands(inv.total),
+                  Text(fmtThousands(shownTotal),
                       style: const TextStyle(
                           fontSize: 17, fontWeight: FontWeight.w900)),
                 ],
@@ -375,20 +387,16 @@ class _WalletScreenState extends State<WalletScreen> {
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 13)),
                 ),
-                Text('#${inv.id.length > 6 ? inv.id.substring(inv.id.length - 6) : inv.id}',
-                    style:
-                        TextStyle(color: Colors.grey.shade500, fontSize: 12)),
               ],
             ),
             const SizedBox(height: 16),
             if (inv.type == 'stored_point') ...[
+              // ✅ رقم الفاتورة وأمامها المبلغ
               _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
-                  AppColors.orange),
+                  AppColors.orange, big: true),
               _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '+1',
                   AppColors.teal),
-              _row(s.isArabic ? 'مصدر الرصيد المخزن' : 'Stored source',
-                  fmtThousands(kPointUnit), const Color(0xFF9B59B6)),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(s.isArabic ? 'تكوّن من:' : 'From:',
                   style: TextStyle(
                       color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
@@ -413,6 +421,11 @@ class _WalletScreenState extends State<WalletScreen> {
                       ],
                     ),
                   )),
+              const Divider(height: 24),
+              // ✅ الإجمالي أسفل القائمة
+              _row(s.isArabic ? 'الإجمالي' : 'Total',
+                  fmtThousands(kPointUnit), const Color(0xFF9B59B6),
+                  big: true),
             ] else ...[
               ...inv.items.map((it) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
