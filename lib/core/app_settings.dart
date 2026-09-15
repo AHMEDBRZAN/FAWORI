@@ -1,13 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'messenger.dart';
 import 'orders_service.dart';
 import 'store_service.dart';
-import 'theme.dart';
-
-/// 🔑 مفتاح عام لعرض SnackBar من أي مكان بدون context
-final GlobalKey<ScaffoldMessengerState> messengerKey =
-    GlobalKey<ScaffoldMessengerState>();
 
 class AppSettings extends ChangeNotifier {
   bool _isArabic = true;
@@ -78,7 +74,7 @@ class AppSettings extends ChangeNotifier {
             content: Text(_isArabic
                 ? '🔔 وصل $diff طلب جديد!'
                 : '🔔 $diff new order(s)!'),
-            backgroundColor: AppColors.orange,
+            backgroundColor: const Color(0xFFF26B0F),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 3),
           ));
