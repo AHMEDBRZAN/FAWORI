@@ -9,9 +9,14 @@ import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'product_detail_screen.dart';
 
-// ======================================================
-// المحفظة
-// ======================================================
+String _dmy(String iso) {
+  try {
+    final p = iso.split('-');
+    return '${p[2].padLeft(2, '0')}-${p[1].padLeft(2, '0')}-${p[0]}';
+  } catch (_) {
+    return iso;
+  }
+}
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -28,22 +33,59 @@ class _WalletScreenState extends State<WalletScreen> {
     _load();
   }
 
-  /// ✅ تحديث شامل: نقاط المستخدم + الفواتير
   Future<void> _load() async {
+    final s = context.read<AppSettings>();
     try {
-      await context.read<AppSettings>().refreshUser();
+      final uid = s.user?.id ?? '';
+      if (uid.isNotEmpty && !s.isGuest) {
+        await OrdersService.convertStoredToPoints(uid);
+      }
+    } catch (_) {}
+    try {
+      await s.refreshUser();
     } catch (_) {}
     final invs = await StoreService.loadInvoices();
-    if (mounted) {
-      setState(() {
-        _invoices = invs;
-      });
+    if (mounted) setState(() => _invoices = invs);
+  }
+
+  String _typeLabel(Invoice inv, bool ar) {
+    if (inv.type == 'return') return ar ? 'مرتجع' : 'Return';
+    if (inv.type == 'stored_point') return ar ? 'الرصيد المخزن' : 'Stored';
+    return ar ? 'شراء' : 'Sale';
+  }
+
+  Color _typeColor(Invoice inv) {
+    if (inv.type == 'return') return Colors.red;
+    if (inv.type == 'stored_point') return const Color(0xFF9B59B6);
+    return AppColors.teal;
+  }
+
+  List<Map<String, dynamic>> _sourcesFor(Invoice conv) {
+    final k = int.tryParse(conv.id.split('_sp_').last) ?? 0;
+    final start = k * 125000.0;
+    final end = start + 125000.0;
+    double acc = 0;
+    final out = <Map<String, dynamic>>[];
+    for (final i in _invoices) {
+      if (i.userId != conv.userId || i.type != 'sale' || i.stored <= 0) {
+        continue;
+      }
+      final s0 = acc;
+      final s1 = acc + i.stored;
+      if (s1 > start && s0 < end) {
+        final used = (s1 < end ? s1 : end) - (s0 > start ? s0 : start);
+        out.add({'no': i.no.isEmpty ? i.id : i.no, 'date': i.date, 'amt': used});
+      }
+      acc = s1;
+      if (acc >= end) break;
     }
+    return out;
   }
 
   @override
   Widget build(BuildContext context) {
     final AppSettings s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
     final mine = _invoices.where((i) => i.userId == s.user?.id).toList();
     final int storedMod = s.stored % kPointUnit;
     final int remaining = kPointUnit - storedMod;
@@ -51,10 +93,9 @@ class _WalletScreenState extends State<WalletScreen> {
 
     return Scaffold(
       body: SafeArea(
-        // ✅ السحب للأسفل للتحديث
         child: RefreshIndicator(
           color: AppColors.teal,
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
           onRefresh: _load,
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -69,8 +110,8 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppColors.orange.withAlpha(30),
                       borderRadius: BorderRadius.circular(10),
@@ -92,12 +133,6 @@ class _WalletScreenState extends State<WalletScreen> {
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                        color: AppColors.orange.withAlpha(60),
-                        blurRadius: 18,
-                        offset: const Offset(0, 8)),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,24 +163,21 @@ class _WalletScreenState extends State<WalletScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          fmtThousands(s.points),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 40,
-                              fontWeight: FontWeight.w900,
-                              height: 1.1),
-                        ),
+                        Text(fmtThousands(s.points),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 40,
+                                fontWeight: FontWeight.w900,
+                                height: 1.1)),
                         const SizedBox(width: 8),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 6),
                           child: Text(
-                            s.isArabic ? 'نقطة' : 'points',
-                            style: TextStyle(
-                                color: Colors.white.withAlpha(220),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700),
-                          ),
+                              s.isArabic ? 'نقطة' : 'points',
+                              style: TextStyle(
+                                  color: Colors.white.withAlpha(220),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700)),
                         ),
                       ],
                     ),
@@ -156,8 +188,8 @@ class _WalletScreenState extends State<WalletScreen> {
                         value: progress.clamp(0.0, 1.0),
                         minHeight: 8,
                         backgroundColor: Colors.white.withAlpha(60),
-                        valueColor:
-                            const AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.white),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -165,30 +197,27 @@ class _WalletScreenState extends State<WalletScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            '${s.isArabic ? 'رصيد مخزن' : 'Stored'}: ${fmtThousands(s.stored)}',
+                              '${s.isArabic ? 'رصيد مخزن' : 'Stored'}: ${fmtThousands(s.stored)}',
+                              style: TextStyle(
+                                  color: Colors.white.withAlpha(230),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                        Text(
+                            '${s.isArabic ? 'متبقي' : 'Remaining'} ${fmtThousands(remaining)} ${s.isArabic ? 'للنقطة القادمة' : 'to next point'}',
                             style: TextStyle(
                                 color: Colors.white.withAlpha(230),
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                        Text(
-                          '${s.isArabic ? 'متبقي' : 'Remaining'} ${fmtThousands(remaining)} ${s.isArabic ? 'للنقطة القادمة' : 'to next point'}',
-                          style: TextStyle(
-                              color: Colors.white.withAlpha(230),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700),
-                        ),
+                                fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              Text(
-                s.isArabic ? 'الفواتير' : 'Invoices',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-              ),
+              Text(s.isArabic ? 'الفواتير' : 'Invoices',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
               if (mine.isEmpty)
                 Padding(
@@ -199,7 +228,35 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                 )
               else
-                ...mine.reversed.map((inv) => _tile(s, inv)),
+                ...mine.reversed.map((inv) => _tile(s, inv, dark)),
+              if (mine.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFF1E1E28) : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.teal.withAlpha(70)),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                          s.isArabic
+                              ? 'إجمالي الرصيد المخزن'
+                              : 'Total stored',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: dark ? Colors.white : AppColors.ink)),
+                      const Spacer(),
+                      Text(fmtThousands(s.stored),
+                          style: const TextStyle(
+                              color: AppColors.teal,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -207,16 +264,17 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  Widget _tile(AppSettings s, Invoice inv) {
+  Widget _tile(AppSettings s, Invoice inv, bool dark) {
+    final c = _typeColor(inv);
     return Pressable(
       onTap: () => _openDetails(s, inv),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: dark ? const Color(0xFF1E1E28) : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.orange.withAlpha(50)),
+          border: Border.all(color: c.withAlpha(60)),
         ),
         child: Row(
           children: [
@@ -224,23 +282,19 @@ class _WalletScreenState extends State<WalletScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.teal.withAlpha(30),
+                color: c.withAlpha(30),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(
-                s.isArabic ? 'شراء' : 'Sale',
-                style: const TextStyle(
-                    color: AppColors.teal,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800),
-              ),
+              child: Text(_typeLabel(inv, s.isArabic),
+                  style: TextStyle(
+                      color: c, fontSize: 11, fontWeight: FontWeight.w800)),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(inv.date,
+                  Text(_dmy(inv.date),
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 12)),
                   const SizedBox(height: 4),
@@ -250,27 +304,21 @@ class _WalletScreenState extends State<WalletScreen> {
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('${inv.items.length} ${s.isArabic ? 'مادة' : 'items'}',
-                    style: TextStyle(
-                        color: Colors.grey.shade500, fontSize: 11)),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.orange.withAlpha(30),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('+${fmtThousands(inv.points)}',
-                      style: const TextStyle(
-                          color: AppColors.orange,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900)),
-                ),
-              ],
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: inv.points >= 0
+                    ? AppColors.orange.withAlpha(30)
+                    : Colors.red.withAlpha(30),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                  '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                  style: TextStyle(
+                      color: inv.points >= 0 ? AppColors.orange : Colors.red,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900)),
             ),
           ],
         ),
@@ -279,10 +327,11 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   void _openDetails(AppSettings s, Invoice inv) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -311,64 +360,100 @@ class _WalletScreenState extends State<WalletScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.teal.withAlpha(30),
+                    color: _typeColor(inv).withAlpha(30),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(s.isArabic ? 'شراء' : 'Sale',
-                      style: const TextStyle(
-                          color: AppColors.teal,
+                  child: Text(_typeLabel(inv, s.isArabic),
+                      style: TextStyle(
+                          color: _typeColor(inv),
                           fontSize: 11,
                           fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(inv.date,
+                  child: Text(_dmy(inv.date),
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 13)),
                 ),
                 Text('#${inv.id.length > 6 ? inv.id.substring(inv.id.length - 6) : inv.id}',
-                    style: TextStyle(
-                        color: Colors.grey.shade500, fontSize: 12)),
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 12)),
               ],
             ),
             const SizedBox(height: 16),
-            ...inv.items.map((it) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(it.name,
+            if (inv.type == 'stored_point') ...[
+              _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
+                  AppColors.orange),
+              _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '+1',
+                  AppColors.teal),
+              _row(s.isArabic ? 'مصدر الرصيد المخزن' : 'Stored source',
+                  fmtThousands(kPointUnit), const Color(0xFF9B59B6)),
+              const SizedBox(height: 8),
+              Text(s.isArabic ? 'تكوّن من:' : 'From:',
+                  style: TextStyle(
+                      color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              ..._sourcesFor(inv).map((src) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            child: Text(
+                                '${src['no']} • ${_dmy(src['date'] as String)}',
+                                style: TextStyle(
+                                    color: dark
+                                        ? Colors.grey.shade300
+                                        : Colors.grey.shade700,
+                                    fontSize: 13))),
+                        Text(fmtThousands(src['amt'] as num),
                             style: const TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.w800)),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.orange.withAlpha(30),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: AppColors.orange.withAlpha(90)),
+                                color: Color(0xFF9B59B6),
+                                fontWeight: FontWeight.w800)),
+                      ],
+                    ),
+                  )),
+            ] else ...[
+              ...inv.items.map((it) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            child: Text(it.name,
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.orange.withAlpha(30),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: AppColors.orange.withAlpha(90)),
+                          ),
+                          child: Text('× ${it.qty}',
+                              style: const TextStyle(
+                                  color: AppColors.orange,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900)),
                         ),
-                        child: Text('× ${it.qty}',
-                            style: const TextStyle(
-                                color: AppColors.orange,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900)),
-                      ),
-                    ],
-                  ),
-                )),
-            const Divider(height: 24),
-            _row(s.isArabic ? 'الإجمالي' : 'Total',
-                fmtThousands(inv.total), AppColors.orange, big: true),
-            _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Invoice points',
-                '+${fmtThousands(inv.points)}', AppColors.teal),
-            _row(
-                s.isArabic
-                    ? 'رصيد مخزن من هذه الفاتورة'
-                    : 'Stored from this invoice',
-                fmtThousands(inv.stored), AppColors.teal),
+                      ],
+                    ),
+                  )),
+              const Divider(height: 24),
+              _row(s.isArabic ? 'الإجمالي' : 'Total',
+                  fmtThousands(inv.total), AppColors.orange,
+                  big: true),
+              _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Invoice points',
+                  '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                  inv.points >= 0 ? AppColors.teal : Colors.red),
+              _row(
+                  s.isArabic
+                      ? 'رصيد مخزن من هذه الفاتورة'
+                      : 'Stored from this invoice',
+                  fmtThousands(inv.stored), AppColors.teal),
+            ],
             const SizedBox(height: 20),
           ],
         ),
@@ -377,13 +462,16 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Widget _row(String label, String value, Color c, {bool big = false}) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Text(label,
               style: TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: big ? 15 : 14)),
+                  fontWeight: FontWeight.w800,
+                  fontSize: big ? 15 : 14,
+                  color: dark ? Colors.white : AppColors.ink)),
           const Spacer(),
           Text(value,
               style: TextStyle(
@@ -395,10 +483,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 }
-
-// ======================================================
-// المفضلة
-// ======================================================
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
