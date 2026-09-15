@@ -15,34 +15,8 @@ Future<void> main() async {
   ], child: const FaworiApp()));
 }
 
-class FaworiApp extends StatefulWidget {
+class FaworiApp extends StatelessWidget {
   const FaworiApp({super.key});
-  @override
-  State<FaworiApp> createState() => _FaworiAppState();
-}
-
-class _FaworiAppState extends State<FaworiApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  /// 🔄 عند عودة التطبيق إلى المقدمة ← إعادة تشغيل Timer + فحص فوري
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      final s = context.read<AppSettings>();
-      s.startOrderPolling(); // ✅ دالة موجودة فعلاً — تعيد تشغيل Timer + فحص فوري
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
