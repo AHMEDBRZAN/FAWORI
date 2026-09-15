@@ -115,7 +115,6 @@ class OrdersService {
     }
   }
 
-  /// ⚡ أسرع: مهلة 5 ثوانٍ لكل مصدر
   static Future<dynamic> _fetchJson(String path) async {
     try {
       final r = await http
@@ -225,7 +224,6 @@ class OrdersService {
       if (matched) await _putJson('assets/data/users.json', users);
     }
 
-    // ✅ تحويل الرصيد المخزن إلى نقاط تلقائياً
     await convertStoredToPoints(o.userId);
   }
 
@@ -234,7 +232,6 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  /// 🔁 مرتجع: يخصم النقاط والرصيد كفاتورة سالبة
   static Future<void> markReturned(Order o) async {
     final pts = (o.total ~/ kPointUnit).toInt();
     final st = (o.total % kPointUnit).toInt();
@@ -259,23 +256,22 @@ class OrdersService {
     }
   }
 
-  /// 💰 عند بلوغ الرصيد المخزن 125,000 ← فاتورة نقطة واحدة "الرصيد المخزن"
-  static Future<void> convertStoredToPoints(String userId) async {
+  /// 💰 كل ما بلغ الرصيد التراكمي 125,000 ← فاتورة نقطة جديدة SP-متسلسل
+  static Future<bool> convertStoredToPoints(String userId) async {
     final invs = await _fetchJson('assets/data/invoices.json');
-    if (invs is! List) return;
-    int storedSum = 0;
+    if (invs is! List) return false;
+    int net = 0;
+    int existing = 0;
     for (final i in invs) {
       if (i is Map && i['userId'] == userId) {
-        storedSum += ((i['stored'] as num?)?.toInt() ?? 0);
+        net += ((i['stored'] as num?)?.toInt() ?? 0);
+        if (i['type'] == 'stored_point') existing++;
       }
     }
-    if (storedSum < kPointUnit) return;
-    final times = storedSum ~/ kPointUnit;
-    final existing = invs
-        .where((i) =>
-            i is Map && i['userId'] == userId && i['type'] == 'stored_point')
-        .length;
-    if (existing >= times) return;
+    // ✅ الإجمالي التراكمي = الصافي + ما تم تحويله سابقاً
+    final gross = net + existing * kPointUnit;
+    final times = gross ~/ kPointUnit;
+    if (times <= existing) return false;
     for (int k = existing; k < times; k++) {
       invs.add({
         'id': '${userId}_sp_$k',
@@ -283,12 +279,13 @@ class OrdersService {
         'date': DateTime.now().toString().substring(0, 10),
         'type': 'stored_point',
         'no': 'SP-${k + 1}',
-        'total': 0,
+        'total': kPointUnit,
         'points': 1,
         'stored': -kPointUnit,
         'items': const [],
       });
     }
     await _putJson('assets/data/invoices.json', invs);
+    return true;
   }
 }
