@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/app_settings.dart';
 import 'core/favorites.dart';
+import 'core/messenger.dart';
 import 'core/theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
-import 'widgets/smart_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,7 +87,8 @@ class SplashView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(34),
                 border: Border.all(color: AppColors.orange, width: 2),
                 boxShadow: [
-                  BoxShadow(color: AppColors.teal.withAlpha(60), blurRadius: 40),
+                  BoxShadow(
+                      color: AppColors.teal.withAlpha(60), blurRadius: 40),
                 ],
               ),
               child: ClipRRect(
