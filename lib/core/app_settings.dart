@@ -48,7 +48,6 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
-  /// 🔄 فحص عام في الخلفية كل 20 ثانية (لكل الأدوار)
   void startOrderPolling() {
     _pollTimer?.cancel();
     _pollTimer =
@@ -93,6 +92,11 @@ class AppSettings extends ChangeNotifier {
         notifyListeners();
       }
     } catch (_) {}
+  }
+
+  /// 🔄 فحص فوري + إعادة تشغيل Timer — يُستدعى عند عودة التطبيق إلى المقدمة
+  void forceRefresh() {
+    startOrderPolling();
   }
 
   Future<User> _withInvoiceTotals(User base) async {
