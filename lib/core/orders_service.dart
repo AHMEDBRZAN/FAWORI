@@ -3,13 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'store_service.dart';
 
-/// 📡 قراءة حية مباشرة من المستودع
 const String _raw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
 const String _site = 'https://ahmedbrzan.github.io/FAWORI';
 const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
-
-/// 🔐 وسيط الكتابة (Cloudflare Worker)
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
 String fmtThousands(num n) {
@@ -118,19 +115,20 @@ class OrdersService {
     }
   }
 
+  /// ⚡ أسرع: مهلة 5 ثوانٍ لكل مصدر
   static Future<dynamic> _fetchJson(String path) async {
     try {
       final r = await http
           .get(Uri.parse(
               '$_raw/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 5));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     try {
       final r = await http
           .get(Uri.parse(
               '$_site/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 5));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     return [];
@@ -186,7 +184,6 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
-  /// ✅ قبول: يحتسب النقاط/الرصيد، ينشر الفاتورة، يحدّث نقاط المستخدم
   static Future<void> acceptOrder(Order o) async {
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
@@ -213,6 +210,7 @@ class OrdersService {
 
     final users = await _fetchJson('assets/data/users.json');
     if (users is List) {
+      bool matched = false;
       for (final u in users) {
         if (u is Map &&
             (u['id']?.toString().trim() == o.userId ||
@@ -221,15 +219,76 @@ class OrdersService {
               ((u['points'] as num?)?.toInt() ?? 0) + o.points.toInt();
           u['stored'] =
               ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
+          matched = true;
         }
       }
-      await _putJson('assets/data/users.json', users);
+      if (matched) await _putJson('assets/data/users.json', users);
     }
+
+    // ✅ تحويل الرصيد المخزن إلى نقاط تلقائياً
+    await convertStoredToPoints(o.userId);
   }
 
-  /// ❌ رفض: يُحدّث الحالة إلى 'rejected' لتبقى عند المستخدم
   static Future<void> rejectOrder(Order o) async {
     o.status = 'rejected';
     await updateOrder(o);
+  }
+
+  /// 🔁 مرتجع: يخصم النقاط والرصيد كفاتورة سالبة
+  static Future<void> markReturned(Order o) async {
+    final pts = (o.total ~/ kPointUnit).toInt();
+    final st = (o.total % kPointUnit).toInt();
+    o.status = 'returned';
+    await updateOrder(o);
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is List) {
+      invs.add({
+        'id': '${o.id}_ret',
+        'userId': o.userId,
+        'date': o.date,
+        'type': 'return',
+        'no': o.invoiceNo,
+        'total': -(o.total.toInt()),
+        'points': -pts,
+        'stored': -st,
+        'items': o.items
+            .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
+            .toList(),
+      });
+      await _putJson('assets/data/invoices.json', invs);
+    }
+  }
+
+  /// 💰 عند بلوغ الرصيد المخزن 125,000 ← فاتورة نقطة واحدة "الرصيد المخزن"
+  static Future<void> convertStoredToPoints(String userId) async {
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is! List) return;
+    int storedSum = 0;
+    for (final i in invs) {
+      if (i is Map && i['userId'] == userId) {
+        storedSum += ((i['stored'] as num?)?.toInt() ?? 0);
+      }
+    }
+    if (storedSum < kPointUnit) return;
+    final times = storedSum ~/ kPointUnit;
+    final existing = invs
+        .where((i) =>
+            i is Map && i['userId'] == userId && i['type'] == 'stored_point')
+        .length;
+    if (existing >= times) return;
+    for (int k = existing; k < times; k++) {
+      invs.add({
+        'id': '${userId}_sp_$k',
+        'userId': userId,
+        'date': DateTime.now().toString().substring(0, 10),
+        'type': 'stored_point',
+        'no': 'SP-${k + 1}',
+        'total': 0,
+        'points': 1,
+        'stored': -kPointUnit,
+        'items': const [],
+      });
+    }
+    await _putJson('assets/data/invoices.json', invs);
   }
 }
