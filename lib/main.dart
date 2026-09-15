@@ -34,12 +34,12 @@ class _FaworiAppState extends State<FaworiApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  /// 🔄 عند عودة التطبيق إلى المقدمة ← فحص فوري + إعادة Timer
+  /// 🔄 عند عودة التطبيق إلى المقدمة ← إعادة تشغيل Timer + فحص فوري
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       final s = context.read<AppSettings>();
-      s.forceRefresh();
+      s.startOrderPolling(); // ✅ دالة موجودة فعلاً — تعيد تشغيل Timer + فحص فوري
     }
   }
 
