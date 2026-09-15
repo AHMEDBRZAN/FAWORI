@@ -51,30 +51,17 @@ class AppSettings extends ChangeNotifier {
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
   }
 
-  /// 🔄 فحص عام كل 20 ثانية + رصد أحداث المتصفح المباشرة
   void startOrderPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 20), (_) {
-      _pollTick();
-    });
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 20), (_) => _pollTick());
 
-    // 🎯 ربط أحداث المتصفح (مرة واحدة فقط)
     if (!_listenersAttached) {
       _listenersAttached = true;
-
-      // 1) عند عودة التبويب من الخلفية
       html.document.addEventListener('visibilitychange', (_) {
-        if (html.document.visibilityState == 'visible') {
-          _pollTick();
-        }
+        if (html.document.visibilityState == 'visible') _pollTick();
       });
-
-      // 2) عند تركيز النافذة (التبديل من تطبيق/نافذة أخرى)
-      html.window.addEventListener('focus', (_) {
-        _pollTick();
-      });
-
-      // 3) عند تفاعل المستخدم (click/key) — لضمان اليقظة
+      html.window.addEventListener('focus', (_) => _pollTick());
       html.document.addEventListener('click', (_) => _pollTick());
       html.document.addEventListener('keydown', (_) => _pollTick());
     }
@@ -85,11 +72,13 @@ class AppSettings extends ChangeNotifier {
   Future<void> _pollTick() async {
     if (_user == null || _user!.role == 'guest') return;
     try {
+      // 💰 تحويل الرصيد المخزن إلى نقاط فوراً عند بلوغ 125,000
+      final created = await OrdersService.convertStoredToPoints(_user!.id);
+
       final orders = await OrdersService.loadOrders();
       final pending = orders.where((o) => o.status == 'pending').length;
       pendingCount = pending;
 
-      // 🔔 إشعار للمدير عند وصول طلبات جديدة (بدون نغمة)
       if (_user!.role == 'admin' &&
           _lastPending >= 0 &&
           pending > _lastPending) {
@@ -107,15 +96,17 @@ class AppSettings extends ChangeNotifier {
       }
       _lastPending = pending;
 
-      // 🔁 تحديث صامت للشاشات عند أي تغيير
       final mine = orders
           .where((o) => o.userId == _user!.id)
           .map((o) => o.status)
           .join(',');
       final sig = '$pending|${orders.length}|$mine';
-      if (sig != _lastSig) {
+      if (created || sig != _lastSig) {
         _lastSig = sig;
         _ordersVersion++;
+        if (created) {
+          await refreshUser();
+        }
         notifyListeners();
       }
     } catch (_) {}
