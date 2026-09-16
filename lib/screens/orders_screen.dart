@@ -1,697 +1,297 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../core/app_settings.dart';
-import '../core/orders_service.dart';
-import '../core/theme.dart';
-import '../widgets/pressable.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'store_service.dart';
 
-String dmy(String iso) {
-  try {
-    final p = iso.split('-');
-    return '${p[2].padLeft(2, '0')}-${p[1].padLeft(2, '0')}-${p[0]}';
-  } catch (_) {
-    return iso;
+const String _raw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
+const String _site = 'https://ahmedbrzan.github.io/FAWORI';
+const String kOrdersPath = 'assets/data/orders.json';
+const int kPointUnit = 125000;
+const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
+
+String fmtThousands(num n) {
+  final s = n.toStringAsFixed(0);
+  final out = StringBuffer();
+  int c = 0;
+  for (int i = s.length - 1; i >= 0; i--) {
+    out.write(s[i]);
+    c++;
+    if (c % 3 == 0 && i != 0) out.write(',');
   }
+  return out.toString().split('').reversed.join();
 }
 
-String time12(String idMillis) {
-  try {
-    final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(idMillis));
-    int h = dt.hour % 12;
-    if (h == 0) h = 12;
-    final m = dt.minute.toString().padLeft(2, '0');
-    return '$h:$m ${dt.hour < 12 ? 'ص' : 'م'}';
-  } catch (_) {
-    return '';
-  }
+class CartItem {
+  final String id, name, image, brand;
+  int qty;
+  CartItem(
+      {required this.id,
+      required this.name,
+      required this.image,
+      required this.brand,
+      this.qty = 1});
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'name': name, 'image': image, 'brand': brand, 'qty': qty};
+  factory CartItem.fromJson(Map<String, dynamic> j) => CartItem(
+      id: j['id'] ?? '',
+      name: j['name'] ?? '',
+      image: j['image'] ?? '',
+      brand: j['brand'] ?? '',
+      qty: (j['qty'] as num?)?.toInt() ?? 1);
 }
 
-class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
-  @override
-  State<OrdersScreen> createState() => _OrdersScreenState();
+class OrderItem {
+  final String name;
+  final int qty;
+  OrderItem({required this.name, required this.qty});
+  Map<String, dynamic> toJson() => {'name': name, 'qty': qty};
+  factory OrderItem.fromJson(Map<String, dynamic> j) =>
+      OrderItem(name: j['name'] ?? '', qty: (j['qty'] as num?)?.toInt() ?? 1);
 }
 
-class _OrdersScreenState extends State<OrdersScreen>
-    with SingleTickerProviderStateMixin {
-  late Future<List<Order>> _future = _loadAndMarkStatic();
-  TabController? _tabCtrl;
-  int _tabIndex = 0;
-  int _lastVersion = -1;
+class Order {
+  final String id, userId, userName, userRole, date;
+  final List<OrderItem> items;
+  String status;
+  double total;
+  double points;
+  double stored;
+  String invoiceNo;
+  Order({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.userRole,
+    required this.date,
+    required this.items,
+    this.status = 'pending',
+    this.total = 0,
+    this.points = 0,
+    this.stored = 0,
+    this.invoiceNo = '',
+  });
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'userId': userId,
+        'userName': userName,
+        'userRole': userRole,
+        'date': date,
+        'items': items.map((e) => e.toJson()).toList(),
+        'status': status,
+        'total': total,
+        'points': points,
+        'stored': stored,
+        'invoiceNo': invoiceNo,
+      };
+  factory Order.fromJson(Map<String, dynamic> j) => Order(
+        id: j['id'] ?? '',
+        userId: j['userId'] ?? '',
+        userName: j['userName'] ?? '',
+        userRole: j['userRole'] ?? '',
+        date: j['date'] ?? '',
+        items: (j['items'] as List<dynamic>? ?? [])
+            .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        status: j['status'] ?? 'pending',
+        total: (j['total'] as num?)?.toDouble() ?? 0,
+        points: (j['points'] as num?)?.toDouble() ?? 0,
+        stored: (j['stored'] as num?)?.toDouble() ?? 0,
+        invoiceNo: j['invoiceNo'] ?? '',
+      );
+}
 
-  /// ✅ تحميل + تعليم كمقروء (بدون context)
-  static Future<List<Order>> _loadAndMarkStatic() async {
-    return OrdersService.loadOrders();
-  }
-
-  /// ✅ تحميل + تعليم كمقروء للمدير والمستخدم
-  Future<List<Order>> _loadAndMark() async {
-    final os = await OrdersService.loadOrders();
-    if (mounted) {
-      await context.read<AppSettings>().markAllSeen();
+class OrdersService {
+  static Future<void> _putJson(String path, dynamic data) async {
+    final r = await http.post(
+      Uri.parse(kWriteProxy),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'path': path,
+        'content': base64Encode(utf8.encode(jsonEncode(data))),
+      }),
+    );
+    if (r.statusCode != 200 && r.statusCode != 201) {
+      throw Exception('PUT ${r.statusCode}');
     }
-    return os;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final s = context.read<AppSettings>();
-      final isAdmin = s.isAdmin || s.isImageAdmin;
-      _tabCtrl = TabController(length: isAdmin ? 5 : 4, vsync: this);
-      _tabCtrl!.addListener(() {
-        if (!_tabCtrl!.indexIsChanging) {
-          setState(() => _tabIndex = _tabCtrl!.index);
-        }
+  static Future<dynamic> _fetchJson(String path) async {
+    try {
+      final r = await http
+          .get(Uri.parse(
+              '$_raw/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+          .timeout(const Duration(seconds: 5));
+      if (r.statusCode == 200) return jsonDecode(r.body);
+    } catch (_) {}
+    try {
+      final r = await http
+          .get(Uri.parse(
+              '$_site/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+          .timeout(const Duration(seconds: 5));
+      if (r.statusCode == 200) return jsonDecode(r.body);
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<List<CartItem>> loadCart(String uid) async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final s = p.getString('cart_$uid');
+      if (s == null || s.isEmpty) return [];
+      final List<dynamic> l = jsonDecode(s) as List<dynamic>;
+      return l.map((e) => CartItem.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> saveCart(String uid, List<CartItem> items) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(
+        'cart_$uid', jsonEncode(items.map((e) => e.toJson()).toList()));
+  }
+
+  static Future<void> clearCart(String uid) async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove('cart_$uid');
+  }
+
+  static Future<List<Order>> loadOrders() async {
+    final d = await _fetchJson(kOrdersPath);
+    if (d is List) {
+      return d.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  static Future<void> submitOrder(Order o) async {
+    final list = await loadOrders();
+    list.add(o);
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+  }
+
+  static Future<void> updateOrder(Order o) async {
+    final list = await loadOrders();
+    final i = list.indexWhere((x) => x.id == o.id);
+    if (i >= 0) list[i] = o;
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+  }
+
+  static Future<void> deleteOrder(String id) async {
+    final list = await loadOrders();
+    list.removeWhere((x) => x.id == id);
+    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+  }
+
+  static Future<void> acceptOrder(Order o) async {
+    o.points = (o.total ~/ kPointUnit).toDouble();
+    o.stored = (o.total % kPointUnit).toDouble();
+    o.status = 'accepted';
+    await updateOrder(o);
+
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is List) {
+      invs.add({
+        'id': o.id,
+        'userId': o.userId,
+        'date': o.date,
+        'type': 'sale',
+        'no': o.invoiceNo,
+        'total': o.total,
+        'points': o.points.toInt(),
+        'stored': o.stored.toInt(),
+        'items': o.items
+            .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
+            .toList(),
       });
-      setState(() {
-        _future = _loadAndMark();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabCtrl?.dispose();
-    super.dispose();
-  }
-
-  String _roleAr(String r) {
-    if (r == 'agent') return 'وكيل';
-    if (r == 'tech') return 'صباغ';
-    if (r == 'admin') return 'مدير';
-    return 'عميل';
-  }
-
-  String _statusAr(String st) {
-    if (st == 'accepted') return 'مقبولة';
-    if (st == 'rejected') return 'مرفوضة';
-    if (st == 'returned') return 'مرتجعة';
-    return 'قيد المراجعة';
-  }
-
-  Color _statusColor(String st) {
-    if (st == 'accepted') return AppColors.teal;
-    if (st == 'rejected') return Colors.red;
-    if (st == 'returned') return const Color(0xFF9B59B6);
-    return AppColors.orange;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
-    final bool isAdmin = s.isAdmin || s.isImageAdmin;
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-
-    final v = s.ordersVersion;
-    if (v != _lastVersion) {
-      _lastVersion = v;
-      _future = _loadAndMark();
+      await _putJson('assets/data/invoices.json', invs);
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(isAdmin
-            ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
-            : (s.isArabic ? 'طلباتي' : 'My orders')),
-        bottom: _tabCtrl == null
-            ? null
-            : TabBar(
-                controller: _tabCtrl,
-                isScrollable: true,
-                indicatorColor: AppColors.orange,
-                labelColor: AppColors.orange,
-                unselectedLabelColor:
-                    dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                labelStyle:
-                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-                tabs: isAdmin
-                    ? [
-                        Tab(text: s.isArabic ? 'معلقة' : 'Pending'),
-                        Tab(text: s.isArabic ? 'الكل' : 'All'),
-                        Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
-                        Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
-                        Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
-                      ]
-                    : [
-                        Tab(text: s.isArabic ? 'الكل' : 'All'),
-                        Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
-                        Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
-                        Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
-                      ],
-              ),
-      ),
-      body: RefreshIndicator(
-        color: AppColors.orange,
-        backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
-        onRefresh: () async {
-          setState(() => _future = _loadAndMark());
-        },
-        child: FutureBuilder<List<Order>>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState == ConnectionState.waiting &&
-                snap.data == null) {
-              return ListView(children: const [
-                SizedBox(height: 200),
-                Center(child: CircularProgressIndicator()),
-              ]);
-            }
-            var orders = snap.data ?? [];
-            if (isAdmin) {
-              switch (_tabIndex) {
-                case 0:
-                  orders =
-                      orders.where((o) => o.status == 'pending').toList();
-                  break;
-                case 2:
-                  orders =
-                      orders.where((o) => o.status == 'accepted').toList();
-                  break;
-                case 3:
-                  orders =
-                      orders.where((o) => o.status == 'rejected').toList();
-                  break;
-                case 4:
-                  orders =
-                      orders.where((o) => o.status == 'returned').toList();
-                  break;
-              }
-            } else {
-              orders = orders.where((o) => o.userId == s.user?.id).toList();
-              switch (_tabIndex) {
-                case 1:
-                  orders =
-                      orders.where((o) => o.status == 'accepted').toList();
-                  break;
-                case 2:
-                  orders =
-                      orders.where((o) => o.status == 'rejected').toList();
-                  break;
-                case 3:
-                  orders =
-                      orders.where((o) => o.status == 'returned').toList();
-                  break;
-              }
-            }
-            if (orders.isEmpty) {
-              return ListView(children: [
-                const SizedBox(height: 120),
-                Center(
-                    child: Text(
-                  s.isArabic ? 'لا توجد طلبات' : 'No orders',
-                  style: TextStyle(
-                      color:
-                          dark ? Colors.grey.shade400 : Colors.grey.shade600),
-                )),
-              ]);
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _card(orders[i], isAdmin, s, dark),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _card(Order o, bool isAdmin, AppSettings s, bool dark) {
-    final c = _statusColor(o.status);
-    return Pressable(
-      onTap: () async {
-        await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => _OrderDetail(order: o, isAdmin: isAdmin)));
-        if (mounted) {
-          setState(() => _future = _loadAndMark());
+    final users = await _fetchJson('assets/data/users.json');
+    if (users is List) {
+      bool matched = false;
+      for (final u in users) {
+        if (u is Map &&
+            (u['id']?.toString().trim() == o.userId ||
+                u['name']?.toString().trim() == o.userName.trim())) {
+          u['points'] =
+              ((u['points'] as num?)?.toInt() ?? 0) + o.points.toInt();
+          u['stored'] =
+              ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
+          matched = true;
         }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: dark ? const Color(0xFF1E1E28) : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: c.withAlpha(70)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    isAdmin
-                        ? '${o.userName} (${_roleAr(o.userRole)})'
-                        : dmy(o.date),
-                    style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                        color: dark ? Colors.white : AppColors.ink),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                      color: c.withAlpha(45),
-                      borderRadius: BorderRadius.circular(12)),
-                  child: Text(
-                    s.isArabic ? _statusAr(o.status) : o.status,
-                    style: TextStyle(
-                        color: dark ? Colors.white : Colors.black,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${dmy(o.date)} • ${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${time12(o.id)}',
-              style: TextStyle(
-                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  fontSize: 12),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              s.isArabic ? 'عرض المزيد من التفاصيل' : 'View more details',
-              style: TextStyle(
-                  color: c, fontWeight: FontWeight.w800, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+      }
+      if (matched) await _putJson('assets/data/users.json', users);
+    }
 
-class _OrderDetail extends StatefulWidget {
-  final Order order;
-  final bool isAdmin;
-  const _OrderDetail({required this.order, required this.isAdmin});
-  @override
-  State<_OrderDetail> createState() => _OrderDetailState();
-}
-
-class _OrderDetailState extends State<_OrderDetail> {
-  final _total = TextEditingController();
-  final _invNo = TextEditingController();
-  bool _busy = false;
-
-  double get _totalNum =>
-      double.tryParse(_total.text.replaceAll(',', '')) ?? 0;
-  int get _points => (_totalNum ~/ kPointUnit).toInt();
-  int get _stored => (_totalNum % kPointUnit).toInt();
-
-  String _roleAr(String r) {
-    if (r == 'agent') return 'وكيل';
-    if (r == 'tech') return 'صباغ';
-    if (r == 'admin') return 'مدير';
-    return 'عميل';
+    await convertStoredToPoints(o.userId);
   }
 
-  Future<void> _accept() async {
-    setState(() => _busy = true);
-    try {
-      widget.order.total = _totalNum;
-      widget.order.invoiceNo = _invNo.text.trim();
-      await OrdersService.acceptOrder(widget.order);
-      try {
-        await context.read<AppSettings>().refreshUser();
-      } catch (_) {}
-      if (mounted) {
-        setState(() => _busy = false);
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل: $e')));
-      }
+  static Future<void> rejectOrder(Order o) async {
+    o.status = 'rejected';
+    await updateOrder(o);
+  }
+
+  /// 🔁 مرتجع: مواد مختارة + كمية + سعر إجمالي + رقم فاتورة
+  static Future<void> markReturned(Order o,
+      {List<OrderItem>? selectedItems,
+      double? customTotal,
+      String? customInvoiceNo}) async {
+    final items = selectedItems ?? o.items;
+    final total = customTotal ?? o.total;
+    final pts = (total ~/ kPointUnit).toInt();
+    final st = (total % kPointUnit).toInt();
+
+    o.status = 'returned';
+    await updateOrder(o);
+
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is List) {
+      invs.add({
+        'id': '${o.id}_ret_${DateTime.now().millisecondsSinceEpoch}',
+        'userId': o.userId,
+        'date': DateTime.now().toString().substring(0, 10),
+        'type': 'return',
+        'no': customInvoiceNo ?? o.invoiceNo,
+        'total': -(total.toInt()),
+        'points': -pts,
+        'stored': -st,
+        'items': items
+            .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
+            .toList(),
+      });
+      await _putJson('assets/data/invoices.json', invs);
     }
   }
 
-  Future<void> _reject() async {
-    setState(() => _busy = true);
-    try {
-      await OrdersService.rejectOrder(widget.order);
-      if (mounted) {
-        setState(() => _busy = false);
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+  static Future<bool> convertStoredToPoints(String userId) async {
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is! List) return false;
+    int net = 0;
+    int existing = 0;
+    for (final i in invs) {
+      if (i is Map && i['userId'] == userId) {
+        net += ((i['stored'] as num?)?.toInt() ?? 0);
+        if (i['type'] == 'stored_point') existing++;
       }
     }
-  }
-
-  Future<void> _return() async {
-    setState(() => _busy = true);
-    try {
-      await OrdersService.markReturned(widget.order);
-      try {
-        await context.read<AppSettings>().refreshUser();
-      } catch (_) {}
-      if (mounted) {
-        setState(() => _busy = false);
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل: $e')));
-      }
+    final gross = net + existing * kPointUnit;
+    final times = gross ~/ kPointUnit;
+    if (times <= existing) return false;
+    for (int k = existing; k < times; k++) {
+      invs.add({
+        'id': '${userId}_sp_$k',
+        'userId': userId,
+        'date': DateTime.now().toString().substring(0, 10),
+        'type': 'stored_point',
+        'no': 'SP-${k + 1}',
+        'total': kPointUnit,
+        'points': 1,
+        'stored': -kPointUnit,
+        'items': const [],
+      });
     }
-  }
-
-  Widget _field(String label, TextEditingController c, String hint) {
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    return TextField(
-      controller: c,
-      keyboardType: TextInputType.number,
-      onChanged: (_) => setState(() {}),
-      style: TextStyle(color: dark ? Colors.white : AppColors.ink),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        filled: true,
-        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Widget _sumRow(String label, String value, Color c, {bool big = false}) {
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Text(label,
-              style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: big ? 15 : 14,
-                  color: dark ? Colors.white : AppColors.ink)),
-          const Spacer(),
-          Text(value,
-              style: TextStyle(
-                  color: c,
-                  fontWeight: FontWeight.w900,
-                  fontSize: big ? 18 : 15)),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
-    final o = widget.order;
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(s.isArabic ? 'تفاصيل الفاتورة' : 'Invoice details'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: <Color>[
-                    AppColors.teal.withAlpha(dark ? 40 : 25),
-                    Theme.of(context).colorScheme.surface
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.teal.withAlpha(70)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${o.userName} (${_roleAr(o.userRole)})',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        color: dark ? Colors.white : AppColors.ink)),
-                const SizedBox(height: 4),
-                Text(
-                    '${s.isArabic ? 'التاريخ' : 'Date'}: ${dmy(o.date)} • ${time12(o.id)}',
-                    style: TextStyle(
-                        color: dark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
-                        fontSize: 12)),
-                const SizedBox(height: 10),
-                ...o.items.map((it) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                              child: Text(it.name,
-                                  style: TextStyle(
-                                      color: dark
-                                          ? Colors.white
-                                          : AppColors.ink))),
-                          Text('×${it.qty}',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color:
-                                      dark ? Colors.white : AppColors.ink)),
-                        ],
-                      ),
-                    )),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          if (widget.isAdmin && o.status == 'pending') ...[
-            _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total, '250000'),
-            const SizedBox(height: 12),
-            _field(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', _invNo, '0001'),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.orange.withAlpha(70)),
-              ),
-              child: Column(
-                children: [
-                  _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
-                      fmtThousands(_totalNum), AppColors.orange,
-                      big: true),
-                  _sumRow(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
-                      fmtThousands(_points), AppColors.teal),
-                  _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
-                      fmtThousands(_stored), AppColors.teal),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: <Color>[
-                          Color(0xFF0D9668),
-                          Color(0xFF0AA87A)
-                        ]),
-                        borderRadius: BorderRadius.circular(14)),
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white),
-                        onPressed: _busy ? null : _accept,
-                        child: _busy
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : Text(s.isArabic ? 'قبول' : 'Accept',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w900)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: <Color>[
-                          Color(0xFFD63C3C),
-                          Color(0xFFB02A2A)
-                        ]),
-                        borderRadius: BorderRadius.circular(14)),
-                    child: SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white),
-                        onPressed: _busy ? null : _reject,
-                        child: Text(s.isArabic ? 'رفض' : 'Reject',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w900)),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ] else if (widget.isAdmin && o.status == 'accepted') ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.teal.withAlpha(70)),
-              ),
-              child: Column(
-                children: [
-                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
-                      o.invoiceNo, AppColors.orange),
-                  _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
-                      fmtThousands(o.total), AppColors.orange),
-                  _sumRow(s.isArabic ? 'النقاط' : 'Points',
-                      fmtThousands(o.points), AppColors.teal),
-                  _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
-                      fmtThousands(o.stored), AppColors.teal),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Container(
-              decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: <Color>[
-                    Color(0xFF9B59B6),
-                    Color(0xFF7D3C98)
-                  ]),
-                  borderRadius: BorderRadius.circular(14)),
-              child: SizedBox(
-                height: 50,
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white),
-                  onPressed: _busy ? null : _return,
-                  child: Text(
-                      s.isArabic ? 'تحويل إلى مرتجع' : 'Mark as returned',
-                      style: const TextStyle(fontWeight: FontWeight.w900)),
-                ),
-              ),
-            ),
-          ] else if (o.status == 'accepted') ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.teal.withAlpha(70)),
-              ),
-              child: Column(
-                children: [
-                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
-                      o.invoiceNo, AppColors.orange),
-                  _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
-                      fmtThousands(o.total), AppColors.orange),
-                  _sumRow(s.isArabic ? 'النقاط' : 'Points',
-                      fmtThousands(o.points), AppColors.teal),
-                  _sumRow(s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
-                      fmtThousands(o.stored), AppColors.teal),
-                ],
-              ),
-            ),
-          ] else if (o.status == 'returned') ...[
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF9B59B6).withAlpha(dark ? 40 : 20),
-                borderRadius: BorderRadius.circular(18),
-                border:
-                    Border.all(color: const Color(0xFF9B59B6).withAlpha(70)),
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.assignment_return_rounded,
-                      color: Color(0xFF9B59B6), size: 56),
-                  const SizedBox(height: 12),
-                  Text(s.isArabic ? 'مرتجعة' : 'Returned',
-                      style: const TextStyle(
-                          color: Color(0xFF9B59B6),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 8),
-                  _sumRow(s.isArabic ? 'النقاط المخصومة' : 'Points deducted',
-                      '-${fmtThousands(o.points)}', Colors.red),
-                  _sumRow(s.isArabic ? 'الرصيد المخصوم' : 'Stored deducted',
-                      '-${fmtThousands(o.stored)}', Colors.red),
-                ],
-              ),
-            ),
-          ] else if (o.status == 'rejected') ...[
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.red.withAlpha(dark ? 40 : 20),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.red.withAlpha(70)),
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: Colors.red, size: 56),
-                  const SizedBox(height: 12),
-                  Text(s.isArabic ? 'مرفوضة' : 'Rejected',
-                      style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 14),
-                  Text(
-                    s.isArabic
-                        ? 'تم رفض الفاتورة للاستفسار يرجى مراجعة شركة فاوري'
-                        : 'Invoice rejected. Please contact FAWORI company.',
-                    style: TextStyle(
-                        color: dark ? Colors.white : Colors.black87,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
+    await _putJson('assets/data/invoices.json', invs);
+    return true;
   }
 }
