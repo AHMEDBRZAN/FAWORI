@@ -2,7 +2,10 @@ name: Deploy Flutter Web
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+    paths-ignore:
+      # ✅ تغييرات البيانات لا تشغّل البناء (تُقرأ مباشرة من raw)
+      - 'assets/data/**'
   workflow_dispatch:
 
 permissions:
@@ -10,17 +13,31 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+
       - uses: subosito/flutter-action@v2
         with:
+          flutter-version: 3.24.3   # ✅ تثبيت الإصدار المتوافق مع المشروع
           channel: stable
-          flutter-version: '3.24.3'
-      - run: flutter pub get
-      - run: flutter build web --release --base-href /FAWORI/
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Build
+        run: flutter build web --release --base-href /FAWORI/
+
+      - uses: actions/configure-pages@v4
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
@@ -28,6 +45,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
