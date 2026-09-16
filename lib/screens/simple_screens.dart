@@ -204,12 +204,24 @@ class _WalletScreenState extends State<WalletScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(
-                              '${s.isArabic ? 'رصيد مخزن' : 'Stored'}: ${fmtThousands(s.stored)}',
-                              style: TextStyle(
-                                  color: Colors.white.withAlpha(230),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700)),
+                          child: Row(
+                            children: [
+                              Text(
+                                  '${s.isArabic ? 'رصيد مخزن' : 'Stored'}: ',
+                                  style: TextStyle(
+                                      color: Colors.white.withAlpha(230),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700)),
+                              Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: Text(fmtThousands(s.stored),
+                                    style: TextStyle(
+                                        color: Colors.white.withAlpha(230),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
                         ),
                         Text(
                             '${s.isArabic ? 'متبقي' : 'Remaining'} ${fmtThousands(remaining)} ${s.isArabic ? 'للنقطة القادمة' : 'to next point'}',
@@ -256,11 +268,14 @@ class _WalletScreenState extends State<WalletScreen> {
                               fontWeight: FontWeight.w900,
                               color: dark ? Colors.white : AppColors.ink)),
                       const Spacer(),
-                      Text(fmtThousands(s.stored),
-                          style: const TextStyle(
-                              color: AppColors.teal,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16)),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(fmtThousands(s.stored),
+                            style: const TextStyle(
+                                color: AppColors.teal,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16)),
+                      ),
                     ],
                   ),
                 ),
@@ -272,10 +287,12 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
+  /// ✅ بطاقة الفاتورة: النوع يمين — التاريخ والمبلغ بالمنتصف — النقاط يسار
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
     final num shownTotal =
         inv.type == 'stored_point' ? kPointUnit : inv.total;
+    final bool neg = shownTotal < 0;
     return Pressable(
       onTap: () => _openDetails(s, inv),
       child: Container(
@@ -299,21 +316,31 @@ class _WalletScreenState extends State<WalletScreen> {
                   style: TextStyle(
                       color: c, fontSize: 11, fontWeight: FontWeight.w800)),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(_dmy(inv.date),
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text(fmtThousands(shownTotal),
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 6),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      fmtThousands(shownTotal),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: neg
+                              ? Colors.red.shade300
+                              : (dark ? Colors.white : AppColors.ink)),
+                    ),
+                  ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -323,12 +350,16 @@ class _WalletScreenState extends State<WalletScreen> {
                     : Colors.red.withAlpha(30),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                  '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
-                  style: TextStyle(
-                      color: inv.points >= 0 ? AppColors.orange : Colors.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900)),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                    '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                    style: TextStyle(
+                        color:
+                            inv.points >= 0 ? AppColors.orange : Colors.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900)),
+              ),
             ),
           ],
         ),
@@ -412,10 +443,13 @@ class _WalletScreenState extends State<WalletScreen> {
                                         ? Colors.grey.shade300
                                         : Colors.grey.shade700,
                                     fontSize: 13))),
-                        Text(fmtThousands(src['amt'] as num),
-                            style: const TextStyle(
-                                color: Color(0xFF9B59B6),
-                                fontWeight: FontWeight.w800)),
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(fmtThousands(src['amt'] as num),
+                              style: const TextStyle(
+                                  color: Color(0xFF9B59B6),
+                                  fontWeight: FontWeight.w800)),
+                        ),
                       ],
                     ),
                   )),
@@ -483,11 +517,14 @@ class _WalletScreenState extends State<WalletScreen> {
                   fontSize: big ? 15 : 14,
                   color: dark ? Colors.white : AppColors.ink)),
           const Spacer(),
-          Text(value,
-              style: TextStyle(
-                  color: c,
-                  fontWeight: FontWeight.w900,
-                  fontSize: big ? 18 : 15)),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(value,
+                style: TextStyle(
+                    color: c,
+                    fontWeight: FontWeight.w900,
+                    fontSize: big ? 18 : 15)),
+          ),
         ],
       ),
     );
