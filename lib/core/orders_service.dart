@@ -232,7 +232,8 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  /// 🔁 مرتجع: مواد مختارة + كمية + سعر إجمالي + رقم فاتورة
+  /// 🔁 مرتجع: نقاط تُخصم فوراً + باقي المبلغ يتجمع في رصيد المرتجع
+  /// ✅ التاريخ = وقت تنفيذ المرتجع
   static Future<void> markReturned(Order o,
       {List<OrderItem>? selectedItems,
       double? customTotal,
@@ -240,7 +241,6 @@ class OrdersService {
     final items = selectedItems ?? o.items;
     final total = customTotal ?? o.total;
     final pts = (total ~/ kPointUnit).toInt();
-    final st = (total % kPointUnit).toInt();
 
     o.status = 'returned';
     await updateOrder(o);
@@ -255,7 +255,7 @@ class OrdersService {
         'no': customInvoiceNo ?? o.invoiceNo,
         'total': -(total.toInt()),
         'points': -pts,
-        'stored': -st,
+        'stored': 0,
         'items': items
             .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
             .toList(),
@@ -264,21 +264,37 @@ class OrdersService {
     }
   }
 
+  /// 💰 تحويلات تلقائية:
+  /// 1) رصيد المبيعات كل 125,000 ← فاتورة +1 "الرصيد المخزن" (SP)
+  /// 2) رصيد المرتجعات كل 125,000 ← يخصم من الرئيسي + فاتورة -1 "مرتجع الرصيد المخزن" (RSP)
   static Future<bool> convertStoredToPoints(String userId) async {
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is! List) return false;
-    int net = 0;
-    int existing = 0;
+    bool changed = false;
+
+    int saleStored = 0;
+    int spCount = 0;
+    int returnPool = 0;
+    int rspCount = 0;
+
     for (final i in invs) {
-      if (i is Map && i['userId'] == userId) {
-        net += ((i['stored'] as num?)?.toInt() ?? 0);
-        if (i['type'] == 'stored_point') existing++;
+      if (i is! Map || i['userId'] != userId) continue;
+      final t = i['type'];
+      final st = ((i['stored'] as num?)?.toInt() ?? 0);
+      if (t == 'sale') {
+        saleStored += st;
+      } else if (t == 'stored_point') {
+        spCount++;
+      } else if (t == 'return_stored') {
+        rspCount++;
+      } else if (t == 'return' && st == 0) {
+        returnPool += ((i['total'] as num?)?.toInt() ?? 0).abs() % kPointUnit;
       }
     }
-    final gross = net + existing * kPointUnit;
-    final times = gross ~/ kPointUnit;
-    if (times <= existing) return false;
-    for (int k = existing; k < times; k++) {
+
+    // 1) رصيد المبيعات → نقاط
+    final times = saleStored ~/ kPointUnit;
+    for (int k = spCount; k < times; k++) {
       invs.add({
         'id': '${userId}_sp_$k',
         'userId': userId,
@@ -290,8 +306,46 @@ class OrdersService {
         'stored': -kPointUnit,
         'items': const [],
       });
+      changed = true;
     }
-    await _putJson('assets/data/invoices.json', invs);
-    return true;
+
+    // 2) رصيد المرتجعات → خصم من الرئيسي + فاتورة -1
+    int poolNet = returnPool - rspCount * kPointUnit;
+    while (poolNet >= kPointUnit) {
+      invs.add({
+        'id': '${userId}_rsp_$rspCount',
+        'userId': userId,
+        'date': DateTime.now().toString().substring(0, 10),
+        'type': 'return_stored',
+        'no': 'RSP-${rspCount + 1}',
+        'total': -kPointUnit,
+        'points': -1,
+        'stored': -kPointUnit,
+        'items': const [],
+      });
+      rspCount++;
+      poolNet -= kPointUnit;
+      changed = true;
+    }
+
+    if (changed) await _putJson('assets/data/invoices.json', invs);
+    return changed;
+  }
+
+  /// 📊 رصيد المرتجع المتبقي (للعرض في البطاقة)
+  static int returnPoolOf(List<dynamic> invs, String userId) {
+    int pool = 0;
+    int rsp = 0;
+    for (final i in invs) {
+      if (i is! Map || i['userId'] != userId) continue;
+      final t = i['type'];
+      final st = ((i['stored'] as num?)?.toInt() ?? 0);
+      if (t == 'return' && st == 0) {
+        pool += ((i['total'] as num?)?.toInt() ?? 0).abs() % kPointUnit;
+      } else if (t == 'return_stored') {
+        rsp++;
+      }
+    }
+    return pool - rsp * kPointUnit;
   }
 }
