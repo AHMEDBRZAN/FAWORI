@@ -9,10 +9,8 @@ const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
-/// ✅ إصلاح: الأرقام السالبة تُعرض -125,000 بدون فاصلة زائدة
 String fmtThousands(num n) {
-  final neg = n < 0;
-  final s = n.abs().toStringAsFixed(0);
+  final s = n.toStringAsFixed(0);
   final out = StringBuffer();
   int c = 0;
   for (int i = s.length - 1; i >= 0; i--) {
@@ -20,8 +18,7 @@ String fmtThousands(num n) {
     c++;
     if (c % 3 == 0 && i != 0) out.write(',');
   }
-  final r = out.toString().split('').reversed.join();
-  return neg ? '-$r' : r;
+  return out.toString().split('').reversed.join();
 }
 
 class CartItem {
@@ -60,6 +57,8 @@ class Order {
   double points;
   double stored;
   String invoiceNo;
+  String origId;
+  String note;
   Order({
     required this.id,
     required this.userId,
@@ -72,6 +71,8 @@ class Order {
     this.points = 0,
     this.stored = 0,
     this.invoiceNo = '',
+    this.origId = '',
+    this.note = '',
   });
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -85,6 +86,8 @@ class Order {
         'points': points,
         'stored': stored,
         'invoiceNo': invoiceNo,
+        if (origId.isNotEmpty) 'origId': origId,
+        if (note.isNotEmpty) 'note': note,
       };
   factory Order.fromJson(Map<String, dynamic> j) => Order(
         id: j['id'] ?? '',
@@ -100,6 +103,8 @@ class Order {
         points: (j['points'] as num?)?.toDouble() ?? 0,
         stored: (j['stored'] as num?)?.toDouble() ?? 0,
         invoiceNo: j['invoiceNo'] ?? '',
+        origId: j['origId'] ?? '',
+        note: j['note'] ?? '',
       );
 }
 
@@ -123,14 +128,14 @@ class OrdersService {
       final r = await http
           .get(Uri.parse(
               '$_raw/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 8));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     try {
       final r = await http
           .get(Uri.parse(
               '$_site/assets/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 8));
       if (r.statusCode == 200) return jsonDecode(r.body);
     } catch (_) {}
     return [];
@@ -191,7 +196,6 @@ class OrdersService {
     o.stored = (o.total % kPointUnit).toDouble();
     o.status = 'accepted';
     await updateOrder(o);
-
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
       invs.add({
@@ -209,138 +213,55 @@ class OrdersService {
       });
       await _putJson('assets/data/invoices.json', invs);
     }
-
-    final users = await _fetchJson('assets/data/users.json');
-    if (users is List) {
-      bool matched = false;
-      for (final u in users) {
-        if (u is Map &&
-            (u['id']?.toString().trim() == o.userId ||
-                u['name']?.toString().trim() == o.userName.trim())) {
-          u['points'] =
-              ((u['points'] as num?)?.toInt() ?? 0) + o.points.toInt();
-          u['stored'] =
-              ((u['stored'] as num?)?.toInt() ?? 0) + o.stored.toInt();
-          matched = true;
-        }
-      }
-      if (matched) await _putJson('assets/data/users.json', users);
-    }
-
-    await convertStoredToPoints(o.userId);
   }
 
-  static Future<void> rejectOrder(Order o) async {
-    o.status = 'rejected';
+  /// ✅ قبول مرتجع: ينشئ فاتورة مرتجع + يعدّل الأصلية + ملاحظة
+  static Future<void> acceptReturn(Order o) async {
+    o.status = 'return_accepted';
+    o.note = 'تم تعديل القيم والمكافأة بعد المرتجع';
     await updateOrder(o);
-  }
-
-  static Future<void> markReturned(Order o,
-      {List<OrderItem>? selectedItems,
-      double? customTotal,
-      String? customInvoiceNo}) async {
-    final items = selectedItems ?? o.items;
-    final total = customTotal ?? o.total;
-    final pts = (total ~/ kPointUnit).toInt();
-
-    o.status = 'returned';
-    await updateOrder(o);
-
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
       invs.add({
-        'id': '${o.id}_ret_${DateTime.now().millisecondsSinceEpoch}',
+        'id': o.id,
         'userId': o.userId,
-        'date': DateTime.now().toString().substring(0, 10),
+        'date': o.date,
         'type': 'return',
-        'no': customInvoiceNo ?? o.invoiceNo,
-        'total': -(total.toInt()),
-        'points': -pts,
+        'no': o.invoiceNo,
+        'total': o.total,
+        'points': 0,
         'stored': 0,
-        'items': items
+        'items': o.items
             .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
             .toList(),
+        'note': 'فاتورة مرتجع',
       });
+      for (final inv in invs) {
+        if (inv is Map && inv['id']?.toString() == o.origId) {
+          final List<dynamic> items = List<dynamic>.from(inv['items'] ?? []);
+          for (final ret in o.items) {
+            for (final it in items) {
+              if (it is Map && it['name']?.toString() == ret.name) {
+                it['qty'] = ((it['qty'] as num?)?.toInt() ?? 0) - ret.qty;
+              }
+            }
+          }
+          items.removeWhere(
+              (it) => it is Map && ((it['qty'] as num?)?.toInt() ?? 0) <= 0);
+          final oldTotal = (inv['total'] as num?)?.toDouble() ?? 0;
+          final newTotal = oldTotal - o.total;
+          inv['items'] = items;
+          inv['total'] = newTotal;
+          inv['points'] = (newTotal ~/ kPointUnit).toInt();
+          inv['stored'] = (newTotal % kPointUnit).toInt();
+          inv['note'] = 'تم تعديل القيم والمكافأة بعد المرتجع';
+        }
+      }
       await _putJson('assets/data/invoices.json', invs);
     }
   }
 
-  static Future<bool> convertStoredToPoints(String userId) async {
-    final invs = await _fetchJson('assets/data/invoices.json');
-    if (invs is! List) return false;
-    bool changed = false;
-
-    int saleStored = 0;
-    int spCount = 0;
-    int returnPool = 0;
-    int rspCount = 0;
-
-    for (final i in invs) {
-      if (i is! Map || i['userId'] != userId) continue;
-      final t = i['type'];
-      final st = ((i['stored'] as num?)?.toInt() ?? 0);
-      if (t == 'sale') {
-        saleStored += st;
-      } else if (t == 'stored_point') {
-        spCount++;
-      } else if (t == 'return_stored') {
-        rspCount++;
-      } else if (t == 'return' && st == 0) {
-        returnPool += ((i['total'] as num?)?.toInt() ?? 0).abs() % kPointUnit;
-      }
-    }
-
-    final times = saleStored ~/ kPointUnit;
-    for (int k = spCount; k < times; k++) {
-      invs.add({
-        'id': '${userId}_sp_$k',
-        'userId': userId,
-        'date': DateTime.now().toString().substring(0, 10),
-        'type': 'stored_point',
-        'no': 'SP-${k + 1}',
-        'total': kPointUnit,
-        'points': 1,
-        'stored': -kPointUnit,
-        'items': const [],
-      });
-      changed = true;
-    }
-
-    int poolNet = returnPool - rspCount * kPointUnit;
-    while (poolNet >= kPointUnit) {
-      invs.add({
-        'id': '${userId}_rsp_$rspCount',
-        'userId': userId,
-        'date': DateTime.now().toString().substring(0, 10),
-        'type': 'return_stored',
-        'no': 'RSP-${rspCount + 1}',
-        'total': -kPointUnit,
-        'points': -1,
-        'stored': -kPointUnit,
-        'items': const [],
-      });
-      rspCount++;
-      poolNet -= kPointUnit;
-      changed = true;
-    }
-
-    if (changed) await _putJson('assets/data/invoices.json', invs);
-    return changed;
-  }
-
-  static int returnPoolOf(List<dynamic> invs, String userId) {
-    int pool = 0;
-    int rsp = 0;
-    for (final i in invs) {
-      if (i is! Map || i['userId'] != userId) continue;
-      final t = i['type'];
-      final st = ((i['stored'] as num?)?.toInt() ?? 0);
-      if (t == 'return' && st == 0) {
-        pool += ((i['total'] as num?)?.toInt() ?? 0).abs() % kPointUnit;
-      } else if (t == 'return_stored') {
-        rsp++;
-      }
-    }
-    return pool - rsp * kPointUnit;
+  static Future<void> rejectOrder(Order o) async {
+    await deleteOrder(o.id);
   }
 }
