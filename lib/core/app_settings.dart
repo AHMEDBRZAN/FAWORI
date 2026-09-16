@@ -95,6 +95,8 @@ class AppSettings extends ChangeNotifier {
   Future<void> _pollTick() async {
     if (_user == null || _user!.role == 'guest') return;
     try {
+      final created = await OrdersService.convertStoredToPoints(_user!.id);
+
       final orders = await OrdersService.loadOrders();
       final pending = orders.where((o) => o.status == 'pending').length;
       pendingCount = pending;
@@ -135,11 +137,12 @@ class AppSettings extends ChangeNotifier {
           .map((o) => o.status)
           .join(',');
       final sig = '$pending|${orders.length}|$unseenCount|$mine';
-      if (sig != _lastSig) {
+      if (created || sig != _lastSig) {
         _lastSig = sig;
         _ordersVersion++;
-        // ✅ تحديث نقاط/رصيد المستخدم عند أي تغيير بالطلبات
-        await refreshUser();
+        if (created) {
+          await refreshUser();
+        }
         notifyListeners();
       }
     } catch (_) {}
