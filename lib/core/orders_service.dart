@@ -9,8 +9,10 @@ const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
+/// ✅ التعديل الجديد: إشارة السالب في البداية دائماً (-125,000)
 String fmtThousands(num n) {
-  final s = n.toStringAsFixed(0);
+  final bool neg = n < 0;
+  final s = n.abs().toStringAsFixed(0);
   final out = StringBuffer();
   int c = 0;
   for (int i = s.length - 1; i >= 0; i--) {
@@ -18,7 +20,8 @@ String fmtThousands(num n) {
     c++;
     if (c % 3 == 0 && i != 0) out.write(',');
   }
-  return out.toString().split('').reversed.join();
+  final res = out.toString().split('').reversed.join();
+  return neg ? '-$res' : res;
 }
 
 class CartItem {
@@ -232,7 +235,6 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  /// 🔁 مرتجع: مواد مخصصة + سعر مخصص + رقم فاتورة مخصص
   static Future<void> markReturned(
     Order o, {
     List<OrderItem>? returnedItems,
