@@ -654,8 +654,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                               children: [
                                 Text(
                                     s.isArabic
-                                        ? 'لرصيد المرتجع المخزن:'
-                                        : 'To return stored:',
+                                        ? 'الرصيد المخزن للمرتجع:'
+                                        : 'Return stored pool:',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w800)),
                                 const Spacer(),
@@ -1045,10 +1045,11 @@ class _OrderDetailState extends State<_OrderDetail> {
                   const SizedBox(height: 8),
                   _sumRow(s.isArabic ? 'النقاط المخصومة' : 'Points deducted',
                       '-${fmtThousands(o.points)}', Colors.red),
+                  // ✅ العنوان المعدّل
                   _sumRow(
                       s.isArabic
-                          ? 'إلى رصيد المرتجع المخزن'
-                          : 'To return stored',
+                          ? 'الرصيد المخزن للمرتجع'
+                          : 'Return stored pool',
                       fmtThousands(o.total.abs() % kPointUnit),
                       const Color(0xFF9B59B6)),
                 ],
