@@ -232,23 +232,31 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  static Future<void> markReturned(Order o) async {
-    final pts = (o.total ~/ kPointUnit).toInt();
-    final st = (o.total % kPointUnit).toInt();
+  /// 🔁 مرتجع: مواد مختارة + كمية + سعر إجمالي + رقم فاتورة
+  static Future<void> markReturned(Order o,
+      {List<OrderItem>? selectedItems,
+      double? customTotal,
+      String? customInvoiceNo}) async {
+    final items = selectedItems ?? o.items;
+    final total = customTotal ?? o.total;
+    final pts = (total ~/ kPointUnit).toInt();
+    final st = (total % kPointUnit).toInt();
+
     o.status = 'returned';
     await updateOrder(o);
+
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
       invs.add({
-        'id': '${o.id}_ret',
+        'id': '${o.id}_ret_${DateTime.now().millisecondsSinceEpoch}',
         'userId': o.userId,
-        'date': o.date,
+        'date': DateTime.now().toString().substring(0, 10),
         'type': 'return',
-        'no': o.invoiceNo,
-        'total': -(o.total.toInt()),
+        'no': customInvoiceNo ?? o.invoiceNo,
+        'total': -(total.toInt()),
         'points': -pts,
         'stored': -st,
-        'items': o.items
+        'items': items
             .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
             .toList(),
       });
@@ -256,7 +264,6 @@ class OrdersService {
     }
   }
 
-  /// 💰 كل ما بلغ الرصيد التراكمي 125,000 ← فاتورة نقطة جديدة SP-متسلسل
   static Future<bool> convertStoredToPoints(String userId) async {
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is! List) return false;
@@ -268,7 +275,6 @@ class OrdersService {
         if (i['type'] == 'stored_point') existing++;
       }
     }
-    // ✅ الإجمالي التراكمي = الصافي + ما تم تحويله سابقاً
     final gross = net + existing * kPointUnit;
     final times = gross ~/ kPointUnit;
     if (times <= existing) return false;
