@@ -215,7 +215,6 @@ class OrdersService {
     }
   }
 
-  /// ✅ قبول مرتجع: ينشئ فاتورة مرتجع + يعدّل الأصلية + ملاحظة
   static Future<void> acceptReturn(Order o) async {
     o.status = 'return_accepted';
     o.note = 'تم تعديل القيم والمكافأة بعد المرتجع';
@@ -263,5 +262,88 @@ class OrdersService {
 
   static Future<void> rejectOrder(Order o) async {
     await deleteOrder(o.id);
+  }
+
+  /// ✅ 1/3 — تُستدعى دورياً من AppSettings لتحويل الرصيد المتبقي المتراكم إلى نقاط
+  static Future<bool> convertStoredToPoints(String userId) async {
+    try {
+      final invs = await _fetchJson('assets/data/invoices.json');
+      if (invs is! List) return false;
+
+      int totalStored = 0;
+      for (final inv in invs) {
+        if (inv is Map &&
+            inv['userId']?.toString() == userId &&
+            inv['type']?.toString() == 'sale' &&
+            inv['converted']?.toString() != 'true') {
+          totalStored += ((inv['stored'] as num?)?.toInt() ?? 0);
+        }
+      }
+
+      if (totalStored >= kPointUnit) {
+        final newPoints = totalStored ~/ kPointUnit;
+        final remaining = totalStored % kPointUnit;
+
+        bool marked = false;
+        for (final inv in invs) {
+          if (inv is Map &&
+              inv['userId']?.toString() == userId &&
+              inv['type']?.toString() == 'sale' &&
+              inv['converted']?.toString() != 'true') {
+            inv['stored'] = 0;
+            inv['converted'] = true;
+            marked = true;
+          }
+        }
+        // أعد المتبقي إلى آخر فاتورة
+        if (marked) {
+          for (int i = invs.length - 1; i >= 0; i--) {
+            final inv = invs[i];
+            if (inv is Map &&
+                inv['userId']?.toString() == userId &&
+                inv['type']?.toString() == 'sale') {
+              inv['stored'] = remaining;
+              break;
+            }
+          }
+        }
+
+        final users = await _fetchJson('assets/data/users.json');
+        if (users is List) {
+          for (final u in users) {
+            if (u is Map && u['id']?.toString() == userId) {
+              u['points'] = ((u['points'] as num?)?.toInt() ?? 0) + newPoints;
+              u['stored'] = remaining;
+            }
+          }
+          await _putJson('assets/data/users.json', users);
+        }
+        await _putJson('assets/data/invoices.json', invs);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// ✅ 2/3 — تجمع النقاط والرصيد من قائمة فواتير لمستخدم معين
+  static Map<String, int> returnPoolOf(List<dynamic> invs, String uid) {
+    int pts = 0;
+    int st = 0;
+    for (final i in invs) {
+      if (i is Map && i['userId']?.toString() == uid) {
+        pts += ((i['points'] as num?)?.toInt() ?? 0);
+        st += ((i['stored'] as num?)?.toInt() ?? 0);
+      }
+    }
+    return {'points': pts, 'stored': st};
+  }
+
+  /// ✅ 3/3 — تعليم الطلب كمرتجع مقبول مع تعبئة السعر والرقم
+  static Future<void> markReturned(Order o, double total, String invoiceNo) async {
+    o.total = total;
+    o.invoiceNo = invoiceNo;
+    await acceptReturn(o);
   }
 }
