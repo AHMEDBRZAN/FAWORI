@@ -34,14 +34,10 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen>
     with SingleTickerProviderStateMixin {
-  late Future<List<Order>> _future = _loadAndMarkStatic();
+  late Future<List<Order>> _future = OrdersService.loadOrders();
   TabController? _tabCtrl;
   int _tabIndex = 0;
   int _lastVersion = -1;
-
-  static Future<List<Order>> _loadAndMarkStatic() async {
-    return OrdersService.loadOrders();
-  }
 
   Future<List<Order>> _loadAndMark() async {
     final os = await OrdersService.loadOrders();
@@ -355,22 +351,21 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
-  /// 🔄 نافذة المرتجع: تحديد المواد + السعر + رقم الفاتورة
+  /// 🔄 نافذة المرتجع: مواد + كميات + سعر + رقم فاتورة
   Future<void> _showReturnDialog() async {
     final s = context.read<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
-    // قائمة المواد مع الكميات القابلة للتعديل
-    final items = widget.order.items
-        .map((it) => {
+    final List<Map<String, Object>> items = widget.order.items
+        .map((it) => <String, Object>{
               'name': it.name,
               'max': it.qty,
               'qty': it.qty,
             })
         .toList();
 
-    final totalCtrl = TextEditingController(
-        text: widget.order.total.toStringAsFixed(0));
+    final totalCtrl =
+        TextEditingController(text: widget.order.total.toStringAsFixed(0));
     final invCtrl = TextEditingController(text: widget.order.invoiceNo);
 
     final result = await showDialog<bool>(
@@ -379,12 +374,12 @@ class _OrderDetailState extends State<_OrderDetail> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             s.isArabic ? 'تحويل إلى مرتجع' : 'Mark as returned',
-            style: TextStyle(
-                color: const Color(0xFF9B59B6),
+            style: const TextStyle(
+                color: Color(0xFF9B59B6),
                 fontWeight: FontWeight.w900,
                 fontSize: 18),
           ),
@@ -408,9 +403,9 @@ class _OrderDetailState extends State<_OrderDetail> {
                   ),
                   const SizedBox(height: 12),
                   ...List.generate(items.length, (i) {
-                    final it = items[i];
-                    final qty = it['qty'] as int;
-                    final max = it['max'] as int;
+                    final name = items[i]['name'] as String;
+                    final qty = items[i]['qty'] as int;
+                    final max = items[i]['max'] as int;
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(10),
@@ -430,11 +425,9 @@ class _OrderDetailState extends State<_OrderDetail> {
                         children: [
                           Expanded(
                             child: Text(
-                              it['name'] as String,
+                              name,
                               style: TextStyle(
-                                  color: dark
-                                      ? Colors.white
-                                      : AppColors.ink,
+                                  color: dark ? Colors.white : AppColors.ink,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14),
                             ),
@@ -454,8 +447,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                               children: [
                                 InkWell(
                                   onTap: qty > 0
-                                      ? () => setDialogState(
-                                          () => items[i]['qty'] = qty - 1)
+                                      ? () => setDialogState(() =>
+                                          items[i]['qty'] = qty - 1)
                                       : null,
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -469,7 +462,7 @@ class _OrderDetailState extends State<_OrderDetail> {
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 10),
+                                      horizontal: 8),
                                   child: Text('$qty / $max',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w900,
@@ -480,8 +473,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                                 ),
                                 InkWell(
                                   onTap: qty < max
-                                      ? () => setDialogState(
-                                          () => items[i]['qty'] = qty + 1)
+                                      ? () => setDialogState(() =>
+                                          items[i]['qty'] = qty + 1)
                                       : null,
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -522,14 +515,11 @@ class _OrderDetailState extends State<_OrderDetail> {
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
                     ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: invCtrl,
-                    keyboardType: TextInputType.text,
                     style: TextStyle(
                         color: dark ? Colors.white : AppColors.ink,
                         fontSize: 16),
@@ -548,8 +538,6 @@ class _OrderDetailState extends State<_OrderDetail> {
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
                     ),
                   ),
                 ],
@@ -600,7 +588,6 @@ class _OrderDetailState extends State<_OrderDetail> {
           .map((it) => OrderItem(
               name: it['name'] as String, qty: it['qty'] as int))
           .toList();
-
       final customTotal =
           double.tryParse(totalCtrl.text.replaceAll(',', '')) ?? 0;
       final customInv = invCtrl.text.trim();
@@ -627,7 +614,6 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
-  /// ✅ حقل بدون labelText — hintText يختفي عند الكتابة بشكل صحيح
   Widget _field(String hint, TextEditingController c,
       {IconData? icon, Color? iconColor}) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -635,8 +621,8 @@ class _OrderDetailState extends State<_OrderDetail> {
       controller: c,
       keyboardType: TextInputType.number,
       onChanged: (_) => setState(() {}),
-      style: TextStyle(
-          color: dark ? Colors.white : AppColors.ink, fontSize: 16),
+      style:
+          TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 16),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(
@@ -650,8 +636,8 @@ class _OrderDetailState extends State<_OrderDetail> {
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
@@ -750,7 +736,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                 icon: Icons.payments_outlined),
             const SizedBox(height: 12),
             _field(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', _invNo,
-                icon: Icons.receipt_long_outlined, iconColor: AppColors.teal),
+                icon: Icons.receipt_long_outlined,
+                iconColor: AppColors.teal),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
