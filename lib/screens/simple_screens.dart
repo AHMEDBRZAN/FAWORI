@@ -28,6 +28,7 @@ class _WalletScreenState extends State<WalletScreen> {
     _load();
   }
 
+  /// ✅ تحديث شامل: نقاط المستخدم + الفواتير
   Future<void> _load() async {
     try {
       await context.read<AppSettings>().refreshUser();
@@ -50,6 +51,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
     return Scaffold(
       body: SafeArea(
+        // ✅ السحب للأسفل للتحديث
         child: RefreshIndicator(
           color: AppColors.teal,
           backgroundColor: Theme.of(context).colorScheme.surface,
@@ -206,8 +208,6 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   Widget _tile(AppSettings s, Invoice inv) {
-    final bool isReturn = inv.type == 'return';
-    final Color c = isReturn ? const Color(0xFFD63C3C) : AppColors.teal;
     return Pressable(
       onTap: () => _openDetails(s, inv),
       child: Container(
@@ -216,7 +216,7 @@ class _WalletScreenState extends State<WalletScreen> {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.withAlpha(50)),
+          border: Border.all(color: AppColors.orange.withAlpha(50)),
         ),
         child: Row(
           children: [
@@ -224,15 +224,15 @@ class _WalletScreenState extends State<WalletScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: c.withAlpha(30),
+                color: AppColors.teal.withAlpha(30),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                isReturn
-                    ? (s.isArabic ? 'مرتجع' : 'Return')
-                    : (s.isArabic ? 'شراء' : 'Sale'),
-                style: TextStyle(
-                    color: c, fontSize: 11, fontWeight: FontWeight.w800),
+                s.isArabic ? 'شراء' : 'Sale',
+                style: const TextStyle(
+                    color: AppColors.teal,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800),
               ),
             ),
             const SizedBox(width: 10),
@@ -257,20 +257,19 @@ class _WalletScreenState extends State<WalletScreen> {
                     style: TextStyle(
                         color: Colors.grey.shade500, fontSize: 11)),
                 const SizedBox(height: 6),
-                if (!isReturn)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.orange.withAlpha(30),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text('+${fmtThousands(inv.points)}',
-                        style: const TextStyle(
-                            color: AppColors.orange,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900)),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: Text('+${fmtThousands(inv.points)}',
+                      style: const TextStyle(
+                          color: AppColors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900)),
+                ),
               ],
             ),
           ],
@@ -279,32 +278,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  Widget _noteBox(String note) {
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.orange.withAlpha(25),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.orange.withAlpha(80)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline_rounded,
-              color: AppColors.orange, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(note,
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700))),
-        ],
-      ),
-    );
-  }
-
   void _openDetails(AppSettings s, Invoice inv) {
-    final bool isReturn = inv.type == 'return';
-    final Color c = isReturn ? const Color(0xFFD63C3C) : AppColors.teal;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -337,15 +311,12 @@ class _WalletScreenState extends State<WalletScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: c.withAlpha(30),
+                    color: AppColors.teal.withAlpha(30),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                      isReturn
-                          ? (s.isArabic ? 'مرتجع' : 'Return')
-                          : (s.isArabic ? 'شراء' : 'Sale'),
-                      style: TextStyle(
-                          color: c,
+                  child: Text(s.isArabic ? 'شراء' : 'Sale',
+                      style: const TextStyle(
+                          color: AppColors.teal,
                           fontSize: 11,
                           fontWeight: FontWeight.w800)),
                 ),
@@ -355,8 +326,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 13)),
                 ),
-                Text(
-                    '#${inv.id.length > 6 ? inv.id.substring(inv.id.length - 6) : inv.id}',
+                Text('#${inv.id.length > 6 ? inv.id.substring(inv.id.length - 6) : inv.id}',
                     style: TextStyle(
                         color: Colors.grey.shade500, fontSize: 12)),
               ],
@@ -390,24 +360,15 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                 )),
             const Divider(height: 24),
-            if (isReturn) ...[
-              _row(s.isArabic ? 'قيمة المرتجع' : 'Return value',
-                  fmtThousands(inv.total), const Color(0xFFD63C3C),
-                  big: true),
-              _row(s.isArabic ? 'رقم فاتورة المرتجع' : 'Return No', inv.no,
-                  const Color(0xFFD63C3C)),
-            ] else ...[
-              _row(s.isArabic ? 'الإجمالي' : 'Total',
-                  fmtThousands(inv.total), AppColors.orange, big: true),
-              _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Invoice points',
-                  '+${fmtThousands(inv.points)}', AppColors.teal),
-              _row(
-                  s.isArabic
-                      ? 'رصيد مخزن من هذه الفاتورة'
-                      : 'Stored from this invoice',
-                  fmtThousands(inv.stored), AppColors.teal),
-            ],
-            if (inv.note.isNotEmpty) _noteBox(inv.note),
+            _row(s.isArabic ? 'الإجمالي' : 'Total',
+                fmtThousands(inv.total), AppColors.orange, big: true),
+            _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Invoice points',
+                '+${fmtThousands(inv.points)}', AppColors.teal),
+            _row(
+                s.isArabic
+                    ? 'رصيد مخزن من هذه الفاتورة'
+                    : 'Stored from this invoice',
+                fmtThousands(inv.stored), AppColors.teal),
             const SizedBox(height: 20),
           ],
         ),
