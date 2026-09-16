@@ -287,7 +287,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ بطاقة موحّدة: نوع بعرض ثابت 100 (يمين) — مبلغ بالمنتصف — نقاط بعرض ثابت 40 (يسار)
+  /// ✅ Stack: المبلغ في مركز البطاقة الحقيقي — الشارات مثبتة على الأطراف
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
     final num shownTotal =
@@ -303,83 +303,90 @@ class _WalletScreenState extends State<WalletScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: c.withAlpha(60)),
         ),
-        child: Row(
-          children: [
-            // ✅ يمين: شارة النوع بعرض ثابت
-            SizedBox(
-              width: 100,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: c.withAlpha(30),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(_typeLabel(inv, s.isArabic),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: c,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800)),
+        child: SizedBox(
+          height: 62,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // ✅ المنتصف الحقيقي للبطاقة
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_dmy(inv.date),
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                        fmtThousands(shownTotal),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: neg
+                                ? Colors.red.shade300
+                                : (dark ? Colors.white : AppColors.ink)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            // ✅ المنتصف: التاريخ فوق والمبلغ تحته — محور واحد لكل البطاقات
-            Expanded(
-              child: Column(
-                children: [
-                  Text(_dmy(inv.date),
-                      style: TextStyle(
-                          color: Colors.grey.shade500, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(
-                      fmtThousands(shownTotal),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: neg
-                              ? Colors.red.shade300
-                              : (dark ? Colors.white : AppColors.ink)),
+              // ✅ يمين: شارة النوع مثبتة
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: c.withAlpha(30),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(_typeLabel(inv, s.isArabic),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: c,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ),
+              // ✅ يسار: شارة النقاط مثبتة
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: inv.points >= 0
+                          ? AppColors.orange.withAlpha(30)
+                          : Colors.red.withAlpha(30),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                          '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                          style: TextStyle(
+                              color: inv.points >= 0
+                                  ? AppColors.orange
+                                  : Colors.red,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900)),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // ✅ يسار: شارة النقاط بعرض ثابت
-            SizedBox(
-              width: 40,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: inv.points >= 0
-                        ? AppColors.orange.withAlpha(30)
-                        : Colors.red.withAlpha(30),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(
-                        '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
-                        style: TextStyle(
-                            color: inv.points >= 0
-                                ? AppColors.orange
-                                : Colors.red,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900)),
-                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
