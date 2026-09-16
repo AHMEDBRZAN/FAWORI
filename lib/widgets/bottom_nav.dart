@@ -2,25 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/theme.dart';
-import 'pressable.dart';
+import '../widgets/pressable.dart'; // ✅ تأكد أن المسار صحيح
 
 class BottomNav extends StatelessWidget {
   final int index;
   final Future<void> Function(int) onTap;
   const BottomNav({super.key, required this.index, required this.onTap});
 
-  static const _icons = [
+  // الأيقونات الافتراضية (للمستخدم العادي)
+  static const _baseIcons = [
     Icons.home_rounded,
     Icons.grid_view_rounded,
-    Icons.account_balance_wallet_rounded,
+    Icons.account_balance_wallet_rounded, // المحفظة
     Icons.favorite_rounded,
     Icons.person_rounded,
   ];
+
+  // الأيقونات للمدير (تغيير الأيقونة الثالثة لأيقونة تسجيل)
+  static const _adminIcons = [
+    Icons.home_rounded,
+    Icons.grid_view_rounded,
+    Icons.person_add_alt_1_rounded, // ✅ أيقونة تسجيل المستخدمين
+    Icons.favorite_rounded,
+    Icons.person_rounded,
+  ];
+
   static const _keys = ['home', 'products', 'wallet', 'favorites', 'settings'];
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
+    final isAdmin = s.isAdmin;
+
+    // ✅ اختيار مجموعة الأيقونات بناءً على دور المستخدم
+    final icons = isAdmin ? _adminIcons : _baseIcons;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -31,13 +47,21 @@ class BottomNav extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
-            children: List.generate(_icons.length, (i) {
+            children: List.generate(icons.length, (i) {
               final active = i == index;
               final locked = s.isGuest && (i == 2 || i == 3);
               final color = active ? AppColors.orange : Colors.grey;
-              final label = i == 4
-                  ? (s.isArabic ? 'ملف الشخصي' : 'Profile')
-                  : s.tr(_keys[i]);
+
+              // ✅ تحديد النص بناءً على الدور والخانة
+              String label;
+              if (i == 4) {
+                label = s.isArabic ? 'ملف الشخصي' : 'Profile';
+              } else if (i == 2 && isAdmin) {
+                label = s.isArabic ? 'تسجيل' : 'Register'; // ✅ نص التسجيل للمدير
+              } else {
+                label = s.tr(_keys[i]); // النص الافتراضي (المحفظة)
+              }
+
               return Expanded(
                 child: Pressable(
                   onTap: () => onTap(i),
@@ -58,7 +82,7 @@ class BottomNav extends StatelessWidget {
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            Icon(_icons[i], color: color, size: 24),
+                            Icon(icons[i], color: color, size: 24),
                             if (locked)
                               Positioned(
                                 bottom: -2,
