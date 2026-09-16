@@ -351,7 +351,6 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
-  /// 🔄 نافذة المرتجع: مواد + كميات + سعر + رقم فاتورة
   Future<void> _showReturnDialog() async {
     final s = context.read<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -447,8 +446,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                               children: [
                                 InkWell(
                                   onTap: qty > 0
-                                      ? () => setDialogState(() =>
-                                          items[i]['qty'] = qty - 1)
+                                      ? () => setDialogState(
+                                          () => items[i]['qty'] = qty - 1)
                                       : null,
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -473,8 +472,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                                 ),
                                 InkWell(
                                   onTap: qty < max
-                                      ? () => setDialogState(() =>
-                                          items[i]['qty'] = qty + 1)
+                                      ? () => setDialogState(
+                                          () => items[i]['qty'] = qty + 1)
                                       : null,
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -642,6 +641,7 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
+  /// ✅ التعديل الجديد: القيمة داخل Directionality.ltr لعدم قفز إشارة السالب
   Widget _sumRow(String label, String value, Color c, {bool big = false}) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
@@ -654,11 +654,14 @@ class _OrderDetailState extends State<_OrderDetail> {
                   fontSize: big ? 15 : 14,
                   color: dark ? Colors.white : AppColors.ink)),
           const Spacer(),
-          Text(value,
-              style: TextStyle(
-                  color: c,
-                  fontWeight: FontWeight.w900,
-                  fontSize: big ? 18 : 15)),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(value,
+                style: TextStyle(
+                    color: c,
+                    fontWeight: FontWeight.w900,
+                    fontSize: big ? 18 : 15)),
+          ),
         ],
       ),
     );
