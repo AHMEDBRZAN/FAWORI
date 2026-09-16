@@ -6,11 +6,7 @@ const String kOwner = 'AHMEDBRZAN';
 const String kRepo = 'FAWORI';
 const String kBranch = 'main';
 const String kSite = 'https://ahmedbrzan.github.io/FAWORI';
-
-/// 📡 قراءة حية مباشرة من المستودع
 const String kRaw = 'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
-
-/// 🔐 وسيط الكتابة (Cloudflare Worker) — التوكن عنده وليس عندنا
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 const String kUploadToken = '';
 
@@ -65,6 +61,7 @@ class Invoice {
   final String id, userId, date, type, no;
   final int total, points, stored;
   final List<InvoiceItem> items;
+  final String note;
   Invoice({
     required this.id,
     required this.userId,
@@ -75,6 +72,7 @@ class Invoice {
     this.points = 0,
     this.stored = 0,
     this.items = const [],
+    this.note = '',
   });
   factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(
         id: j['id']?.toString() ?? '',
@@ -88,6 +86,7 @@ class Invoice {
         items: (j['items'] as List<dynamic>? ?? [])
             .map((e) => InvoiceItem.fromJson(e as Map<String, dynamic>))
             .toList(),
+        note: j['note']?.toString() ?? '',
       );
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -99,6 +98,7 @@ class Invoice {
         'points': points,
         'stored': stored,
         'items': items.map((e) => e.toJson()).toList(),
+        if (note.isNotEmpty) 'note': note,
       };
 }
 
@@ -141,9 +141,7 @@ Future<void> _putViaProxy(String path, dynamic data) async {
   }
 }
 
-/// 📡 قراءة ذكية: مستودع مباشر ← ثم نسخة الموقع ← مع مهلة 8 ثوانٍ
 Future<dynamic> _fetchJson(String path) async {
-  // 1) مباشر من المستودع (الأحدث)
   try {
     final r = await http
         .get(Uri.parse(
@@ -151,7 +149,6 @@ Future<dynamic> _fetchJson(String path) async {
         .timeout(const Duration(seconds: 8));
     if (r.statusCode == 200) return jsonDecode(r.body);
   } catch (_) {}
-  // 2) احتياط: نسخة الموقع المبنية
   try {
     final r = await http
         .get(Uri.parse(
