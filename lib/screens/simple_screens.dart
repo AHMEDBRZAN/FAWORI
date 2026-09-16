@@ -75,7 +75,6 @@ class _WalletScreenState extends State<WalletScreen> {
     return AppColors.teal;
   }
 
-  /// ✅ مصادر فاتورة الرصيد المخزن (SP)
   List<Map<String, dynamic>> _sourcesFor(Invoice conv) {
     final k = int.tryParse(conv.id.split('_sp_').last) ?? 0;
     final start = k * 125000.0;
@@ -101,7 +100,6 @@ class _WalletScreenState extends State<WalletScreen> {
     return out;
   }
 
-  /// ✅ مصادر فاتورة الرصيد المخزن للمرتجع (RSP)
   List<Map<String, dynamic>> _returnSourcesFor(Invoice conv) {
     final k = int.tryParse(conv.id.split('_rsp_').last) ?? 0;
     final start = k * 125000.0;
@@ -129,7 +127,6 @@ class _WalletScreenState extends State<WalletScreen> {
     return out;
   }
 
-  /// ✅ جدول بسيط: التاريخ | رقم الفاتورة | المبلغ
   Widget _sourcesTable(
       List<Map<String, dynamic>> srcs, bool dark, Color c, bool ar) {
     return Container(
@@ -147,7 +144,8 @@ class _WalletScreenState extends State<WalletScreen> {
                 flex: 3,
                 child: Text(ar ? 'التاريخ' : 'Date',
                     style: TextStyle(
-                        color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        color:
+                            dark ? Colors.grey.shade300 : Colors.grey.shade700,
                         fontSize: 11,
                         fontWeight: FontWeight.w800)),
               ),
@@ -155,7 +153,8 @@ class _WalletScreenState extends State<WalletScreen> {
                 flex: 3,
                 child: Text(ar ? 'رقم الفاتورة' : 'Invoice No',
                     style: TextStyle(
-                        color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        color:
+                            dark ? Colors.grey.shade300 : Colors.grey.shade700,
                         fontSize: 11,
                         fontWeight: FontWeight.w800)),
               ),
@@ -164,7 +163,8 @@ class _WalletScreenState extends State<WalletScreen> {
                 child: Text(ar ? 'المبلغ' : 'Amount',
                     textAlign: TextAlign.end,
                     style: TextStyle(
-                        color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        color:
+                            dark ? Colors.grey.shade300 : Colors.grey.shade700,
                         fontSize: 11,
                         fontWeight: FontWeight.w800)),
               ),
@@ -416,7 +416,8 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ بطاقة متساوية: التاريخ والمبلغ في الوسط
+  /// ✅ بطاقة جديدة: الشارة والعداد في صف علوي،
+  /// والتاريخ والمبلغ في صف مستقل بعرض كامل ← وسط حقيقي ومصطفّ لكل البطاقات
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
     final num shownTotal = inv.type == 'stored_point'
@@ -426,60 +427,57 @@ class _WalletScreenState extends State<WalletScreen> {
       onTap: () => _openDetails(s, inv),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: dark ? const Color(0xFF1E1E28) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: c.withAlpha(60)),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
           children: [
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: c.withAlpha(30),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(_typeLabel(inv, s.isArabic),
-                  style: TextStyle(
-                      color: c, fontSize: 11, fontWeight: FontWeight.w800)),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(_dmy(inv.date),
-                      textAlign: TextAlign.center,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: c.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(_typeLabel(inv, s.isArabic),
                       style: TextStyle(
-                          color: Colors.grey.shade500, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text(fmtThousands(shownTotal),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w900)),
-                ],
-              ),
+                          color: c, fontSize: 11, fontWeight: FontWeight.w800)),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: inv.points >= 0
+                        ? AppColors.orange.withAlpha(30)
+                        : Colors.red.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                      '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                      style: TextStyle(
+                          color:
+                              inv.points >= 0 ? AppColors.orange : Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900)),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: inv.points >= 0
-                    ? AppColors.orange.withAlpha(30)
-                    : Colors.red.withAlpha(30),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                  '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
-                  style: TextStyle(
-                      color: inv.points >= 0 ? AppColors.orange : Colors.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900)),
-            ),
+            const SizedBox(height: 10),
+            Text(_dmy(inv.date),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+            const SizedBox(height: 4),
+            Text(fmtThousands(shownTotal),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w900)),
           ],
         ),
       ),
@@ -538,8 +536,6 @@ class _WalletScreenState extends State<WalletScreen> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // ===== الرصيد المخزن (SP) =====
             if (inv.type == 'stored_point') ...[
               _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
                   AppColors.orange, big: true),
@@ -548,7 +544,8 @@ class _WalletScreenState extends State<WalletScreen> {
               const SizedBox(height: 10),
               Text(s.isArabic ? 'تكوّن من:' : 'From:',
                   style: TextStyle(
-                      color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      color:
+                          dark ? Colors.grey.shade300 : Colors.grey.shade700,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
               _sourcesTable(_sourcesFor(inv), dark,
@@ -557,10 +554,7 @@ class _WalletScreenState extends State<WalletScreen> {
               _row(s.isArabic ? 'الإجمالي' : 'Total',
                   fmtThousands(kPointUnit), const Color(0xFF9B59B6),
                   big: true),
-            ]
-
-            // ===== الرصيد المخزن للمرتجع (RSP) =====
-            else if (inv.type == 'return_stored') ...[
+            ] else if (inv.type == 'return_stored') ...[
               _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
                   AppColors.orange, big: true),
               _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '-1',
@@ -573,7 +567,8 @@ class _WalletScreenState extends State<WalletScreen> {
               const SizedBox(height: 10),
               Text(s.isArabic ? 'تكوّن من مرتجعات:' : 'From returns:',
                   style: TextStyle(
-                      color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      color:
+                          dark ? Colors.grey.shade300 : Colors.grey.shade700,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
               _sourcesTable(_returnSourcesFor(inv), dark,
@@ -582,10 +577,7 @@ class _WalletScreenState extends State<WalletScreen> {
               _row(s.isArabic ? 'الإجمالي' : 'Total',
                   fmtThousands(-kPointUnit), const Color(0xFF7D3C98),
                   big: true),
-            ]
-
-            // ===== المرتجع =====
-            else if (inv.type == 'return') ...[
+            ] else if (inv.type == 'return') ...[
               ...inv.items.map((it) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
@@ -625,10 +617,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       : 'Return stored pool',
                   fmtThousands(inv.total.abs() % kPointUnit),
                   const Color(0xFF9B59B6)),
-            ]
-
-            // ===== الشراء =====
-            else ...[
+            ] else ...[
               ...inv.items.map((it) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
@@ -658,8 +647,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   )),
               const Divider(height: 24),
               _row(s.isArabic ? 'الإجمالي' : 'Total',
-                  fmtThousands(inv.total), AppColors.orange,
-                  big: true),
+                  fmtThousands(inv.total), AppColors.orange, big: true),
               _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Invoice points',
                   '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
                   inv.points >= 0 ? AppColors.teal : Colors.red),
