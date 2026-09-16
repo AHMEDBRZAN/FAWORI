@@ -287,7 +287,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ بطاقة الفاتورة: النوع يمين — التاريخ والمبلغ بالمنتصف — النقاط يسار
+  /// ✅ بطاقة موحّدة: نوع بعرض ثابت 100 (يمين) — مبلغ بالمنتصف — نقاط بعرض ثابت 40 (يسار)
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
     final num shownTotal =
@@ -305,18 +305,29 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: c.withAlpha(30),
-                borderRadius: BorderRadius.circular(10),
+            // ✅ يمين: شارة النوع بعرض ثابت
+            SizedBox(
+              width: 100,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: c.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(_typeLabel(inv, s.isArabic),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: c,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800)),
+                ),
               ),
-              child: Text(_typeLabel(inv, s.isArabic),
-                  style: TextStyle(
-                      color: c, fontSize: 11, fontWeight: FontWeight.w800)),
             ),
             const SizedBox(width: 8),
+            // ✅ المنتصف: التاريخ فوق والمبلغ تحته — محور واحد لكل البطاقات
             Expanded(
               child: Column(
                 children: [
@@ -341,24 +352,31 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: inv.points >= 0
-                    ? AppColors.orange.withAlpha(30)
-                    : Colors.red.withAlpha(30),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: Text(
-                    '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
-                    style: TextStyle(
-                        color:
-                            inv.points >= 0 ? AppColors.orange : Colors.red,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900)),
+            // ✅ يسار: شارة النقاط بعرض ثابت
+            SizedBox(
+              width: 40,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: inv.points >= 0
+                        ? AppColors.orange.withAlpha(30)
+                        : Colors.red.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                        '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                        style: TextStyle(
+                            color: inv.points >= 0
+                                ? AppColors.orange
+                                : Colors.red,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900)),
+                  ),
+                ),
               ),
             ),
           ],
