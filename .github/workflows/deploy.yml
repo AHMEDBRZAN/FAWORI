@@ -2,11 +2,7 @@ name: Deploy Flutter Web
 
 on:
   push:
-    branches: [ main ]
-    paths-ignore:
-      # ✅ تغييرات البيانات لا تشغّل البناء (تُقرأ مباشرة من raw)
-      - 'assets/data/**'
-  workflow_dispatch:
+    branches: [main]
 
 permissions:
   contents: read
@@ -14,21 +10,21 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-deploy
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.24.3   # ✅ تثبيت الإصدار المتوافق مع المشروع
+          flutter-version: 3.24.3
           channel: stable
-          cache: true
 
       - name: Pub get
         run: flutter pub get
@@ -36,19 +32,18 @@ jobs:
       - name: Build
         run: flutter build web --release --base-href /FAWORI/
 
-      - uses: actions/configure-pages@v4
-
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
