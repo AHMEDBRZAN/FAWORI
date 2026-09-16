@@ -9,10 +9,11 @@ import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'product_detail_screen.dart';
 
+/// ✅ لكل الصفحات: يمين=يوم / وسط=شهر / يسار=سنة
 String _dmy(String iso) {
   try {
     final p = iso.split('-');
-    return '${p[2].padLeft(2, '0')}-${p[1].padLeft(2, '0')}-${p[0]}';
+    return '${p[0]}-${p[1].padLeft(2, '0')}-${p[2].padLeft(2, '0')}';
   } catch (_) {
     return iso;
   }
@@ -26,12 +27,12 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   List<Invoice> _invoices = [];
+  int _returnPool = 0;
   int _lastVersion = -1;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 🔄 تحديث فوري مع كل تغيير من الفحص العام (مثل الإشعارات)
     final v = context.watch<AppSettings>().ordersVersion;
     if (v != _lastVersion) {
       _lastVersion = v;
@@ -51,18 +52,27 @@ class _WalletScreenState extends State<WalletScreen> {
       await s.refreshUser();
     } catch (_) {}
     final invs = await StoreService.loadInvoices();
-    if (mounted) setState(() => _invoices = invs);
+    if (mounted) {
+      setState(() {
+        _invoices = invs;
+        _returnPool = OrdersService.returnPoolOf(invs, s.user?.id ?? '');
+      });
+    }
   }
 
   String _typeLabel(Invoice inv, bool ar) {
     if (inv.type == 'return') return ar ? 'مرتجع' : 'Return';
     if (inv.type == 'stored_point') return ar ? 'الرصيد المخزن' : 'Stored';
+    if (inv.type == 'return_stored') {
+      return ar ? 'مرتجع الرصيد المخزن' : 'Return stored';
+    }
     return ar ? 'شراء' : 'Sale';
   }
 
   Color _typeColor(Invoice inv) {
     if (inv.type == 'return') return Colors.red;
     if (inv.type == 'stored_point') return const Color(0xFF9B59B6);
+    if (inv.type == 'return_stored') return const Color(0xFF7D3C98);
     return AppColors.teal;
   }
 
@@ -220,6 +230,32 @@ class _WalletScreenState extends State<WalletScreen> {
                                 fontWeight: FontWeight.w700)),
                       ],
                     ),
+                    // ✅ تلميح رصيد المرتجع المخزن
+                    if (_returnPool > 0) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(40),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.assignment_return_rounded,
+                                color: Colors.white, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                                '${s.isArabic ? 'رصيد مخزن للمرتجع' : 'Return stored'}: ${fmtThousands(_returnPool)}',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -275,9 +311,9 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
-    // ✅ فاتورة الرصيد المخزن تعرض 125,000 بدل الصفر
-    final num shownTotal =
-        inv.type == 'stored_point' ? kPointUnit : inv.total;
+    final num shownTotal = inv.type == 'stored_point'
+        ? kPointUnit
+        : (inv.type == 'return_stored' ? -kPointUnit : inv.total);
     return Pressable(
       onTap: () => _openDetails(s, inv),
       child: Container(
@@ -391,7 +427,6 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
             const SizedBox(height: 16),
             if (inv.type == 'stored_point') ...[
-              // ✅ رقم الفاتورة وأمامها المبلغ
               _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
                   AppColors.orange, big: true),
               _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '+1',
@@ -422,10 +457,66 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   )),
               const Divider(height: 24),
-              // ✅ الإجمالي أسفل القائمة
               _row(s.isArabic ? 'الإجمالي' : 'Total',
                   fmtThousands(kPointUnit), const Color(0xFF9B59B6),
                   big: true),
+            ] else if (inv.type == 'return_stored') ...[
+              _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
+                  AppColors.orange, big: true),
+              _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '-1',
+                  Colors.red),
+              _row(s.isArabic ? 'مخصوم من الرصيد المخزن' : 'Deducted from stored',
+                  fmtThousands(kPointUnit), const Color(0xFF7D3C98)),
+              const SizedBox(height: 8),
+              Text(
+                s.isArabic
+                    ? 'تُنشأ تلقائياً عند بلوغ رصيد المرتجع 125,000'
+                    : 'Auto-created when return stored reaches 125,000',
+                style: TextStyle(
+                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ] else if (inv.type == 'return') ...[
+              ...inv.items.map((it) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                            child: Text(it.name,
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withAlpha(30),
+                            borderRadius: BorderRadius.circular(10),
+                            border:
+                                Border.all(color: Colors.red.withAlpha(90)),
+                          ),
+                          child: Text('× ${it.qty}',
+                              style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900)),
+                        ),
+                      ],
+                    ),
+                  )),
+              const Divider(height: 24),
+              _row(s.isArabic ? 'الإجمالي المرتجع' : 'Returned total',
+                  fmtThousands(inv.total), Colors.red, big: true),
+              _row(s.isArabic ? 'نقاط مخصومة' : 'Points deducted',
+                  '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                  Colors.red),
+              _row(
+                  s.isArabic
+                      ? 'إلى رصيد المرتجع المخزن'
+                      : 'To return stored pool',
+                  fmtThousands(inv.total.abs() % kPointUnit),
+                  const Color(0xFF9B59B6)),
             ] else ...[
               ...inv.items.map((it) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
