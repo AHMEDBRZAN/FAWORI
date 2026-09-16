@@ -9,8 +9,10 @@ const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
+/// ✅ إصلاح: الأرقام السالبة تُعرض -125,000 بدون فاصلة زائدة
 String fmtThousands(num n) {
-  final s = n.toStringAsFixed(0);
+  final neg = n < 0;
+  final s = n.abs().toStringAsFixed(0);
   final out = StringBuffer();
   int c = 0;
   for (int i = s.length - 1; i >= 0; i--) {
@@ -18,7 +20,8 @@ String fmtThousands(num n) {
     c++;
     if (c % 3 == 0 && i != 0) out.write(',');
   }
-  return out.toString().split('').reversed.join();
+  final r = out.toString().split('').reversed.join();
+  return neg ? '-$r' : r;
 }
 
 class CartItem {
@@ -232,8 +235,6 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  /// 🔁 مرتجع: نقاط تُخصم فوراً + باقي المبلغ يتجمع في رصيد المرتجع
-  /// ✅ التاريخ = وقت تنفيذ المرتجع
   static Future<void> markReturned(Order o,
       {List<OrderItem>? selectedItems,
       double? customTotal,
@@ -264,9 +265,6 @@ class OrdersService {
     }
   }
 
-  /// 💰 تحويلات تلقائية:
-  /// 1) رصيد المبيعات كل 125,000 ← فاتورة +1 "الرصيد المخزن" (SP)
-  /// 2) رصيد المرتجعات كل 125,000 ← يخصم من الرئيسي + فاتورة -1 "مرتجع الرصيد المخزن" (RSP)
   static Future<bool> convertStoredToPoints(String userId) async {
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is! List) return false;
@@ -292,7 +290,6 @@ class OrdersService {
       }
     }
 
-    // 1) رصيد المبيعات → نقاط
     final times = saleStored ~/ kPointUnit;
     for (int k = spCount; k < times; k++) {
       invs.add({
@@ -309,7 +306,6 @@ class OrdersService {
       changed = true;
     }
 
-    // 2) رصيد المرتجعات → خصم من الرئيسي + فاتورة -1
     int poolNet = returnPool - rspCount * kPointUnit;
     while (poolNet >= kPointUnit) {
       invs.add({
@@ -332,7 +328,6 @@ class OrdersService {
     return changed;
   }
 
-  /// 📊 رصيد المرتجع المتبقي (للعرض في البطاقة)
   static int returnPoolOf(List<dynamic> invs, String userId) {
     int pool = 0;
     int rsp = 0;
