@@ -95,8 +95,6 @@ class AppSettings extends ChangeNotifier {
   Future<void> _pollTick() async {
     if (_user == null || _user!.role == 'guest') return;
     try {
-      final created = await OrdersService.convertStoredToPoints(_user!.id);
-
       final orders = await OrdersService.loadOrders();
       final pending = orders.where((o) => o.status == 'pending').length;
       pendingCount = pending;
@@ -137,12 +135,11 @@ class AppSettings extends ChangeNotifier {
           .map((o) => o.status)
           .join(',');
       final sig = '$pending|${orders.length}|$unseenCount|$mine';
-      if (created || sig != _lastSig) {
+      if (sig != _lastSig) {
         _lastSig = sig;
         _ordersVersion++;
-        if (created) {
-          await refreshUser();
-        }
+        // ✅ تحديث نقاط/رصيد المستخدم عند أي تغيير بالطلبات
+        await refreshUser();
         notifyListeners();
       }
     } catch (_) {}
@@ -373,6 +370,3 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 }
-———————————-
-
-lib/screens/orders_screen.dart :
