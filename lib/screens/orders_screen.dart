@@ -34,10 +34,24 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen>
     with SingleTickerProviderStateMixin {
-  late Future<List<Order>> _future = OrdersService.loadOrders();
+  late Future<List<Order>> _future = _loadAndMarkStatic();
   TabController? _tabCtrl;
   int _tabIndex = 0;
   int _lastVersion = -1;
+
+  /// ✅ تحميل + تعليم كمقروء (بدون context)
+  static Future<List<Order>> _loadAndMarkStatic() async {
+    return OrdersService.loadOrders();
+  }
+
+  /// ✅ تحميل + تعليم كمقروء للمدير والمستخدم
+  Future<List<Order>> _loadAndMark() async {
+    final os = await OrdersService.loadOrders();
+    if (mounted) {
+      await context.read<AppSettings>().markAllSeen();
+    }
+    return os;
+  }
 
   @override
   void initState() {
@@ -52,7 +66,9 @@ class _OrdersScreenState extends State<OrdersScreen>
           setState(() => _tabIndex = _tabCtrl!.index);
         }
       });
-      setState(() {});
+      setState(() {
+        _future = _loadAndMark();
+      });
     });
   }
 
@@ -89,11 +105,10 @@ class _OrdersScreenState extends State<OrdersScreen>
     final bool isAdmin = s.isAdmin || s.isImageAdmin;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
-    // 🔄 تحديث تلقائي عند أي تغيير من الفحص العام
     final v = s.ordersVersion;
     if (v != _lastVersion) {
       _lastVersion = v;
-      _future = OrdersService.loadOrders();
+      _future = _loadAndMark();
     }
 
     return Scaffold(
@@ -134,7 +149,7 @@ class _OrdersScreenState extends State<OrdersScreen>
         color: AppColors.orange,
         backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
         onRefresh: () async {
-          setState(() => _future = OrdersService.loadOrders());
+          setState(() => _future = _loadAndMark());
         },
         child: FutureBuilder<List<Order>>(
           future: _future,
@@ -190,9 +205,8 @@ class _OrdersScreenState extends State<OrdersScreen>
                     child: Text(
                   s.isArabic ? 'لا توجد طلبات' : 'No orders',
                   style: TextStyle(
-                      color: dark
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade600),
+                      color:
+                          dark ? Colors.grey.shade400 : Colors.grey.shade600),
                 )),
               ]);
             }
@@ -217,7 +231,7 @@ class _OrdersScreenState extends State<OrdersScreen>
             MaterialPageRoute(
                 builder: (_) => _OrderDetail(order: o, isAdmin: isAdmin)));
         if (mounted) {
-          setState(() => _future = OrdersService.loadOrders());
+          setState(() => _future = _loadAndMark());
         }
       },
       child: Container(
@@ -460,9 +474,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                           Text('×${it.qty}',
                               style: TextStyle(
                                   fontWeight: FontWeight.w800,
-                                  color: dark
-                                      ? Colors.white
-                                      : AppColors.ink)),
+                                  color:
+                                      dark ? Colors.white : AppColors.ink)),
                         ],
                       ),
                     )),
@@ -470,7 +483,6 @@ class _OrderDetailState extends State<_OrderDetail> {
             ),
           ),
           const SizedBox(height: 18),
-
           if (widget.isAdmin && o.status == 'pending') ...[
             _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total, '250000'),
             const SizedBox(height: 12),
@@ -624,7 +636,8 @@ class _OrderDetailState extends State<_OrderDetail> {
               decoration: BoxDecoration(
                 color: const Color(0xFF9B59B6).withAlpha(dark ? 40 : 20),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFF9B59B6).withAlpha(70)),
+                border:
+                    Border.all(color: const Color(0xFF9B59B6).withAlpha(70)),
               ),
               child: Column(
                 children: [
