@@ -18,6 +18,11 @@ class AppSettings extends ChangeNotifier {
   String _lastSig = '';
   int pendingCount = 0;
 
+  // 👁️ تتبع المقروء لكل مستخدم على حدة
+  Set<String> _seenIds = {};
+  bool _seenLoaded = false;
+  int unseenCount = 0;
+
   bool _listenersAttached = false;
 
   bool get isArabic => _isArabic;
@@ -30,6 +35,8 @@ class AppSettings extends ChangeNotifier {
   int get points => _user?.points ?? 0;
   int get stored => _user?.stored ?? 0;
   int get ordersVersion => _ordersVersion;
+
+  String get _seenKey => 'seen_${_user?.id ?? ''}';
 
   String tr(String key) {
     const Map<String, Map<String, String>> strings = {
@@ -49,6 +56,22 @@ class AppSettings extends ChangeNotifier {
     final m = strings[key];
     if (m == null) return key;
     return _isArabic ? (m['ar'] ?? key) : (m['en'] ?? key);
+  }
+
+  /// 🎯 الطلبات المهمة لكل دور:
+  /// المدير ← المعلقة | المستخدم ← طلباته ذات الحالة النهائية
+  List<String> _relevantIds(List<Order> orders) {
+    if (_user == null) return const [];
+    if (_user!.role == 'admin') {
+      return orders
+          .where((o) => o.status == 'pending')
+          .map((o) => o.id)
+          .toList();
+    }
+    return orders
+        .where((o) => o.userId == _user!.id && o.status != 'pending')
+        .map((o) => o.id)
+        .toList();
   }
 
   void startOrderPolling() {
@@ -72,12 +95,25 @@ class AppSettings extends ChangeNotifier {
   Future<void> _pollTick() async {
     if (_user == null || _user!.role == 'guest') return;
     try {
-      // 💰 تحويل الرصيد المخزن إلى نقاط فوراً عند بلوغ 125,000
       final created = await OrdersService.convertStoredToPoints(_user!.id);
 
       final orders = await OrdersService.loadOrders();
       final pending = orders.where((o) => o.status == 'pending').length;
       pendingCount = pending;
+
+      // 👁️ حساب غير المقروء
+      final relevant = _relevantIds(orders).toSet();
+      if (!_seenLoaded) {
+        _seenLoaded = true;
+        final p = await SharedPreferences.getInstance();
+        _seenIds = (p.getStringList(_seenKey) ?? []).toSet();
+        // أول مرة: كل الموجود مقروء (لا شارة وهمية)
+        if (_seenIds.isEmpty) {
+          _seenIds = Set<String>.from(relevant);
+          await p.setStringList(_seenKey, _seenIds.toList());
+        }
+      }
+      unseenCount = relevant.difference(_seenIds).length;
 
       if (_user!.role == 'admin' &&
           _lastPending >= 0 &&
@@ -100,7 +136,7 @@ class AppSettings extends ChangeNotifier {
           .where((o) => o.userId == _user!.id)
           .map((o) => o.status)
           .join(',');
-      final sig = '$pending|${orders.length}|$mine';
+      final sig = '$pending|${orders.length}|$unseenCount|$mine';
       if (created || sig != _lastSig) {
         _lastSig = sig;
         _ordersVersion++;
@@ -109,6 +145,27 @@ class AppSettings extends ChangeNotifier {
         }
         notifyListeners();
       }
+    } catch (_) {}
+  }
+
+  /// ✅ تعليم كل الحالي كمقروء (تختفي الشارة) — للمدير والمستخدم
+  Future<void> markAllSeen() async {
+    if (_user == null || _user!.role == 'guest') return;
+    try {
+      final orders = await OrdersService.loadOrders();
+      final rel = _relevantIds(orders).toSet();
+      final p = await SharedPreferences.getInstance();
+      final seen = (p.getStringList(_seenKey) ?? []).toSet();
+      seen.addAll(rel);
+      if (seen.length > 400) {
+        final active = orders.map((o) => o.id).toSet();
+        seen.retainWhere(active.contains);
+      }
+      _seenIds = seen;
+      _seenLoaded = true;
+      await p.setStringList(_seenKey, seen.toList());
+      unseenCount = 0;
+      notifyListeners();
     } catch (_) {}
   }
 
@@ -162,6 +219,8 @@ class AppSettings extends ChangeNotifier {
   Future<void> loginAsUser(User u) async {
     _user = await _withInvoiceTotals(u);
     _isImageAdmin = (u.role == 'admin');
+    _seenLoaded = false;
+    _seenIds = {};
     try {
       await StoreService.upsertUser(u);
     } catch (_) {}
@@ -190,6 +249,8 @@ class AppSettings extends ChangeNotifier {
     }
     _user = await _withInvoiceTotals(admin);
     _isImageAdmin = true;
+    _seenLoaded = false;
+    _seenIds = {};
     await _savePrefs();
     startOrderPolling();
     notifyListeners();
@@ -201,6 +262,7 @@ class AppSettings extends ChangeNotifier {
         name: 'ضيف',
         role: 'guest');
     _isImageAdmin = false;
+    unseenCount = 0;
     await _savePrefs();
     notifyListeners();
   }
@@ -267,6 +329,9 @@ class AppSettings extends ChangeNotifier {
     _isImageAdmin = false;
     _pollTimer?.cancel();
     _lastPending = -1;
+    _seenLoaded = false;
+    _seenIds = {};
+    unseenCount = 0;
     _savePrefs();
     notifyListeners();
   }
