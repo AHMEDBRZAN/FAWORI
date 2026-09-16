@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/favorites.dart';
@@ -9,6 +11,10 @@ import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'product_detail_screen.dart';
 
+const String _rawBase =
+    'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
+const String _proxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
+
 String _dmy(String iso) {
   try {
     final p = iso.split('-');
@@ -17,6 +23,10 @@ String _dmy(String iso) {
     return iso;
   }
 }
+
+// ======================================================
+// المحفظة (للمدير ← صفحة تسجيل المستخدمين)
+// ======================================================
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -32,7 +42,9 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final v = context.watch<AppSettings>().ordersVersion;
+    final s = context.read<AppSettings>();
+    if (s.isAdmin) return; // المدير لا يحتاج تحميل المحفظة
+    final v = s.ordersVersion;
     if (v != _lastVersion) {
       _lastVersion = v;
       _load();
@@ -59,6 +71,15 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    // ✅ المدير ← صفحة تسجيل المستخدمين بدل المحفظة
+    if (s.isAdmin) return const _AdminRegister();
+    return _walletBody(s);
+  }
+
+  // ================= واجهة المحفظة للمستخدم =================
   String _typeLabel(Invoice inv, bool ar) {
     if (inv.type == 'return') return ar ? 'مرتجع' : 'Return';
     if (inv.type == 'stored_point') return ar ? 'الرصيد المخزن' : 'Stored';
@@ -209,9 +230,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
+  Widget _walletBody(AppSettings s) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final mine = _invoices.where((i) => i.userId == s.user?.id).toList();
     final int storedMod = s.stored % kPointUnit;
@@ -416,8 +435,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ بطاقة جديدة: الشارة والعداد في صف علوي،
-  /// والتاريخ والمبلغ في صف مستقل بعرض كامل ← وسط حقيقي ومصطفّ لكل البطاقات
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
     final num shownTotal = inv.type == 'stored_point'
@@ -686,6 +703,563 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 }
+
+// ======================================================
+// ✅ صفحة تسجيل المستخدمين (تظهر للمدير فقط بدل المحفظة)
+// ======================================================
+
+class _AdminRegister extends StatefulWidget {
+  const _AdminRegister();
+  @override
+  State<_AdminRegister> createState() => _AdminRegisterState();
+}
+
+class _AdminRegisterState extends State<_AdminRegister> {
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  final _altPhone = TextEditingController();
+  final _pass = TextEditingController();
+  final _address = TextEditingController();
+  final _customMarital = TextEditingController();
+  final _customHousing = TextEditingController();
+  final _customTransport = TextEditingController();
+
+  String? _role;
+  String? _marital;
+  String? _housing;
+  String? _transport;
+  bool _showAltPhone = false;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _altPhone.dispose();
+    _pass.dispose();
+    _address.dispose();
+    _customMarital.dispose();
+    _customHousing.dispose();
+    _customTransport.dispose();
+    super.dispose();
+  }
+
+  /// ❗ نافذة التوضيح
+  void _info(String title, String body) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: AppColors.orange.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.priority_high_rounded,
+                  color: AppColors.orange, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+        content: Text(body,
+            style: TextStyle(
+                fontSize: 14,
+                height: 1.7,
+                color: dark ? Colors.grey.shade300 : Colors.grey.shade800)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('فهمت',
+                style: TextStyle(
+                    color: AppColors.teal, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoBtn(String title, String body) {
+    return IconButton(
+      visualDensity: VisualDensity.compact,
+      icon: const Icon(Icons.error_outline_rounded,
+          color: AppColors.orange, size: 20),
+      onPressed: () => _info(title, body),
+    );
+  }
+
+  Widget _field(
+    TextEditingController c, {
+    required String label,
+    String? hint,
+    TextInputType type = TextInputType.text,
+    bool obscure = false,
+    Widget? suffix,
+    bool dark = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 13)),
+              ),
+              if (suffix != null) suffix,
+            ],
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: c,
+            keyboardType: type,
+            obscureText: obscure,
+            style: TextStyle(
+                color: dark ? Colors.white : AppColors.ink, fontSize: 15),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                  color: dark ? Colors.grey.shade600 : Colors.grey.shade400,
+                  fontSize: 13),
+              filled: true,
+              fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    Widget? suffix,
+    bool dark = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 13)),
+              ),
+              if (suffix != null) suffix,
+            ],
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: (dark ? Colors.white24 : Colors.black26)
+                      .withAlpha(60)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                isExpanded: true,
+                dropdownColor: dark ? const Color(0xFF26262E) : Colors.white,
+                style: TextStyle(
+                    color: dark ? Colors.white : AppColors.ink, fontSize: 14),
+                hint: const Text('اختر...'),
+                items: items
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final s = context.read<AppSettings>();
+    // ✅ تحقق
+    if (_role == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚠️ اختر نوع الحساب')));
+      return;
+    }
+    if (_name.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚠️ أدخل الاسم الرباعي')));
+      return;
+    }
+    if (_phone.text.trim().length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚠️ أدخل رقم هاتف صحيح')));
+      return;
+    }
+    if (_pass.text.trim().length < 4) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('⚠️ كلمة السر أرقام فقط (4 أرقام على الأقل)')));
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      // جلب المستخدمين الحاليين
+      final r = await http
+          .get(Uri.parse(
+              '$_rawBase/assets/data/users.json?t=${DateTime.now().millisecondsSinceEpoch}'))
+          .timeout(const Duration(seconds: 6));
+      final List<dynamic> users =
+          r.statusCode == 200 ? (jsonDecode(r.body) as List) : [];
+
+      // منع تكرار رقم الهاتف
+      for (final u in users) {
+        if (u is Map && u['phone']?.toString() == _phone.text.trim()) {
+          throw Exception('رقم الهاتف مسجل مسبقاً');
+        }
+      }
+
+      final marital = _marital == 'أخرى'
+          ? 'أخرى: ${_customMarital.text.trim()}'
+          : (_marital ?? '');
+      final housing = _housing == 'أخرى'
+          ? 'أخرى: ${_customHousing.text.trim()}'
+          : (_housing ?? '');
+      final transport = _transport == 'أخرى'
+          ? 'أخرى: ${_customTransport.text.trim()}'
+          : (_transport ?? '');
+
+      users.add({
+        'id': 'u_${DateTime.now().millisecondsSinceEpoch}',
+        'name': _name.text.trim(),
+        'role': _role,
+        'phone': _phone.text.trim(),
+        'altPhone': _altPhone.text.trim(),
+        'password': _pass.text.trim(),
+        'address': _address.text.trim(),
+        'marital': marital,
+        'housing': housing,
+        'transport': transport,
+        'points': 0,
+        'stored': 0,
+        'registeredBy': 'admin',
+        'registeredAt': DateTime.now().toString().substring(0, 10),
+      });
+
+      final pr = await http.post(
+        Uri.parse(_proxy),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'path': 'assets/data/users.json',
+          'content': base64Encode(utf8.encode(jsonEncode(users))),
+        }),
+      );
+      if (pr.statusCode != 200 && pr.statusCode != 201) {
+        throw Exception('فشل الرفع ${pr.statusCode}');
+      }
+
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.isArabic
+              ? '✅ تم تسجيل المستخدم — يمكنه الدخول الآن'
+              : '✅ User registered — can login now'),
+          backgroundColor: const Color(0xFF0D9668),
+        ));
+        _name.clear();
+        _phone.clear();
+        _altPhone.clear();
+        _pass.clear();
+        _address.clear();
+        _customMarital.clear();
+        _customHousing.clear();
+        _customTransport.clear();
+        setState(() {
+          _role = null;
+          _marital = null;
+          _housing = null;
+          _transport = null;
+          _showAltPhone = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final ar = s.isArabic;
+
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.teal.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.person_add_alt_1_rounded,
+                      color: AppColors.teal, size: 26),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(ar ? 'تسجيل المستخدمين' : 'User registration',
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w900)),
+                      Text(
+                        ar
+                            ? 'يُسمح بالدخول فقط بعد تسجيل المدير'
+                            : 'Login allowed only after admin registration',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // 1) نوع الحساب
+            _dropdown(
+              label: ar ? 'نوع الحساب' : 'Account type',
+              value: _role,
+              items: ar
+                  ? ['وكيل', 'عميل', 'فني']
+                  : ['Agent', 'Customer', 'Tech'],
+              onChanged: (v) => setState(() {
+                _role = ar
+                    ? (v == 'وكيل'
+                        ? 'agent'
+                        : v == 'فني'
+                            ? 'tech'
+                            : 'customer')
+                    : (v == 'Agent'
+                        ? 'agent'
+                        : v == 'Tech'
+                            ? 'tech'
+                            : 'customer');
+              }),
+              dark: dark,
+            ),
+
+            // 2) الاسم الرباعي
+            _field(_name,
+                label: ar ? 'الاسم الرباعي' : 'Full name (4 parts)',
+                hint: ar ? 'مثال: حسين علي محمد حسن' : 'e.g. name name name name',
+                dark: dark,
+                suffix: _infoBtn(
+                    ar ? 'الاسم الرباعي' : 'Full name',
+                    ar
+                        ? 'الاسم الرباعي لأجل التعرف بشكل كامل'
+                        : 'Full four-part name for complete identification')),
+
+            // 3) رقم الهاتف + بديل
+            _field(_phone,
+                label: ar ? 'رقم الهاتف' : 'Phone number',
+                hint: '07xxxxxxxxx',
+                type: TextInputType.phone,
+                dark: dark,
+                suffix: _infoBtn(
+                  ar ? 'رقم الهاتف' : 'Phone',
+                  ar
+                      ? 'إضافة رقم هاتف ضروري جداً. هل يملك رقم بديل؟ اضغط (أضف رقم بديل) بالأسفل'
+                      : 'Phone is required. Has an alternative? Use add below',
+                )),
+            if (_showAltPhone)
+              _field(_altPhone,
+                  label: ar ? 'رقم هاتف بديل' : 'Alternative phone',
+                  hint: '07xxxxxxxxx',
+                  type: TextInputType.phone,
+                  dark: dark),
+            Align(
+              alignment: ar ? Alignment.centerLeft : Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () =>
+                    setState(() => _showAltPhone = !_showAltPhone),
+                icon: Icon(
+                    _showAltPhone
+                        ? Icons.remove_circle_outline
+                        : Icons.add_circle_outline,
+                    size: 18,
+                    color: AppColors.teal),
+                label: Text(
+                    ar
+                        ? (_showAltPhone ? 'إلغاء الرقم البديل' : 'أضف رقم بديل')
+                        : (_showAltPhone ? 'Remove alt' : 'Add alt phone'),
+                    style: const TextStyle(
+                        color: AppColors.teal,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12)),
+              ),
+            ),
+
+            // 4) كلمة السر (أرقام فقط)
+            _field(_pass,
+                label: ar ? 'كلمة السر' : 'Password',
+                hint: ar ? 'أرقام فقط مثال: 1234' : 'Digits only e.g. 1234',
+                type: TextInputType.number,
+                obscure: true,
+                dark: dark),
+
+            // 5) العنوان
+            _field(_address,
+                label: ar ? 'العنوان' : 'Address',
+                hint: ar ? 'المحافظة / المدينة' : 'City / District',
+                dark: dark,
+                suffix: _infoBtn(
+                    ar ? 'العنوان' : 'Address',
+                    ar
+                        ? 'شارع - نقطة دالة'
+                        : 'Street - landmark')),
+
+            // 6) الحالة الاجتماعية
+            _dropdown(
+              label: ar ? 'الحالة الاجتماعية' : 'Marital status',
+              value: _marital,
+              items: ar
+                  ? ['متزوج', 'اعزب', 'مطلق', 'أخرى']
+                  : ['Married', 'Single', 'Divorced', 'Other'],
+              onChanged: (v) => setState(() => _marital = v),
+              dark: dark,
+              suffix: _infoBtn(
+                  ar ? 'الحالة الاجتماعية' : 'Marital',
+                  ar
+                      ? 'الغرض منها مكافأة دفع تكاليف الزواج'
+                      : 'Purpose: marriage costs reward'),
+            ),
+            if (_marital == 'أخرى' || _marital == 'Other')
+              _field(_customMarital,
+                  label: ar ? 'حدد الأخرى' : 'Specify other',
+                  dark: dark),
+
+            // 7) نوع دار السكن
+            _dropdown(
+              label: ar ? 'نوع دار السكن' : 'Housing type',
+              value: _housing,
+              items: ar ? ['ايجار', 'ملك', 'أخرى'] : ['Rent', 'Owned', 'Other'],
+              onChanged: (v) => setState(() => _housing = v),
+              dark: dark,
+              suffix: _infoBtn(
+                  ar ? 'نوع دار السكن' : 'Housing',
+                  ar
+                      ? 'الغرض منها مكافأة إهداء منزل'
+                      : 'Purpose: house gift reward'),
+            ),
+            if (_housing == 'أخرى' || _housing == 'Other')
+              _field(_customHousing,
+                  label: ar ? 'حدد الأخرى' : 'Specify other',
+                  dark: dark),
+
+            // 8) وسائل النقل
+            _dropdown(
+              label: ar ? 'وسائل النقل' : 'Transport',
+              value: _transport,
+              items: ar
+                  ? ['سيارة', 'دراجة', 'لا يوجد', 'أخرى']
+                  : ['Car', 'Motorcycle', 'None', 'Other'],
+              onChanged: (v) => setState(() => _transport = v),
+              dark: dark,
+            ),
+            if (_transport == 'أخرى' || _transport == 'Other')
+              _field(_customTransport,
+                  label: ar ? 'حدد الأخرى' : 'Specify other',
+                  dark: dark),
+
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: <Color>[
+                  Color(0xFF0D9668),
+                  Color(0xFF0AA87A)
+                ]),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: SizedBox(
+                height: 52,
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.white),
+                  onPressed: _busy ? null : _submit,
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                  label: Text(
+                      ar ? 'تسجيل المستخدم' : 'Register user',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w900)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                ar
+                    ? 'لا يمكن للمستخدم الدخول إلا بعد اكتمال التسجيل من المدير'
+                    : 'User can login only after admin completes registration',
+                style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ======================================================
+// المفضلة
+// ======================================================
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
