@@ -9,7 +9,6 @@ import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'product_detail_screen.dart';
 
-/// ✅ لكل الصفحات: يمين=يوم / وسط=شهر / يسار=سنة
 String _dmy(String iso) {
   try {
     final p = iso.split('-');
@@ -64,7 +63,7 @@ class _WalletScreenState extends State<WalletScreen> {
     if (inv.type == 'return') return ar ? 'مرتجع' : 'Return';
     if (inv.type == 'stored_point') return ar ? 'الرصيد المخزن' : 'Stored';
     if (inv.type == 'return_stored') {
-      return ar ? 'مرتجع الرصيد المخزن' : 'Return stored';
+      return ar ? 'الرصيد المخزن للمرتجع' : 'Return stored';
     }
     return ar ? 'شراء' : 'Sale';
   }
@@ -76,6 +75,7 @@ class _WalletScreenState extends State<WalletScreen> {
     return AppColors.teal;
   }
 
+  /// ✅ مصادر فاتورة الرصيد المخزن (SP)
   List<Map<String, dynamic>> _sourcesFor(Invoice conv) {
     final k = int.tryParse(conv.id.split('_sp_').last) ?? 0;
     final start = k * 125000.0;
@@ -99,6 +99,114 @@ class _WalletScreenState extends State<WalletScreen> {
       if (acc >= end) break;
     }
     return out;
+  }
+
+  /// ✅ مصادر فاتورة الرصيد المخزن للمرتجع (RSP)
+  List<Map<String, dynamic>> _returnSourcesFor(Invoice conv) {
+    final k = int.tryParse(conv.id.split('_rsp_').last) ?? 0;
+    final start = k * 125000.0;
+    final end = start + 125000.0;
+    double acc = 0;
+    final out = <Map<String, dynamic>>[];
+    for (final i in _invoices) {
+      if (i.userId != conv.userId || i.type != 'return' || i.stored != 0) {
+        continue;
+      }
+      final part = i.total.abs() % 125000;
+      if (part <= 0) continue;
+      final s0 = acc;
+      final s1 = acc + part;
+      if (s1 > start && s0 < end) {
+        final used = (s1 < end ? s1 : end) - (s0 > start ? s0 : start);
+        final no = i.no.isNotEmpty
+            ? i.no
+            : '#${i.id.length > 6 ? i.id.substring(i.id.length - 6) : i.id}';
+        out.add({'no': no, 'date': i.date, 'amt': used});
+      }
+      acc = s1;
+      if (acc >= end) break;
+    }
+    return out;
+  }
+
+  /// ✅ جدول بسيط: التاريخ | رقم الفاتورة | المبلغ
+  Widget _sourcesTable(
+      List<Map<String, dynamic>> srcs, bool dark, Color c, bool ar) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.withAlpha(15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.withAlpha(50)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Text(ar ? 'التاريخ' : 'Date',
+                    style: TextStyle(
+                        color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800)),
+              ),
+              Expanded(
+                flex: 3,
+                child: Text(ar ? 'رقم الفاتورة' : 'Invoice No',
+                    style: TextStyle(
+                        color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800)),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(ar ? 'المبلغ' : 'Amount',
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                        color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800)),
+              ),
+            ],
+          ),
+          Divider(height: 12, color: c.withAlpha(60)),
+          ...srcs.map((src) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Text(_dmy(src['date'] as String),
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                              fontSize: 12)),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Text(src['no'] as String,
+                          style: TextStyle(
+                              color: dark ? Colors.white : AppColors.ink,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(fmtThousands(src['amt'] as num),
+                          textAlign: TextAlign.end,
+                          style: TextStyle(
+                              color: c,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800)),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
   }
 
   @override
@@ -230,7 +338,6 @@ class _WalletScreenState extends State<WalletScreen> {
                                 fontWeight: FontWeight.w700)),
                       ],
                     ),
-                    // ✅ تلميح رصيد المرتجع المخزن
                     if (_returnPool > 0) ...[
                       const SizedBox(height: 8),
                       Container(
@@ -247,7 +354,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                 color: Colors.white, size: 14),
                             const SizedBox(width: 6),
                             Text(
-                                '${s.isArabic ? 'رصيد مخزن للمرتجع' : 'Return stored'}: ${fmtThousands(_returnPool)}',
+                                '${s.isArabic ? 'الرصيد المخزن للمرتجع' : 'Return stored'}: ${fmtThousands(_returnPool)}',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 11,
@@ -309,6 +416,7 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
+  /// ✅ بطاقة متساوية: التاريخ والمبلغ في الوسط
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
     final num shownTotal = inv.type == 'stored_point'
@@ -318,13 +426,14 @@ class _WalletScreenState extends State<WalletScreen> {
       onTap: () => _openDetails(s, inv),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         decoration: BoxDecoration(
           color: dark ? const Color(0xFF1E1E28) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: c.withAlpha(60)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               padding:
@@ -340,18 +449,21 @@ class _WalletScreenState extends State<WalletScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(_dmy(inv.date),
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 12)),
                   const SizedBox(height: 4),
                   Text(fmtThousands(shownTotal),
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                           fontSize: 17, fontWeight: FontWeight.w900)),
                 ],
               ),
             ),
+            const SizedBox(width: 10),
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -385,7 +497,7 @@ class _WalletScreenState extends State<WalletScreen> {
       ),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.7,
+        initialChildSize: 0.75,
         maxChildSize: 0.95,
         builder: (context, scroll) => ListView(
           controller: scroll,
@@ -426,6 +538,8 @@ class _WalletScreenState extends State<WalletScreen> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // ===== الرصيد المخزن (SP) =====
             if (inv.type == 'stored_point') ...[
               _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
                   AppColors.orange, big: true),
@@ -437,47 +551,41 @@ class _WalletScreenState extends State<WalletScreen> {
                       color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              ..._sourcesFor(inv).map((src) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                            child: Text(
-                                '${src['no']} • ${_dmy(src['date'] as String)}',
-                                style: TextStyle(
-                                    color: dark
-                                        ? Colors.grey.shade300
-                                        : Colors.grey.shade700,
-                                    fontSize: 13))),
-                        Text(fmtThousands(src['amt'] as num),
-                            style: const TextStyle(
-                                color: Color(0xFF9B59B6),
-                                fontWeight: FontWeight.w800)),
-                      ],
-                    ),
-                  )),
+              _sourcesTable(_sourcesFor(inv), dark,
+                  const Color(0xFF9B59B6), s.isArabic),
               const Divider(height: 24),
               _row(s.isArabic ? 'الإجمالي' : 'Total',
                   fmtThousands(kPointUnit), const Color(0xFF9B59B6),
                   big: true),
-            ] else if (inv.type == 'return_stored') ...[
+            ]
+
+            // ===== الرصيد المخزن للمرتجع (RSP) =====
+            else if (inv.type == 'return_stored') ...[
               _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
                   AppColors.orange, big: true),
               _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '-1',
                   Colors.red),
-              _row(s.isArabic ? 'مخصوم من الرصيد المخزن' : 'Deducted from stored',
+              _row(
+                  s.isArabic
+                      ? 'مخصوم من الرصيد المخزن'
+                      : 'Deducted from stored',
                   fmtThousands(kPointUnit), const Color(0xFF7D3C98)),
-              const SizedBox(height: 8),
-              Text(
-                s.isArabic
-                    ? 'تُنشأ تلقائياً عند بلوغ رصيد المرتجع 125,000'
-                    : 'Auto-created when return stored reaches 125,000',
-                style: TextStyle(
-                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                    fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            ] else if (inv.type == 'return') ...[
+              const SizedBox(height: 10),
+              Text(s.isArabic ? 'تكوّن من مرتجعات:' : 'From returns:',
+                  style: TextStyle(
+                      color: dark ? Colors.grey.shade300 : Colors.grey.shade700,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              _sourcesTable(_returnSourcesFor(inv), dark,
+                  const Color(0xFF7D3C98), s.isArabic),
+              const Divider(height: 24),
+              _row(s.isArabic ? 'الإجمالي' : 'Total',
+                  fmtThousands(-kPointUnit), const Color(0xFF7D3C98),
+                  big: true),
+            ]
+
+            // ===== المرتجع =====
+            else if (inv.type == 'return') ...[
               ...inv.items.map((it) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
@@ -509,15 +617,18 @@ class _WalletScreenState extends State<WalletScreen> {
               _row(s.isArabic ? 'الإجمالي المرتجع' : 'Returned total',
                   fmtThousands(inv.total), Colors.red, big: true),
               _row(s.isArabic ? 'نقاط مخصومة' : 'Points deducted',
-                  '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                  '${inv.points <= 0 ? '' : '+'}${fmtThousands(inv.points)}',
                   Colors.red),
               _row(
                   s.isArabic
-                      ? 'إلى رصيد المرتجع المخزن'
-                      : 'To return stored pool',
+                      ? 'الرصيد المخزن للمرتجع'
+                      : 'Return stored pool',
                   fmtThousands(inv.total.abs() % kPointUnit),
                   const Color(0xFF9B59B6)),
-            ] else ...[
+            ]
+
+            // ===== الشراء =====
+            else ...[
               ...inv.items.map((it) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
