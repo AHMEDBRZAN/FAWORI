@@ -12,7 +12,7 @@ import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'product_detail_screen.dart';
 
-/// ✅ ثابت محلي لتجنب تعارض kWriteProxy بين orders_service و store_service
+/// ✅ ثابت محلي لتجنب تعارض kWriteProxy
 const String _kProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
 String _dmy(String iso) {
@@ -398,6 +398,10 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
+  // ======================================================
+  // ✅ تفاصيل الفاتورة: رأس (تاريخ + رقم) + جدول + ملخص
+  // ======================================================
+
   void _openDetails(AppSettings s, Invoice inv) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
@@ -409,7 +413,7 @@ class _WalletScreenState extends State<WalletScreen> {
       ),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.7,
+        initialChildSize: 0.75,
         maxChildSize: 0.95,
         builder: (context, scroll) => ListView(
           controller: scroll,
@@ -441,82 +445,58 @@ class _WalletScreenState extends State<WalletScreen> {
                           fontSize: 11,
                           fontWeight: FontWeight.w800)),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(_dmy(inv.date),
-                      style: TextStyle(
-                          color: Colors.grey.shade500, fontSize: 13)),
-                ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            // ✅ فوق الجدول: التاريخ ← ومقابله رقم الفاتورة
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.teal.withAlpha(dark ? 30 : 18),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.teal.withAlpha(60)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today_rounded,
+                      size: 15, color: AppColors.teal),
+                  const SizedBox(width: 6),
+                  Text(_dmy(inv.date),
+                      style: TextStyle(
+                          color:
+                              dark ? Colors.grey.shade200 : AppColors.ink,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13)),
+                  const Spacer(),
+                  const Icon(Icons.receipt_long_outlined,
+                      size: 15, color: AppColors.orange),
+                  const SizedBox(width: 6),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(inv.no.isEmpty ? '—' : inv.no,
+                        style: const TextStyle(
+                            color: AppColors.orange,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            // ✅ الجدول
+            if (inv.type == 'stored_point')
+              _sourcesTable(inv, dark, s)
+            else
+              _itemsTable(inv, dark, s),
+            const SizedBox(height: 14),
+            // ✅ أسفل الجدول: الملخص
             if (inv.type == 'stored_point') ...[
-              _row(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', inv.no,
-                  AppColors.orange, big: true),
               _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '+1',
                   AppColors.teal),
-              const SizedBox(height: 10),
-              Text(s.isArabic ? 'تكوّن من:' : 'From:',
-                  style: TextStyle(
-                      color:
-                          dark ? Colors.grey.shade300 : Colors.grey.shade700,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              ..._sourcesFor(inv).map((src) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                            child: Text(
-                                '${src['no']} • ${_dmy(src['date'] as String)}',
-                                style: TextStyle(
-                                    color: dark
-                                        ? Colors.grey.shade300
-                                        : Colors.grey.shade700,
-                                    fontSize: 13))),
-                        Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Text(fmtThousands(src['amt'] as num),
-                              style: const TextStyle(
-                                  color: Color(0xFF9B59B6),
-                                  fontWeight: FontWeight.w800)),
-                        ),
-                      ],
-                    ),
-                  )),
-              const Divider(height: 24),
               _row(s.isArabic ? 'الإجمالي' : 'Total',
                   fmtThousands(kPointUnit), const Color(0xFF9B59B6),
                   big: true),
             ] else ...[
-              ...inv.items.map((it) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                            child: Text(it.name,
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800))),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.orange.withAlpha(30),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: AppColors.orange.withAlpha(90)),
-                          ),
-                          child: Text('× ${it.qty}',
-                              style: const TextStyle(
-                                  color: AppColors.orange,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w900)),
-                        ),
-                      ],
-                    ),
-                  )),
-              const Divider(height: 24),
               _row(s.isArabic ? 'الإجمالي' : 'Total',
                   fmtThousands(inv.total), AppColors.orange,
                   big: true),
@@ -532,6 +512,191 @@ class _WalletScreenState extends State<WalletScreen> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  /// ✅ جدول المواد: ت | اسم المادة | العدد
+  Widget _itemsTable(Invoice inv, bool dark, AppSettings s) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.orange.withAlpha(60)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            padding:
+                const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            color: AppColors.orange.withAlpha(dark ? 50 : 35),
+            child: Row(
+              children: [
+                SizedBox(
+                    width: 34,
+                    child: Text(s.isArabic ? 'ت' : '#',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.orange,
+                            fontSize: 13))),
+                Expanded(
+                    child: Text(s.isArabic ? 'اسم المادة' : 'Item',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.orange,
+                            fontSize: 13))),
+                SizedBox(
+                    width: 56,
+                    child: Text(s.isArabic ? 'العدد' : 'Qty',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.orange,
+                            fontSize: 13))),
+              ],
+            ),
+          ),
+          for (int i = 0; i < inv.items.length; i++)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              color: i.isOdd
+                  ? (dark
+                      ? Colors.white.withAlpha(8)
+                      : Colors.black.withAlpha(6))
+                  : Colors.transparent,
+              child: Row(
+                children: [
+                  SizedBox(
+                      width: 34,
+                      child: Text('${i + 1}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: dark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                              fontSize: 13))),
+                  Expanded(
+                      child: Text(inv.items[i].name,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: dark ? Colors.white : AppColors.ink,
+                              fontSize: 13))),
+                  SizedBox(
+                      width: 56,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.teal.withAlpha(30),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('${inv.items[i].qty}',
+                              style: const TextStyle(
+                                  color: AppColors.teal,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12)),
+                        ),
+                      )),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ جدول مصادر الرصيد المخزن: ت | رقم الفاتورة | المبلغ
+  Widget _sourcesTable(Invoice inv, bool dark, AppSettings s) {
+    final srcs = _sourcesFor(inv);
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFF9B59B6).withAlpha(60)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            padding:
+                const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            color: const Color(0xFF9B59B6).withAlpha(dark ? 50 : 30),
+            child: Row(
+              children: [
+                SizedBox(
+                    width: 34,
+                    child: Text(s.isArabic ? 'ت' : '#',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF9B59B6),
+                            fontSize: 13))),
+                Expanded(
+                    child: Text(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF9B59B6),
+                            fontSize: 13))),
+                SizedBox(
+                    width: 80,
+                    child: Text(s.isArabic ? 'المبلغ' : 'Amount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF9B59B6),
+                            fontSize: 13))),
+              ],
+            ),
+          ),
+          for (int i = 0; i < srcs.length; i++)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              color: i.isOdd
+                  ? (dark
+                      ? Colors.white.withAlpha(8)
+                      : Colors.black.withAlpha(6))
+                  : Colors.transparent,
+              child: Row(
+                children: [
+                  SizedBox(
+                      width: 34,
+                      child: Text('${i + 1}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: dark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                              fontSize: 13))),
+                  Expanded(
+                      child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                        '${srcs[i]['no']} • ${_dmy(srcs[i]['date'] as String)}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: dark ? Colors.white : AppColors.ink,
+                            fontSize: 12)),
+                  )),
+                  SizedBox(
+                      width: 80,
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(fmtThousands(srcs[i]['amt'] as num),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Color(0xFF9B59B6),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12)),
+                      )),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -906,7 +1071,7 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
     setState(() => _saving = true);
     try {
       final r = await http.post(
-        Uri.parse(_kProxy), // ✅ الثابت المحلي
+        Uri.parse(_kProxy),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'path': widget.path,
@@ -938,7 +1103,7 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
   }
 
   Future<void> _paste() async {
-    final d = await Clipboard.getData('text/plain'); // ✅ الصيغة الصحيحة
+    final d = await Clipboard.getData('text/plain');
     if (d?.text != null && mounted) {
       setState(() => _ctrl.text = d!.text!);
       ScaffoldMessenger.of(context)
