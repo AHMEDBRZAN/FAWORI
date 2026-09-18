@@ -12,6 +12,9 @@ import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'product_detail_screen.dart';
 
+/// ✅ ثابت محلي لتجنب تعارض kWriteProxy بين orders_service و store_service
+const String _kProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
+
 String _dmy(String iso) {
   try {
     final p = iso.split('-');
@@ -569,7 +572,6 @@ class FavoritesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
-    // ✅ المدير يرى شاشة الإدارة بدلاً من المفضلة
     if (s.isAdmin || s.isImageAdmin) return const AdminCodeView();
     return const _FavoritesView();
   }
@@ -904,7 +906,7 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
     setState(() => _saving = true);
     try {
       final r = await http.post(
-        Uri.parse(kWriteProxy),
+        Uri.parse(_kProxy), // ✅ الثابت المحلي
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'path': widget.path,
@@ -930,17 +932,17 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
   Future<void> _copy() async {
     await Clipboard.setData(ClipboardData(text: _ctrl.text));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(' تم نسخ الكل')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم نسخ الكل')));
     }
   }
 
   Future<void> _paste() async {
-    final d = await Clipboard.getData(ClipboardData.kTextPlain);
+    final d = await Clipboard.getData('text/plain'); // ✅ الصيغة الصحيحة
     if (d?.text != null && mounted) {
       setState(() => _ctrl.text = d!.text!);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('📥 تم لصق المحتوى')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('تم لصق المحتوى')));
     }
   }
 
@@ -991,8 +993,8 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
           ),
           IconButton(
             tooltip: s.isArabic ? 'نسخ الكل' : 'Copy all',
-            icon:
-                const Icon(Icons.content_copy_rounded, color: AppColors.orange),
+            icon: const Icon(Icons.content_copy_rounded,
+                color: AppColors.orange),
             onPressed: _copy,
           ),
           IconButton(
@@ -1032,8 +1034,9 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
                     ),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor:
-                          dark ? const Color(0xFF1E1E28) : const Color(0xFFFFFDF9),
+                      fillColor: dark
+                          ? const Color(0xFF1E1E28)
+                          : const Color(0xFFFFFDF9),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
                       contentPadding: const EdgeInsets.all(12),
