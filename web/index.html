@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <style>
+    /* خلفية فقط — بدون أي loader أو شعار */
     html, body {
       margin: 0;
       padding: 0;
@@ -23,48 +24,18 @@
       background: #EFF2F7;
     }
     body.dark { background: #141419; }
-
-    .loader {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      transition: opacity 0.3s;
-    }
-    .loader.hide { opacity: 0; pointer-events: none; }
-
-    .spinner {
-      width: 30px;
-      height: 30px;
-      border: 3px solid rgba(15, 157, 147, 0.2);
-      border-top-color: #0F9D93;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 
   <script>
+    /* ✅ المفتاح الصحيح: flutter.isDark — لتلوين الخلفية قبل أول إطار بدون وميض */
     try {
-      if (localStorage.getItem('isDark') === 'true') {
+      if ((localStorage.getItem('flutter.isDark') || 'false') == 'true') {
         document.body.classList.add('dark');
       }
     } catch (_) {}
   </script>
 </head>
 <body>
-  <div class="loader" id="loader">
-    <div class="spinner"></div>
-  </div>
-
   <script src="flutter_bootstrap.js" async></script>
-  <script>
-    window.addEventListener('flutter-first-frame', function () {
-      const l = document.getElementById('loader');
-      if (l) { l.classList.add('hide'); setTimeout(() => l.remove(), 300); }
-    });
-  </script>
 </body>
 </html>
