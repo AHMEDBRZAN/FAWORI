@@ -312,6 +312,23 @@ class _OrderDetailState extends State<_OrderDetail> {
     return 'عميل';
   }
 
+  /// ✅ تنسيق الإدخال بفواصل الآلاف أثناء الكتابة: 200000 ← 200,000
+  String _fmtInput(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return '';
+    return fmtThousands(int.parse(digits));
+  }
+
+  void _applyMoneyFormat(TextEditingController c) {
+    final f = _fmtInput(c.text);
+    if (f != c.text) {
+      c.value = TextEditingValue(
+        text: f,
+        selection: TextSelection.collapsed(offset: f.length),
+      );
+    }
+  }
+
   Future<void> _accept() async {
     setState(() => _busy = true);
     try {
@@ -363,8 +380,11 @@ class _OrderDetailState extends State<_OrderDetail> {
             })
         .toList();
 
-    final totalCtrl =
-        TextEditingController(text: widget.order.total.toStringAsFixed(0));
+    // ✅ القيمة الابتدائية بفواصل الآلاف
+    final totalCtrl = TextEditingController(
+        text: widget.order.total > 0
+            ? fmtThousands(widget.order.total.toInt())
+            : '');
     final invCtrl = TextEditingController(text: widget.order.invoiceNo);
 
     final result = await showDialog<bool>(
@@ -496,6 +516,10 @@ class _OrderDetailState extends State<_OrderDetail> {
                   TextField(
                     controller: totalCtrl,
                     keyboardType: TextInputType.number,
+                    onChanged: (_) {
+                      _applyMoneyFormat(totalCtrl);
+                      setDialogState(() {});
+                    },
                     style: TextStyle(
                         color: dark ? Colors.white : AppColors.ink,
                         fontSize: 16),
@@ -613,12 +637,41 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
+  /// ✅ حقل المبالغ: تنسيق تلقائي بفواصل الآلاف أثناء الكتابة
+  Widget _moneyField(String hint, TextEditingController c) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    return TextField(
+      controller: c,
+      keyboardType: TextInputType.number,
+      onChanged: (_) {
+        _applyMoneyFormat(c);
+        setState(() {});
+      },
+      style:
+          TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 16),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(
+            color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
+            fontSize: 15),
+        prefixIcon:
+            const Icon(Icons.payments_outlined, color: AppColors.orange, size: 22),
+        filled: true,
+        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+    );
+  }
+
   Widget _field(String hint, TextEditingController c,
       {IconData? icon, Color? iconColor}) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     return TextField(
       controller: c,
-      keyboardType: TextInputType.number,
       onChanged: (_) => setState(() {}),
       style:
           TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 16),
@@ -641,7 +694,6 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
-  /// ✅ التعديل الجديد: القيمة داخل Directionality.ltr لعدم قفز إشارة السالب
   Widget _sumRow(String label, String value, Color c, {bool big = false}) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
@@ -735,8 +787,7 @@ class _OrderDetailState extends State<_OrderDetail> {
           ),
           const SizedBox(height: 18),
           if (widget.isAdmin && o.status == 'pending') ...[
-            _field(s.isArabic ? 'السعر الإجمالي' : 'Total', _total,
-                icon: Icons.payments_outlined),
+            _moneyField(s.isArabic ? 'السعر الإجمالي' : 'Total', _total),
             const SizedBox(height: 12),
             _field(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', _invNo,
                 icon: Icons.receipt_long_outlined,
