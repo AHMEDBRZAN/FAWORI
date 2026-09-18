@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
@@ -174,9 +175,13 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ),
                     const SizedBox(height: 8),
-                    // ✅ حقل رقم الفاتورة — فوق السعر الإجمالي
+                    // ✅ حقل رقم الفاتورة — كيبورد أرقام فقط
                     TextField(
                       controller: _invNo,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly
+                      ],
                       style: TextStyle(
                           color: dark ? Colors.white : AppColors.ink,
                           fontSize: 16),
