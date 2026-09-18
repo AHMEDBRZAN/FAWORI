@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
@@ -330,7 +331,6 @@ class _OrderDetailState extends State<_OrderDetail> {
   Future<void> _accept() async {
     setState(() => _busy = true);
     try {
-      // ✅ رقم الفاتورة يبقى كما أدخله المستخدم — المدير يدخل السعر فقط
       widget.order.total = _totalNum;
       await OrdersService.acceptOrder(widget.order);
       try {
@@ -366,6 +366,7 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
+  /// 🔄 نافذة المرتجع: حقول فارغة تماماً — سعر ورقم فاتورة المرتجع مختلفان
   Future<void> _showReturnDialog() async {
     final s = context.read<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -378,11 +379,9 @@ class _OrderDetailState extends State<_OrderDetail> {
             })
         .toList();
 
-    final totalCtrl = TextEditingController(
-        text: widget.order.total > 0
-            ? fmtThousands(widget.order.total.toInt())
-            : '');
-    final invCtrl = TextEditingController(text: widget.order.invoiceNo);
+    // ✅ فارغة — لا نجلب سعر أو رقم الفاتورة الأصلية
+    final totalCtrl = TextEditingController();
+    final invCtrl = TextEditingController();
 
     final result = await showDialog<bool>(
       context: context,
@@ -510,18 +509,20 @@ class _OrderDetailState extends State<_OrderDetail> {
                     );
                   }),
                   const SizedBox(height: 16),
+                  // ✅ سعر المرتجع: فارغ + أرقام فقط + حذف مباشر
                   TextField(
                     controller: totalCtrl,
                     keyboardType: TextInputType.number,
-                    onChanged: (_) {
-                      _applyMoneyFormat(totalCtrl);
-                      setDialogState(() {});
-                    },
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ],
                     style: TextStyle(
                         color: dark ? Colors.white : AppColors.ink,
                         fontSize: 16),
                     decoration: InputDecoration(
-                      hintText: s.isArabic ? 'السعر الإجمالي' : 'Total',
+                      hintText: s.isArabic
+                          ? 'اكتب سعر المرتجع'
+                          : 'Write return price',
                       hintStyle: TextStyle(
                           color: dark
                               ? Colors.grey.shade500
@@ -538,13 +539,20 @@ class _OrderDetailState extends State<_OrderDetail> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  // ✅ رقم فاتورة المرتجع: فارغ + أرقام فقط + حذف مباشر
                   TextField(
                     controller: invCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ],
                     style: TextStyle(
                         color: dark ? Colors.white : AppColors.ink,
                         fontSize: 16),
                     decoration: InputDecoration(
-                      hintText: s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                      hintText: s.isArabic
+                          ? 'اكتب رقم فاتورة المرتجع'
+                          : 'Write return invoice No',
                       hintStyle: TextStyle(
                           color: dark
                               ? Colors.grey.shade500
@@ -601,6 +609,18 @@ class _OrderDetailState extends State<_OrderDetail> {
 
     if (result != true || !mounted) return;
 
+    // ✅ تحقق من سعر المرتجع قبل التنفيذ
+    final customTotal = double.tryParse(totalCtrl.text) ?? 0;
+    if (customTotal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.isArabic
+              ? 'أدخل سعر المرتجع'
+              : 'Enter return price'),
+          backgroundColor: Colors.red));
+      return;
+    }
+    final customInv = invCtrl.text.trim();
+
     setState(() => _busy = true);
     try {
       final returnedItems = items
@@ -608,9 +628,6 @@ class _OrderDetailState extends State<_OrderDetail> {
           .map((it) => OrderItem(
               name: it['name'] as String, qty: it['qty'] as int))
           .toList();
-      final customTotal =
-          double.tryParse(totalCtrl.text.replaceAll(',', '')) ?? 0;
-      final customInv = invCtrl.text.trim();
 
       await OrdersService.markReturned(
         widget.order,
@@ -767,7 +784,6 @@ class _OrderDetailState extends State<_OrderDetail> {
               ),
               child: Column(
                 children: [
-                  // ✅ رقم الفاتورة من المستخدم — معلومة فقط
                   _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
                       o.invoiceNo.isEmpty ? '—' : o.invoiceNo,
                       AppColors.orange),
