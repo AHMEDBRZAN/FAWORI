@@ -1,5 +1,7 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/app_settings.dart';
 import 'core/favorites.dart';
 import 'core/messenger.dart';
@@ -9,10 +11,25 @@ import 'screens/main_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MultiProvider(providers: [
-    ChangeNotifierProvider(create: (_) => AppSettings()),
-    ChangeNotifierProvider(create: (_) => Favorites()),
-  ], child: const FaworiApp()));
+
+  // ✅ قراءة الثيم المحفوظ قبل أول إطار + تلوين خلفية الصفحة بنفس اللون
+  final p = await SharedPreferences.getInstance();
+  final dark = p.getBool('isDark') ?? false;
+  final arabic = p.getBool('isArabic') ?? true;
+  try {
+    html.document.body?.style.backgroundColor =
+        dark ? '#141419' : '#EFF2F7';
+  } catch (_) {}
+
+  final settings = AppSettings()..applyInitial(dark: dark, arabic: arabic);
+
+  runApp(MultiProvider(
+    providers: [
+      ChangeNotifierProvider.value(value: settings),
+      ChangeNotifierProvider(create: (_) => Favorites()),
+    ],
+    child: const FaworiApp(),
+  ));
 }
 
 class FaworiApp extends StatelessWidget {
@@ -53,13 +70,13 @@ class _SplashGateState extends State<SplashGate> {
 
   Future<void> _boot() async {
     try {
+      // ✅ مهلة قصوى 3 ثوانٍ فقط
       await context
           .read<AppSettings>()
           .restoreSession()
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 3));
     } catch (_) {}
-    // ✅ أسرع: نصف ثانية فقط
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 400));
     if (mounted) setState(() => _ready = true);
   }
 
@@ -71,7 +88,7 @@ class _SplashGateState extends State<SplashGate> {
   }
 }
 
-/// ✅ Splash خفيف وسريع — يتبع وضع التطبيق (داكن / فاتح)
+/// ✅ Splash موحّد اللون حسب ثيم التطبيق — خفيف وسريع — صورة webp
 class SplashView extends StatelessWidget {
   const SplashView({super.key});
   @override
@@ -94,6 +111,7 @@ class SplashView extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(28),
+                // ✅ الشعار بصيغة webp (أصغر وأسرع تحميلاً)
                 child: Image.asset(
                   'assets/images/logo.webp',
                   fit: BoxFit.cover,
