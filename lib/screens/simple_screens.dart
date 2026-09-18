@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/favorites.dart';
@@ -17,6 +20,10 @@ String _dmy(String iso) {
     return iso;
   }
 }
+
+// ======================================================
+// المحفظة
+// ======================================================
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -287,7 +294,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ Stack: المبلغ في مركز البطاقة الحقيقي — الشارات مثبتة على الأطراف
   Widget _tile(AppSettings s, Invoice inv, bool dark) {
     final c = _typeColor(inv);
     final num shownTotal =
@@ -308,7 +314,6 @@ class _WalletScreenState extends State<WalletScreen> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // ✅ المنتصف الحقيقي للبطاقة
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -333,7 +338,6 @@ class _WalletScreenState extends State<WalletScreen> {
                   ],
                 ),
               ),
-              // ✅ يمين: شارة النوع مثبتة
               Positioned(
                 right: 0,
                 top: 0,
@@ -356,7 +360,6 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                 ),
               ),
-              // ✅ يسار: شارة النقاط مثبتة
               Positioned(
                 left: 0,
                 top: 0,
@@ -556,8 +559,24 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 }
 
+// ======================================================
+// المفضلة (مستخدم) / الإدارة (مدير)
+// ======================================================
+
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    // ✅ المدير يرى شاشة الإدارة بدلاً من المفضلة
+    if (s.isAdmin || s.isImageAdmin) return const AdminCodeView();
+    return const _FavoritesView();
+  }
+}
+
+class _FavoritesView extends StatelessWidget {
+  const _FavoritesView();
 
   Future<void> _addToCart(BuildContext context, Product p) async {
     final s = context.read<AppSettings>();
@@ -662,6 +681,366 @@ class FavoritesScreen extends StatelessWidget {
                   ),
                 );
               },
+            ),
+    );
+  }
+}
+
+// ======================================================
+// 🛠️ شاشة الإدارة: ملفات الكود في المستودع
+// ======================================================
+
+class AdminCodeView extends StatefulWidget {
+  const AdminCodeView({super.key});
+  @override
+  State<AdminCodeView> createState() => _AdminCodeViewState();
+}
+
+class _AdminCodeViewState extends State<AdminCodeView> {
+  List<String> _files = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final r = await http
+          .get(Uri.parse(
+              'https://api.github.com/repos/AHMEDBRZAN/FAWORI/git/trees/main?recursive=1'))
+          .timeout(const Duration(seconds: 12));
+      if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
+      final j = jsonDecode(r.body);
+      final tree = (j['tree'] as List<dynamic>? ?? []);
+      final files = tree
+          .where((e) =>
+              e['type'] == 'blob' &&
+              ((e['path'] as String).endsWith('.dart') ||
+                  (e['path'] as String).endsWith('.yml')))
+          .map((e) => e['path'] as String)
+          .toList()
+        ..sort();
+      if (!mounted) return;
+      setState(() {
+        _files = files;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$e';
+        _loading = false;
+      });
+    }
+  }
+
+  Map<String, List<String>> get _groups {
+    final m = <String, List<String>>{};
+    for (final p in _files) {
+      final i = p.lastIndexOf('/');
+      final dir = i <= 0 ? 'الجذر' : p.substring(0, i);
+      m.putIfAbsent(dir, () => []).add(p);
+    }
+    return m;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final groups = _groups;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(s.isArabic ? 'الإدارة' : 'Admin'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.orange),
+            onPressed: _load,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? ListView(
+                  children: [
+                    const SizedBox(height: 100),
+                    Center(
+                        child: Text(
+                      s.isArabic ? 'فشل التحميل: $_error' : 'Failed: $_error',
+                      style: const TextStyle(color: Colors.red),
+                    )),
+                  ],
+                )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      for (final entry in groups.entries) ...[
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.folder_rounded,
+                                  color: AppColors.orange, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(entry.key,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14)),
+                              ),
+                              Text('${entry.value.length}',
+                                  style: TextStyle(
+                                      color: Colors.grey.shade500,
+                                      fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        for (final f in entry.value)
+                          Pressable(
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        CodeEditorPage(path: f))),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: dark
+                                    ? const Color(0xFF1E1E28)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: AppColors.teal.withAlpha(60)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.description_outlined,
+                                      color: AppColors.teal, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      f.split('/').last,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13),
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_left_rounded,
+                                      color: Colors.grey, size: 20),
+                                ],
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 8),
+                      ],
+                    ],
+                  ),
+                ),
+    );
+  }
+}
+
+// ======================================================
+// 📝 محرر الكود
+// ======================================================
+
+class CodeEditorPage extends StatefulWidget {
+  final String path;
+  const CodeEditorPage({super.key, required this.path});
+  @override
+  State<CodeEditorPage> createState() => _CodeEditorPageState();
+}
+
+class _CodeEditorPageState extends State<CodeEditorPage> {
+  final _ctrl = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final r = await http
+          .get(Uri.parse(
+              'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main/${widget.path}?t=${DateTime.now().millisecondsSinceEpoch}'))
+          .timeout(const Duration(seconds: 12));
+      if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
+      _ctrl.text = r.body;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل التحميل: $e')));
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final r = await http.post(
+        Uri.parse(kWriteProxy),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'path': widget.path,
+          'content': base64Encode(utf8.encode(_ctrl.text)),
+        }),
+      );
+      if (r.statusCode != 200 && r.statusCode != 201) {
+        throw Exception('PUT ${r.statusCode}');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('✅ تم الحفظ والنشر — سيبدأ البناء تلقائياً')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل الحفظ: $e')));
+      }
+    }
+    if (mounted) setState(() => _saving = false);
+  }
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: _ctrl.text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(' تم نسخ الكل')));
+    }
+  }
+
+  Future<void> _paste() async {
+    final d = await Clipboard.getData(ClipboardData.kTextPlain);
+    if (d?.text != null && mounted) {
+      setState(() => _ctrl.text = d!.text!);
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('📥 تم لصق المحتوى')));
+    }
+  }
+
+  void _clear() {
+    final s = context.read<AppSettings>();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(s.isArabic ? 'مسح الكل' : 'Clear all'),
+        content: Text(s.isArabic
+            ? 'سيُحذف كل النص داخل المحرر (يمكنك اللصق بعده).'
+            : 'All text in the editor will be cleared.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _ctrl.text = '');
+            },
+            child: Text(s.isArabic ? 'مسح' : 'Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final name = widget.path.split('/').last;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(name, style: const TextStyle(fontSize: 15)),
+        actions: [
+          IconButton(
+            tooltip: s.isArabic ? 'لصق' : 'Paste',
+            icon: const Icon(Icons.content_paste_rounded,
+                color: AppColors.teal),
+            onPressed: _paste,
+          ),
+          IconButton(
+            tooltip: s.isArabic ? 'نسخ الكل' : 'Copy all',
+            icon:
+                const Icon(Icons.content_copy_rounded, color: AppColors.orange),
+            onPressed: _copy,
+          ),
+          IconButton(
+            tooltip: s.isArabic ? 'مسح الكل' : 'Clear all',
+            icon: const Icon(Icons.delete_sweep_rounded, color: Colors.red),
+            onPressed: _clear,
+          ),
+          IconButton(
+            tooltip: s.isArabic ? 'حفظ ونشر' : 'Save & deploy',
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.teal))
+                : const Icon(Icons.cloud_upload_rounded,
+                    color: AppColors.teal),
+            onPressed: _saving ? null : _save,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(12),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: SingleChildScrollView(
+                  child: TextField(
+                    controller: _ctrl,
+                    maxLines: null,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      height: 1.5,
+                      color: dark ? Colors.grey.shade100 : AppColors.ink,
+                    ),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor:
+                          dark ? const Color(0xFF1E1E28) : const Color(0xFFFFFDF9),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+              ),
             ),
     );
   }
