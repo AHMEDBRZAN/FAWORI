@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
+  <!-- ✅ سطر إلزامي لـ Flutter build -->
+  <base href="$FLUTTER_BASE_HREF">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>FAWORI</title>
@@ -11,7 +14,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <style>
-    /* ✅ قراءة الثيم المحفوظ في localStorage وتلوين الخلفية فوراً (يمنع الوميض) */
     html, body {
       margin: 0;
       padding: 0;
@@ -53,14 +55,12 @@
   </script>
 </head>
 <body>
-  <!-- Loader بسيط يختفي فور بدء Flutter -->
   <div class="loader" id="loader">
     <div class="spinner"></div>
   </div>
 
   <script src="flutter_bootstrap.js" async></script>
   <script>
-    // إخفاء الـ loader بعد تحميل Flutter
     window.addEventListener('flutter-first-frame', function () {
       const l = document.getElementById('loader');
       if (l) { l.classList.add('hide'); setTimeout(() => l.remove(), 300); }
