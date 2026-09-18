@@ -38,6 +38,12 @@ class AppSettings extends ChangeNotifier {
 
   String get _seenKey => 'seen_${_user?.id ?? ''}';
 
+  /// ✅ تطبيق الثيم المحفوظ قبل أول إطار (يمنع وميض اللون)
+  void applyInitial({required bool dark, required bool arabic}) {
+    _isDark = dark;
+    _isArabic = arabic;
+  }
+
   String tr(String key) {
     const Map<String, Map<String, String>> strings = {
       'appName': {'ar': 'شركة فاوري', 'en': 'FAWORI'},
