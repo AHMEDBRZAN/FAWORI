@@ -297,7 +297,6 @@ class _OrderDetail extends StatefulWidget {
 
 class _OrderDetailState extends State<_OrderDetail> {
   final _total = TextEditingController();
-  final _invNo = TextEditingController();
   bool _busy = false;
 
   double get _totalNum =>
@@ -312,7 +311,6 @@ class _OrderDetailState extends State<_OrderDetail> {
     return 'عميل';
   }
 
-  /// ✅ تنسيق الإدخال بفواصل الآلاف أثناء الكتابة: 200000 ← 200,000
   String _fmtInput(String raw) {
     final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.isEmpty) return '';
@@ -332,8 +330,8 @@ class _OrderDetailState extends State<_OrderDetail> {
   Future<void> _accept() async {
     setState(() => _busy = true);
     try {
+      // ✅ رقم الفاتورة يبقى كما أدخله المستخدم — المدير يدخل السعر فقط
       widget.order.total = _totalNum;
-      widget.order.invoiceNo = _invNo.text.trim();
       await OrdersService.acceptOrder(widget.order);
       try {
         await context.read<AppSettings>().refreshUser();
@@ -380,7 +378,6 @@ class _OrderDetailState extends State<_OrderDetail> {
             })
         .toList();
 
-    // ✅ القيمة الابتدائية بفواصل الآلاف
     final totalCtrl = TextEditingController(
         text: widget.order.total > 0
             ? fmtThousands(widget.order.total.toInt())
@@ -637,7 +634,6 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
-  /// ✅ حقل المبالغ: تنسيق تلقائي بفواصل الآلاف أثناء الكتابة
   Widget _moneyField(String hint, TextEditingController c) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     return TextField(
@@ -654,35 +650,8 @@ class _OrderDetailState extends State<_OrderDetail> {
         hintStyle: TextStyle(
             color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
             fontSize: 15),
-        prefixIcon:
-            const Icon(Icons.payments_outlined, color: AppColors.orange, size: 22),
-        filled: true,
-        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-    );
-  }
-
-  Widget _field(String hint, TextEditingController c,
-      {IconData? icon, Color? iconColor}) {
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    return TextField(
-      controller: c,
-      onChanged: (_) => setState(() {}),
-      style:
-          TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 16),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(
-            color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
-            fontSize: 15),
-        prefixIcon: icon != null
-            ? Icon(icon, color: iconColor ?? AppColors.orange, size: 22)
-            : null,
+        prefixIcon: const Icon(Icons.payments_outlined,
+            color: AppColors.orange, size: 22),
         filled: true,
         fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
         border: OutlineInputBorder(
@@ -788,10 +757,6 @@ class _OrderDetailState extends State<_OrderDetail> {
           const SizedBox(height: 18),
           if (widget.isAdmin && o.status == 'pending') ...[
             _moneyField(s.isArabic ? 'السعر الإجمالي' : 'Total', _total),
-            const SizedBox(height: 12),
-            _field(s.isArabic ? 'رقم الفاتورة' : 'Invoice No', _invNo,
-                icon: Icons.receipt_long_outlined,
-                iconColor: AppColors.teal),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
@@ -802,6 +767,10 @@ class _OrderDetailState extends State<_OrderDetail> {
               ),
               child: Column(
                 children: [
+                  // ✅ رقم الفاتورة من المستخدم — معلومة فقط
+                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                      o.invoiceNo.isEmpty ? '—' : o.invoiceNo,
+                      AppColors.orange),
                   _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
                       fmtThousands(_totalNum), AppColors.orange,
                       big: true),
@@ -962,6 +931,8 @@ class _OrderDetailState extends State<_OrderDetail> {
                           fontSize: 22,
                           fontWeight: FontWeight.w900)),
                   const SizedBox(height: 8),
+                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                      o.invoiceNo, AppColors.orange),
                   _sumRow(s.isArabic ? 'النقاط المخصومة' : 'Points deducted',
                       '-${fmtThousands(o.points)}', Colors.red),
                   _sumRow(s.isArabic ? 'الرصيد المخصوم' : 'Stored deducted',
@@ -987,6 +958,9 @@ class _OrderDetailState extends State<_OrderDetail> {
                           color: Colors.red,
                           fontSize: 22,
                           fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                      o.invoiceNo, AppColors.orange),
                   const SizedBox(height: 14),
                   Text(
                     s.isArabic
