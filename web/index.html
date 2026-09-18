@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <!-- ✅ سطر إلزامي لـ Flutter build -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
@@ -14,7 +13,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <style>
-    /* خلفية بلون الثيم المحفوظ — بدون أي شاشة مقدمة */
     html, body {
       margin: 0;
       padding: 0;
@@ -24,6 +22,25 @@
       background: #EFF2F7;
     }
     body.dark { background: #141419; }
+
+    .loader {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .loader.hide { opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(15, 157, 147, 0.2);
+      border-top-color: #0F9D93;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 
   <script>
@@ -35,6 +52,16 @@
   </script>
 </head>
 <body>
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+  </div>
+
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      const l = document.getElementById('loader');
+      if (l) { l.classList.add('hide'); setTimeout(() => l.remove(), 300); }
+    });
+  </script>
 </body>
 </html>
