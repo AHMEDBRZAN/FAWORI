@@ -1,7 +1,5 @@
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'core/app_settings.dart';
 import 'core/favorites.dart';
 import 'core/messenger.dart';
@@ -11,22 +9,9 @@ import 'screens/main_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ✅ قراءة الثيم المحفوظ قبل أول إطار (يمنع وميض اللون)
-  final p = await SharedPreferences.getInstance();
-  final dark = p.getBool('isDark') ?? false;
-  final arabic = p.getBool('isArabic') ?? true;
-  try {
-    html.document.body?.style.backgroundColor =
-        dark ? '#141419' : '#EFF2F7';
-  } catch (_) {}
-
-  final settings = AppSettings()..applyInitial(dark: dark, arabic: arabic);
-
-  // ✅ runApp فوراً — بدون انتظار
   runApp(MultiProvider(
     providers: [
-      ChangeNotifierProvider.value(value: settings),
+      ChangeNotifierProvider(create: (_) => AppSettings()),
       ChangeNotifierProvider(create: (_) => Favorites()),
     ],
     child: const FaworiApp(),
@@ -54,7 +39,7 @@ class FaworiApp extends StatelessWidget {
   }
 }
 
-/// ✅ بوابة صامتة: خلفية بلون الثيم + مؤشر صغير فقط أثناء استعادة الجلسة
+/// ✅ بوابة بهوية فاوري: برتقالي ثابت + شعار + اسم (مطابقة لشاشة الويب)
 class _Gate extends StatefulWidget {
   const _Gate();
   @override
@@ -87,14 +72,67 @@ class _GateState extends State<_Gate> {
       return s.isLoggedIn ? const MainScreen() : const LoginScreen();
     }
     return Scaffold(
-      backgroundColor:
-          s.isDark ? const Color(0xFF141419) : const Color(0xFFEFF2F7),
-      body: const Center(
-        child: SizedBox(
-          width: 26,
-          height: 26,
-          child: CircularProgressIndicator(
-              strokeWidth: 3, color: AppColors.teal),
+      backgroundColor: const Color(0xFFF26B0F),
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 130,
+                height: 130,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111111),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withAlpha(90),
+                        blurRadius: 30,
+                        offset: const Offset(0, 8)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: Image.asset(
+                    'assets/images/logo.webp',
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder: (c, o, st) => const Center(
+                      child: Text('FAWORI',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'شركة فاورِي',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 22),
+              const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                    strokeWidth: 3, color: Colors.white),
+              ),
+            ],
+          ),
         ),
       ),
     );
