@@ -39,7 +39,7 @@ class FaworiApp extends StatelessWidget {
   }
 }
 
-/// ✅ بوابة بهوية فاوري: برتقالي ثابت + شعار + اسم (مطابقة لشاشة الويب)
+/// ✅ بوابة بهوية فاوري الموحّدة: تدرج برتقالي فاتح + شعار كبير + اسم أغمق
 class _Gate extends StatefulWidget {
   const _Gate();
   @override
@@ -77,31 +77,37 @@ class _GateState extends State<_Gate> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            colors: <Color>[
+              Color(0xFFFFA149),
+              Color(0xFFF98A2B),
+              Color(0xFFF26B0F),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: <double>[0.0, 0.55, 1.0],
           ),
         ),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // ✅ شعار أكبر ومتناسق
               Container(
-                width: 130,
-                height: 130,
+                width: 160,
+                height: 160,
                 decoration: BoxDecoration(
                   color: const Color(0xFF111111),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(36),
+                  border: Border.all(color: Colors.white, width: 3),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withAlpha(90),
-                        blurRadius: 30,
-                        offset: const Offset(0, 8)),
+                        color: Colors.black.withAlpha(80),
+                        blurRadius: 40,
+                        offset: const Offset(0, 12)),
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(33),
                   child: Image.asset(
                     'assets/images/logo.webp',
                     fit: BoxFit.cover,
@@ -110,26 +116,27 @@ class _GateState extends State<_Gate> {
                       child: Text('FAWORI',
                           style: TextStyle(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: 24,
                               fontWeight: FontWeight.w900)),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 22),
+              // ✅ اسم أغمق وأكبر ومتناسق مع الشعار
               const Text(
                 'شركة فاورِي',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
+                    color: Color(0xFF3B1A00),
+                    fontSize: 30,
                     fontWeight: FontWeight.w900),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 24),
               const SizedBox(
-                width: 26,
-                height: 26,
+                width: 28,
+                height: 28,
                 child: CircularProgressIndicator(
-                    strokeWidth: 3, color: Colors.white),
+                    strokeWidth: 3, color: Color(0xFF3B1A00)),
               ),
             ],
           ),
