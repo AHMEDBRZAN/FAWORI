@@ -56,9 +56,10 @@ class _SplashGateState extends State<SplashGate> {
       await context
           .read<AppSettings>()
           .restoreSession()
-          .timeout(const Duration(seconds: 6));
+          .timeout(const Duration(seconds: 4));
     } catch (_) {}
-    await Future.delayed(const Duration(milliseconds: 1200));
+    // ✅ أسرع: نصف ثانية فقط
+    await Future.delayed(const Duration(milliseconds: 500));
     if (mounted) setState(() => _ready = true);
   }
 
@@ -70,30 +71,29 @@ class _SplashGateState extends State<SplashGate> {
   }
 }
 
+/// ✅ Splash خفيف وسريع — يتبع وضع التطبيق (داكن / فاتح)
 class SplashView extends StatelessWidget {
   const SplashView({super.key});
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    final bool dark = s.isDark;
     return Scaffold(
+      backgroundColor: dark ? const Color(0xFF141419) : const Color(0xFFEFF2F7),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 150,
-              height: 150,
+              width: 130,
+              height: 130,
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(34),
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(color: AppColors.orange, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                      color: AppColors.teal.withAlpha(60), blurRadius: 40),
-                ],
               ),
-              // ✅ حل مشكلة الصورة: شعار نصي احتياطي إذا فشل تحميل الصورة
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
+                borderRadius: BorderRadius.circular(28),
                 child: Image.asset(
                   'assets/images/logo.webp',
                   fit: BoxFit.cover,
@@ -109,27 +109,29 @@ class SplashView extends StatelessWidget {
                       child: Text('FAWORI',
                           style: TextStyle(
                               color: Colors.white,
-                              fontSize: 22,
+                              fontSize: 20,
                               fontWeight: FontWeight.w900)),
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 22),
-            ShaderMask(
-              shaderCallback: (Rect r) => const LinearGradient(
-                      colors: <Color>[AppColors.teal, AppColors.orange])
-                  .createShader(r),
-              child: const Text('شركة فاورِي',
-                  style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white)),
+            const SizedBox(height: 18),
+            Text(
+              'شركة فاورِي',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: dark ? AppColors.teal : AppColors.orange,
+              ),
             ),
-            const SizedBox(height: 26),
-            const CircularProgressIndicator(
-                color: AppColors.teal, backgroundColor: Color(0x33E8A33C)),
+            const SizedBox(height: 22),
+            const SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                  strokeWidth: 3, color: AppColors.teal),
+            ),
           ],
         ),
       ),
