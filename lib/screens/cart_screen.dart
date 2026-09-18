@@ -11,9 +11,10 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  List<CartItem> _cart = [];
-  String _uid = '';
+  List<CartItem> _items = [];
+  bool _loading = true;
   bool _busy = false;
+  final _invNo = TextEditingController();
 
   @override
   void initState() {
@@ -21,190 +22,304 @@ class _CartScreenState extends State<CartScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _invNo.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final s = context.read<AppSettings>();
-    if (s.user == null) return;
-    _uid = s.user!.id;
-    final c = await OrdersService.loadCart(_uid);
-    if (mounted) setState(() => _cart = c);
-  }
-
-  Future<void> _save() async {
-    await OrdersService.saveCart(_uid, _cart);
-    setState(() {});
-  }
-
-  Future<void> _submit() async {
-    final s = context.read<AppSettings>();
-    if (s.user == null || _cart.isEmpty) return;
-    setState(() => _busy = true);
-    try {
-      final order = Order(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userId: s.user!.id,
-        userName: s.user!.name,
-        userRole: s.user!.role,
-        date: DateTime.now().toString().substring(0, 10),
-        items: _cart.map((c) => OrderItem(name: c.name, qty: c.qty)).toList(),
-      );
-      await OrdersService.submitOrder(order);
-      await OrdersService.clearCart(_uid);
-      if (mounted) {
-        setState(() {
-          _cart = [];
-          _busy = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ تم إرسال الفاتورة إلى الإدارة')));
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      String msg = 'فشل الإرسال: $e';
-      if (e.toString().contains('401')) {
-        msg = 'خدمة الكتابة رفضت الطلب (401) — حدّث سر GH_TOKEN في Cloudflare';
-      } else if (e.toString().contains('Failed host lookup') ||
-          e.toString().contains('SocketException')) {
-        msg = 'تحقق من اتصال الإنترنت';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    final cart = await OrdersService.loadCart(s.user?.id ?? '');
+    if (mounted) {
+      setState(() {
+        _items = cart;
+        _loading = false;
+      });
     }
   }
 
-  Widget _row(CartItem c) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.orange.withAlpha(60)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(c.name,
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-          ),
-          IconButton(
-              icon: const Icon(Icons.remove_circle_outline, color: AppColors.orange),
-              onPressed: () {
-                if (c.qty > 1) {
-                  c.qty--;
-                  _save();
-                }
-              }),
-          Text('${c.qty}',
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-          IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: AppColors.orange),
-              onPressed: () {
-                c.qty++;
-                _save();
-              }),
-          IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () {
-                _cart.remove(c);
-                _save();
-              }),
-        ],
-      ),
-    );
+  Future<void> _save() async {
+    final s = context.read<AppSettings>();
+    await OrdersService.saveCart(s.user?.id ?? '', _items);
   }
 
-  Widget _sumRow(String label, String value, Color c) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const Spacer(),
-          Text(value,
-              style: TextStyle(color: c, fontWeight: FontWeight.w900, fontSize: 15)),
-        ],
-      ),
-    );
+  Future<void> _chg(int i, int d) async {
+    setState(() {
+      _items[i].qty = (_items[i].qty + d).clamp(1, 99);
+    });
+    await _save();
+  }
+
+  Future<void> _remove(int i) async {
+    setState(() => _items.removeAt(i));
+    await _save();
+  }
+
+  Future<void> _checkout() async {
+    final s = context.read<AppSettings>();
+    final inv = _invNo.text.trim();
+    // ✅ لا يتم الطلب بدون رقم فاتورة
+    if (inv.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              s.isArabic ? 'أدخل رقم الفاتورة أولاً' : 'Enter invoice number first'),
+          backgroundColor: Colors.red));
+      return;
+    }
+    if (_items.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      final now = DateTime.now();
+      final order = Order(
+        id: '${now.millisecondsSinceEpoch}',
+        userId: s.user?.id ?? '',
+        userName: s.user?.name ?? '',
+        userRole: s.user?.role ?? '',
+        date:
+            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+        items: _items.map((e) => OrderItem(name: e.name, qty: e.qty)).toList(),
+        invoiceNo: inv, // ✅ رقم الفاتورة من المستخدم
+      );
+      await OrdersService.submitOrder(order);
+      await OrdersService.clearCart(s.user?.id ?? '');
+      if (mounted) {
+        setState(() {
+          _items = [];
+          _busy = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(s.isArabic
+                ? '✅ تم إرسال الطلب مع رقم الفاتورة إلى الإدارة'
+                : 'Order sent with invoice number')));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
+    final s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(s.isArabic ? 'السلة' : 'Cart'),
       ),
-      body: _cart.isEmpty
-          ? Center(child: Text(s.isArabic ? 'السلة فارغة' : 'Cart is empty'))
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                ..._cart.map(_row),
-                const SizedBox(height: 12),
-                Container(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _items.isEmpty
+              ? Center(
+                  child: Text(
+                      s.isArabic ? 'السلة فارغة' : 'Cart is empty',
+                      style: TextStyle(color: Colors.grey.shade500)))
+              : ListView(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        colors: <Color>[
-                          AppColors.orange.withAlpha(30),
-                          Theme.of(context).colorScheme.surface
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.orange.withAlpha(80)),
-                  ),
-                  child: Column(
-                    children: [
-                      _sumRow(
-                          s.isArabic ? 'السعر الإجمالي' : 'Total',
-                          s.isArabic ? 'يُحدد من الإدارة' : 'Set by admin',
-                          AppColors.orange),
-                      _sumRow(
-                          s.isArabic ? 'نقاط هذه الفاتورة' : 'Invoice points',
-                          '—',
-                          AppColors.teal),
-                      _sumRow(
-                          s.isArabic ? 'الرصيد المتبقي' : 'Remaining',
-                          '—',
-                          AppColors.teal),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          foregroundColor: Colors.white),
-                      onPressed: _busy ? null : _submit,
-                      child: _busy
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
-                          : Text(
-                              s.isArabic ? 'إتمام الشراء' : 'Checkout',
-                              style: const TextStyle(
-                                  fontSize: 17, fontWeight: FontWeight.w900)),
+                  children: [
+                    for (int i = 0; i < _items.length; i++)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: dark
+                              ? const Color(0xFF1E1E28)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: AppColors.orange.withAlpha(60)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(_items[i].name,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                  Icons.remove_circle_outline,
+                                  color: AppColors.orange),
+                              onPressed: _items[i].qty > 1
+                                  ? () => _chg(i, -1)
+                                  : null,
+                            ),
+                            Text('${_items[i].qty}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 15)),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline,
+                                  color: AppColors.orange),
+                              onPressed: () => _chg(i, 1),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.red),
+                              onPressed: () => _remove(i),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    // ✅ حقل رقم الفاتورة — فوق السعر الإجمالي
+                    TextField(
+                      controller: _invNo,
+                      style: TextStyle(
+                          color: dark ? Colors.white : AppColors.ink,
+                          fontSize: 16),
+                      decoration: InputDecoration(
+                        hintText:
+                            s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                        hintStyle: TextStyle(
+                            color: dark
+                                ? Colors.grey.shade500
+                                : Colors.grey.shade400),
+                        prefixIcon: const Icon(Icons.receipt_long_outlined,
+                            color: AppColors.teal, size: 22),
+                        filled: true,
+                        fillColor: dark
+                            ? const Color(0xFF26262E)
+                            : const Color(0xFFFFFDF9),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 16),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            colors: <Color>[
+                              AppColors.orange.withAlpha(dark ? 40 : 25),
+                              Theme.of(context).colorScheme.surface
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                            color: AppColors.orange.withAlpha(70)),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                  s.isArabic
+                                      ? 'السعر الإجمالي'
+                                      : 'Total',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                              const Spacer(),
+                              Text(
+                                  s.isArabic
+                                      ? 'يُحدد من الإدارة'
+                                      : 'Set by admin',
+                                  style: const TextStyle(
+                                      color: AppColors.orange,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                  s.isArabic
+                                      ? 'نقاط هذه الفاتورة'
+                                      : 'Invoice points',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                              const Spacer(),
+                              const Text('—',
+                                  style: TextStyle(
+                                      color: AppColors.teal,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                  s.isArabic
+                                      ? 'الرصيد المتبقي'
+                                      : 'Remaining',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                              const Spacer(),
+                              const Text('—',
+                                  style: TextStyle(
+                                      color: AppColors.teal,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: <Color>[
+                                Color(0xFFE8A33C),
+                                Color(0xFFF26B0F)
+                              ]),
+                          borderRadius: BorderRadius.circular(14)),
+                      child: SizedBox(
+                        height: 54,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              foregroundColor: Colors.white),
+                          onPressed: _busy ? null : _checkout,
+                          child: _busy
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white))
+                              : Text(
+                                  s.isArabic ? 'إتمام الشراء' : 'Checkout',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
     );
   }
 }
