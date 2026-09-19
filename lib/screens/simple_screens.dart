@@ -12,7 +12,6 @@ import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'product_detail_screen.dart';
 
-/// ✅ ثابت محلي لتجنب تعارض kWriteProxy
 const String _kProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
 String _dmy(String iso) {
@@ -25,7 +24,7 @@ String _dmy(String iso) {
 }
 
 // ======================================================
-// المحفظة
+// المحفظة (مستخدم) + صفحة النقاط (مدير)
 // ======================================================
 
 class WalletScreen extends StatefulWidget {
@@ -102,7 +101,9 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
+    final s = context.watch<AppSettings>();
+    // ✅ المدير يرى صفحة النقاط والرصيد
+    if (s.isAdmin || s.isImageAdmin) return const AdminPointsView();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final mine = _invoices.where((i) => i.userId == s.user?.id).toList();
     final int storedMod = s.stored % kPointUnit;
@@ -398,10 +399,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  // ======================================================
-  // ✅ تفاصيل الفاتورة: رأس (تاريخ + رقم) + جدول + ملخص
-  // ======================================================
-
   void _openDetails(AppSettings s, Invoice inv) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
@@ -448,7 +445,6 @@ class _WalletScreenState extends State<WalletScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            // ✅ فوق الجدول: التاريخ ← ومقابله رقم الفاتورة
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -483,13 +479,11 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            // ✅ الجدول
             if (inv.type == 'stored_point')
               _sourcesTable(inv, dark, s)
             else
               _itemsTable(inv, dark, s),
             const SizedBox(height: 14),
-            // ✅ أسفل الجدول: الملخص
             if (inv.type == 'stored_point') ...[
               _row(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points', '+1',
                   AppColors.teal),
@@ -516,7 +510,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ جدول المواد: ت | اسم المادة | العدد
   Widget _itemsTable(Invoice inv, bool dark, AppSettings s) {
     return Container(
       decoration: BoxDecoration(
@@ -609,7 +602,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ جدول مصادر الرصيد المخزن: ت | رقم الفاتورة | المبلغ
   Widget _sourcesTable(Invoice inv, bool dark, AppSettings s) {
     final srcs = _sourcesFor(inv);
     return Container(
@@ -722,6 +714,1163 @@ class _WalletScreenState extends State<WalletScreen> {
                     fontSize: big ? 18 : 15)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ======================================================
+// 📊 صفحة النقاط والرصيد (للمدير) — تصميم ناعم متدرج
+// ======================================================
+
+class AdminPointsView extends StatefulWidget {
+  const AdminPointsView({super.key});
+  @override
+  State<AdminPointsView> createState() => _AdminPointsViewState();
+}
+
+class _AdminPointsViewState extends State<AdminPointsView> {
+  List<User> _users = [];
+  List<Invoice> _invoices = [];
+  List<Map<String, dynamic>> _returns = [];
+  bool _loading = true;
+  String _q = '';
+  User? _sel;
+  String _filter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final u = await StoreService.loadUsers();
+      final i = await StoreService.loadInvoices();
+      final r = await OrdersService.loadReturns();
+      if (mounted) {
+        setState(() {
+          _users = u.where((x) => x.role != 'guest').toList();
+          _invoices = i;
+          _returns = r;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _roleAr(String r) {
+    if (r == 'agent') return 'وكيل';
+    if (r == 'tech') return 'صباغ';
+    if (r == 'admin') return 'مدير';
+    return 'عميل';
+  }
+
+  List<Invoice> _salesOf(User u) =>
+      _invoices.where((i) => i.userId == u.id && i.type == 'sale').toList();
+
+  List<Map<String, dynamic>> _returnsOf(User u) =>
+      _returns.where((r) => r['userId'] == u.id).toList();
+
+  int _pointsOf(User u) =>
+      _invoices.where((i) => i.userId == u.id).fold(0, (p, i) => p + i.points);
+
+  int _storedOf(User u) =>
+      _invoices.where((i) => i.userId == u.id).fold(0, (p, i) => p + i.stored);
+
+  bool _exactUser(User u, String q) =>
+      u.name.trim().toLowerCase() == q || u.phone.trim() == q;
+
+  bool _exactNo(String no, String q) => no.trim().toLowerCase() == q;
+
+  List<User> _matchUsers(String q) => _users
+      .where((u) =>
+          u.name.toLowerCase().contains(q) || u.phone.contains(q))
+      .toList();
+
+  List<Invoice> _matchSales(String q) => _invoices
+      .where((i) => i.type == 'sale' && i.no.toLowerCase().contains(q))
+      .toList();
+
+  List<Map<String, dynamic>> _matchReturns(String q) => _returns
+      .where((r) =>
+          '${r['no']}'.toLowerCase().contains(q) ||
+          '${r['purchaseNo']}'.toLowerCase().contains(q))
+      .toList();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final q = _q.trim().toLowerCase();
+
+    return Scaffold(
+      backgroundColor: dark
+          ? const Color(0xFF141419)
+          : const Color(0xFFFFF8F1),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: _sel != null
+            ? Container(
+                margin: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.orange.withAlpha(dark ? 50 : 30),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back,
+                      color: AppColors.orange, size: 22),
+                  onPressed: () => setState(() {
+                        _sel = null;
+                        _filter = 'all';
+                      }),
+                ),
+              )
+            : null,
+        title: Text(
+          _sel == null
+              ? (s.isArabic ? 'النقاط والرصيد' : 'Points & Stored')
+              : _sel!.name,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: dark ? Colors.white : AppColors.ink,
+          ),
+        ),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.orange))
+          : RefreshIndicator(
+              onRefresh: _load,
+              color: AppColors.orange,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _searchField(s, dark),
+                  const SizedBox(height: 14),
+                  if (_sel == null)
+                    ..._usersSection(s, dark, q)
+                  else
+                    ..._userInvoicesSection(s, dark),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _searchField(AppSettings s, bool dark) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          colors: dark
+              ? <Color>[
+                  const Color(0xFF1E1E28),
+                  const Color(0xFF26262E),
+                ]
+              : <Color>[
+                  Colors.white,
+                  const Color(0xFFFFF8F1),
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: AppColors.orange.withAlpha(60), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.orange.withAlpha(25),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: TextField(
+        onChanged: (v) => setState(() => _q = v),
+        style: TextStyle(
+            color: dark ? Colors.white : AppColors.ink, fontSize: 15),
+        decoration: InputDecoration(
+          hintText: s.isArabic
+              ? 'بحث ذكي: رقم فاتورة / اسم حساب / رقم هاتف'
+              : 'Smart search: invoice No / name / phone',
+          hintStyle: TextStyle(
+              color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
+              fontSize: 13),
+          prefixIcon: Container(
+            margin: const EdgeInsetsDirectional.only(end: 8),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
+              ),
+              borderRadius: BorderRadiusDirectional.only(
+                topEnd: Radius.circular(22),
+                bottomEnd: Radius.circular(22),
+              ),
+            ),
+            child: const Icon(Icons.search_rounded,
+                color: Colors.white, size: 22),
+          ),
+          suffixIcon: _q.isNotEmpty
+              ? IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withAlpha(25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.clear_rounded,
+                        color: Colors.red, size: 18),
+                  ),
+                  onPressed: () => setState(() => _q = ''),
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        ),
+      ),
+    );
+  }
+
+  // ---------- قسم المستخدمين ----------
+
+  List<Widget> _usersSection(AppSettings s, bool dark, String q) {
+    if (q.isEmpty) {
+      return [
+        _sectionTitle(s.isArabic ? 'المسجلون' : 'Registered',
+            Icons.people_alt_rounded, AppColors.teal),
+        const SizedBox(height: 10),
+        for (final u in _users) _userRow(u, s, dark, false),
+      ];
+    }
+    final us = _matchUsers(q);
+    final sa = _matchSales(q);
+    final re = _matchReturns(q);
+    return [
+      _sectionTitle(s.isArabic ? 'نتائج البحث' : 'Search results',
+          Icons.search_rounded, AppColors.orange),
+      const SizedBox(height: 10),
+      if (us.isEmpty && sa.isEmpty && re.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 30),
+          child: Center(
+              child: Text(s.isArabic ? 'لا توجد نتائج' : 'No results',
+                  style: TextStyle(color: Colors.grey.shade500))),
+        ),
+      for (final u in us) _userRow(u, s, dark, _exactUser(u, q)),
+      if (sa.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        _sectionTitle(s.isArabic ? 'فواتير شراء مطابقة' : 'Matched sales',
+            Icons.shopping_bag_rounded, AppColors.teal),
+        const SizedBox(height: 10),
+        for (final i in sa) _saleRow(i, s, dark, _exactNo(i.no, q)),
+      ],
+      if (re.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        _sectionTitle(s.isArabic ? 'مرتجعات مطابقة' : 'Matched returns',
+            Icons.assignment_return_rounded, Colors.red),
+        const SizedBox(height: 10),
+        for (final r in re)
+          _returnRow(r, s, dark, _exactNo('${r['no'] ?? ''}', q)),
+      ],
+    ];
+  }
+
+  Widget _sectionTitle(String title, IconData icon, Color c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[c.withAlpha(30), c.withAlpha(8)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: c, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(title,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: c)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _userRow(User u, AppSettings s, bool dark, bool glow) {
+    return _Glow(
+      glow: glow,
+      child: Pressable(
+        onTap: () => setState(() {
+              _sel = u;
+              _filter = 'all';
+            }),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: dark
+                  ? <Color>[
+                      const Color(0xFF1E1E28),
+                      const Color(0xFF26262E),
+                    ]
+                  : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.orange.withAlpha(50)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(dark ? 60 : 12),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: <Color>[
+                      Color(0xFFFF8C00),
+                      Color(0xFFF26B0F),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.orange.withAlpha(80),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                      u.name.isNotEmpty ? u.name[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(u.name,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            color: dark ? Colors.white : AppColors.ink)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.teal.withAlpha(25),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(_roleAr(u.role),
+                              style: const TextStyle(
+                                  color: AppColors.teal,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800)),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(u.phone,
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 11)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: <Color>[
+                          AppColors.teal.withAlpha(40),
+                          AppColors.teal.withAlpha(15),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('${fmtThousands(_pointsOf(u))} ⭐',
+                          style: const TextStyle(
+                              color: AppColors.teal,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(fmtThousands(_storedOf(u)),
+                        style: TextStyle(
+                            color: AppColors.orange,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- قسم فواتير المستخدم ----------
+
+  List<Widget> _userInvoicesSection(AppSettings s, bool dark) {
+    final u = _sel!;
+    final sales = _salesOf(u);
+    final rets = _returnsOf(u);
+    return [
+      Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F), Color(0xFFE8A33C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: <double>[0.0, 0.55, 1.0],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.orange.withAlpha(80),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(35),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withAlpha(60), width: 2),
+              ),
+              child: Center(
+                child: Text(u.name.isNotEmpty ? u.name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(u.name,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text('${_roleAr(u.role)} • ${u.phone}',
+                      style: TextStyle(
+                          color: Colors.white.withAlpha(220), fontSize: 12)),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text('${fmtThousands(_pointsOf(u))} ⭐',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20)),
+                ),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(fmtThousands(_storedOf(u)),
+                      style: TextStyle(
+                          color: Colors.white.withAlpha(230),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 14),
+      Row(
+        children: [
+          _chip(s.isArabic ? 'الكل' : 'All', 'all', AppColors.orange),
+          _chip(s.isArabic ? 'شراء' : 'Sale', 'sale', AppColors.teal),
+          _chip(s.isArabic ? 'مرتجع' : 'Return', 'return', Colors.red),
+        ],
+      ),
+      const SizedBox(height: 14),
+      if (_filter != 'return') ...[
+        _sectionTitle(s.isArabic ? 'فواتير الشراء' : 'Sale invoices',
+            Icons.shopping_bag_rounded, AppColors.teal),
+        const SizedBox(height: 10),
+        if (sales.isEmpty)
+          Text(s.isArabic ? 'لا توجد' : 'None',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12))
+        else
+          for (final i in sales) _saleRow(i, s, dark, false),
+      ],
+      if (_filter != 'sale') ...[
+        const SizedBox(height: 14),
+        _sectionTitle(s.isArabic ? 'المرتجعات' : 'Returns',
+            Icons.assignment_return_rounded, Colors.red),
+        const SizedBox(height: 10),
+        if (rets.isEmpty)
+          Text(s.isArabic ? 'لا توجد' : 'None',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12))
+        else
+          for (final r in rets) _returnRow(r, s, dark, false),
+      ],
+    ];
+  }
+
+  Widget _chip(String label, String value, Color c) {
+    final active = _filter == value;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 8),
+      child: InkWell(
+        onTap: () => setState(() => _filter = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: active
+                ? LinearGradient(
+                    colors: <Color>[c, c.withAlpha(180)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: active ? null : c.withAlpha(18),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.withAlpha(active ? 180 : 80)),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: c.withAlpha(50),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: active ? Colors.white : c,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12)),
+        ),
+      ),
+    );
+  }
+
+  Widget _saleRow(Invoice i, AppSettings s, bool dark, bool glow) {
+    return _Glow(
+      glow: glow,
+      child: Pressable(
+        onTap: () => _openSaleDetails(i, s, dark),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: dark
+                  ? <Color>[
+                      const Color(0xFF1E1E28),
+                      const Color(0xFF26262E),
+                    ]
+                  : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.teal.withAlpha(50)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(dark ? 50 : 10),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      AppColors.teal.withAlpha(50),
+                      AppColors.teal.withAlpha(20),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text('${i.points}',
+                      style: const TextStyle(
+                          color: AppColors.teal,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_dmy(i.date),
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 11)),
+                    const SizedBox(height: 4),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(fmtThousands(i.total),
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: dark ? Colors.white : AppColors.ink)),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: <Color>[AppColors.teal, Color(0xFF0AA87A)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(s.isArabic ? 'شراء' : 'Sale',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 4),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(i.no.isEmpty ? '—' : i.no,
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 11)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _returnRow(
+      Map<String, dynamic> r, AppSettings s, bool dark, bool glow) {
+    final no = '${r['no'] ?? ''}';
+    final total = ((r['total'] as num?)?.toInt() ?? 0);
+    final pts = ((r['points'] as num?)?.toInt() ?? 0);
+    final date = '${r['date'] ?? ''}';
+    return _Glow(
+      glow: glow,
+      child: Pressable(
+        onTap: () => _openReturnDetails(r, s, dark),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: dark
+                  ? <Color>[
+                      const Color(0xFF1E1E28),
+                      const Color(0xFF26262E),
+                    ]
+                  : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.red.withAlpha(50)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(dark ? 50 : 10),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      Colors.red.withAlpha(50),
+                      Colors.red.withAlpha(20),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text('-$pts',
+                      style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_dmy(date),
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 11)),
+                    const SizedBox(height: 4),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('-${fmtThousands(total)}',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.red.shade300)),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: <Color>[Colors.red, Color(0xFFB02A2A)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(s.isArabic ? 'مرتجع' : 'Return',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                  const SizedBox(height: 4),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(no.isEmpty ? '—' : no,
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 11)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- التفاصيل ----------
+
+  void _openSaleDetails(Invoice inv, AppSettings s, bool dark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      AppColors.teal.withAlpha(dark ? 40 : 25),
+                      AppColors.teal.withAlpha(dark ? 15 : 8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.teal.withAlpha(60)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 15, color: AppColors.teal),
+                    const SizedBox(width: 6),
+                    Text(_dmy(inv.date),
+                        style: TextStyle(
+                            color: dark ? Colors.grey.shade200 : AppColors.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13)),
+                    const Spacer(),
+                    const Icon(Icons.receipt_long_outlined,
+                        size: 15, color: AppColors.orange),
+                    const SizedBox(width: 6),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(inv.no.isEmpty ? '—' : inv.no,
+                          style: const TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _sheetTable(
+                  inv.items
+                      .map((it) => {'name': it.name, 'qty': it.qty})
+                      .toList(),
+                  dark,
+                  s),
+              const SizedBox(height: 12),
+              _sheetRow(s.isArabic ? 'الإجمالي' : 'Total',
+                  fmtThousands(inv.total), AppColors.orange, dark,
+                  big: true),
+              _sheetRow(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
+                  '${inv.points}', AppColors.teal, dark),
+              _sheetRow(s.isArabic ? 'رصيد مخزن منها' : 'Stored',
+                  fmtThousands(inv.stored), AppColors.teal, dark),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openReturnDetails(
+      Map<String, dynamic> r, AppSettings s, bool dark) {
+    final items = List<Map<String, dynamic>>.from((r['items'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map)));
+    final no = '${r['no'] ?? ''}';
+    final pNo = '${r['purchaseNo'] ?? ''}';
+    final date = '${r['date'] ?? ''}';
+    final total = ((r['total'] as num?)?.toInt() ?? 0);
+    final pts = ((r['points'] as num?)?.toInt() ?? 0);
+    final st = ((r['stored'] as num?)?.toInt() ?? 0);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      const Color(0xFF9B59B6).withAlpha(dark ? 50 : 25),
+                      const Color(0xFF9B59B6).withAlpha(dark ? 20 : 8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: const Color(0xFF9B59B6).withAlpha(70)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 15, color: Color(0xFF9B59B6)),
+                    const SizedBox(width: 6),
+                    Text(_dmy(date),
+                        style: TextStyle(
+                            color: dark ? Colors.grey.shade200 : AppColors.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13)),
+                    const Spacer(),
+                    const Icon(Icons.assignment_return_rounded,
+                        size: 15, color: Color(0xFF9B59B6)),
+                    const SizedBox(width: 6),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(no.isEmpty ? '—' : no,
+                          style: const TextStyle(
+                              color: Color(0xFF9B59B6),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF9B59B6).withAlpha(dark ? 30 : 18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Text(s.isArabic ? 'فاتورة الشراء' : 'Purchase invoice',
+                        style: TextStyle(
+                            color: dark ? Colors.grey.shade300 : AppColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(pNo.isEmpty ? '—' : pNo,
+                          style: const TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _sheetTable(items, dark, s),
+              const SizedBox(height: 12),
+              _sheetRow(s.isArabic ? 'إجمالي المرتجع' : 'Return total',
+                  '-${fmtThousands(total)}', Colors.red, dark, big: true),
+              _sheetRow(s.isArabic ? 'نقاط مخصومة' : 'Points deducted',
+                  '-${fmtThousands(pts)}', Colors.red, dark),
+              _sheetRow(s.isArabic ? 'رصيد مخزن مخصوم' : 'Stored deducted',
+                  '-${fmtThousands(st)}', Colors.red, dark),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetTable(
+      List<Map<String, dynamic>> rows, bool dark, AppSettings s) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.orange.withAlpha(60)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            padding:
+                const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
+              ),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                    width: 34,
+                    child: Text(s.isArabic ? 'ت' : '#',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13))),
+                Expanded(
+                    child: Text(s.isArabic ? 'اسم المادة' : 'Item',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13))),
+                SizedBox(
+                    width: 56,
+                    child: Text(s.isArabic ? 'العدد' : 'Qty',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13))),
+              ],
+            ),
+          ),
+          for (int i = 0; i < rows.length; i++)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              color: i.isOdd
+                  ? (dark
+                      ? Colors.white.withAlpha(8)
+                      : Colors.black.withAlpha(6))
+                  : Colors.transparent,
+              child: Row(
+                children: [
+                  SizedBox(
+                      width: 34,
+                      child: Text('${i + 1}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800))),
+                  Expanded(
+                      child: Text('${rows[i]['name']}',
+                          style: TextStyle(
+                              color: dark ? Colors.white : AppColors.ink,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700))),
+                  SizedBox(
+                      width: 56,
+                      child: Center(
+                        child: Text('${rows[i]['qty']}',
+                            style: const TextStyle(
+                                color: AppColors.teal,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12)),
+                      )),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sheetRow(
+      String label, String value, Color c, bool dark, {bool big = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: big ? 15 : 13,
+                  color: dark ? Colors.white : AppColors.ink)),
+          const Spacer(),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(value,
+                style: TextStyle(
+                    color: c,
+                    fontWeight: FontWeight.w900,
+                    fontSize: big ? 18 : 14)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ✨ وميض ناعم للعنصر المطابق 100%
+class _Glow extends StatefulWidget {
+  final bool glow;
+  final Widget child;
+  const _Glow({required this.glow, required this.child});
+  @override
+  State<_Glow> createState() => _GlowState();
+}
+
+class _GlowState extends State<_Glow> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.glow) _c.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _Glow old) {
+    super.didUpdateWidget(old);
+    if (widget.glow && !_c.isAnimating) _c.repeat(reverse: true);
+    if (!widget.glow && _c.isAnimating) {
+      _c.stop();
+      _c.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.glow) return widget.child;
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.orange.withAlpha(
+                  (60 + 160 * _c.value).toInt().clamp(0, 255)),
+              blurRadius: 20 + 20 * _c.value,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: child,
       ),
     );
   }
