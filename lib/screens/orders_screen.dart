@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
+import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
 
@@ -299,6 +300,27 @@ class _OrderDetail extends StatefulWidget {
 class _OrderDetailState extends State<_OrderDetail> {
   final _total = TextEditingController();
   bool _busy = false;
+  List<Invoice> _returns = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReturns();
+  }
+
+  /// ✅ جلب المرتجعات المرتبطة بهذه الفاتورة
+  Future<void> _loadReturns() async {
+    try {
+      final invs = await StoreService.loadInvoices();
+      if (mounted) {
+        setState(() {
+          _returns = invs
+              .where((i) => i.id.startsWith('${widget.order.id}_ret'))
+              .toList();
+        });
+      }
+    } catch (_) {}
+  }
 
   double get _totalNum =>
       double.tryParse(_total.text.replaceAll(',', '')) ?? 0;
@@ -366,7 +388,7 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
-  /// 🔄 نافذة المرتجع: حقول فارغة تماماً — سعر ورقم فاتورة المرتجع مختلفان
+  /// 🔄 نافذة المرتجع: حقول فارغة — سعر ورقم فاتورة المرتجع مختلفان
   Future<void> _showReturnDialog() async {
     final s = context.read<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -379,7 +401,6 @@ class _OrderDetailState extends State<_OrderDetail> {
             })
         .toList();
 
-    // ✅ فارغة — لا نجلب سعر أو رقم الفاتورة الأصلية
     final totalCtrl = TextEditingController();
     final invCtrl = TextEditingController();
 
@@ -509,7 +530,6 @@ class _OrderDetailState extends State<_OrderDetail> {
                     );
                   }),
                   const SizedBox(height: 16),
-                  // ✅ سعر المرتجع: فارغ + أرقام فقط + حذف مباشر
                   TextField(
                     controller: totalCtrl,
                     keyboardType: TextInputType.number,
@@ -539,7 +559,6 @@ class _OrderDetailState extends State<_OrderDetail> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // ✅ رقم فاتورة المرتجع: فارغ + أرقام فقط + حذف مباشر
                   TextField(
                     controller: invCtrl,
                     keyboardType: TextInputType.number,
@@ -609,13 +628,11 @@ class _OrderDetailState extends State<_OrderDetail> {
 
     if (result != true || !mounted) return;
 
-    // ✅ تحقق من سعر المرتجع قبل التنفيذ
     final customTotal = double.tryParse(totalCtrl.text) ?? 0;
     if (customTotal <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(s.isArabic
-              ? 'أدخل سعر المرتجع'
-              : 'Enter return price'),
+          content: Text(
+              s.isArabic ? 'أدخل سعر المرتجع' : 'Enter return price'),
           backgroundColor: Colors.red));
       return;
     }
@@ -649,6 +666,188 @@ class _OrderDetailState extends State<_OrderDetail> {
             .showSnackBar(SnackBar(content: Text('فشل: $e')));
       }
     }
+  }
+
+  /// ✅ بطاقة الملاحظة — تظهر فقط إذا يوجد مرتجع
+  Widget _noteCard(AppSettings s, bool dark) {
+    return Pressable(
+      onTap: _showReturnsDialog,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF9B59B6).withAlpha(dark ? 40 : 20),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF9B59B6).withAlpha(80)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.sticky_note_2_rounded,
+                color: Color(0xFF9B59B6), size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                s.isArabic
+                    ? 'ملاحظة: يوجد مرتجع على هذه الفاتورة'
+                    : 'Note: this invoice has a return',
+                style: TextStyle(
+                    color: dark ? Colors.white : AppColors.ink,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13),
+              ),
+            ),
+            const Icon(Icons.chevron_left_rounded,
+                color: Color(0xFF9B59B6)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 🪟 نافذة المرتجعات: جدول بسيط متناسق لكل مرتجع
+  void _showReturnsDialog() {
+    final s = context.read<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.isArabic ? 'المرتجعات' : 'Returns',
+                    style: const TextStyle(
+                        color: Color(0xFF9B59B6),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18)),
+                const SizedBox(height: 12),
+                for (final r in _returns) ...[
+                  _retCard(r, s, dark),
+                  const SizedBox(height: 12),
+                ],
+                Align(
+                  alignment: Alignment.center,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(s.isArabic ? 'إغلاق' : 'Close'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 📋 بطاقة مرتجع: رأس (تاريخ + رقم فاتورة) + جدول مواد + إجمالي
+  Widget _retCard(Invoice r, AppSettings s, bool dark) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFF9B59B6).withAlpha(60)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            color: const Color(0xFF9B59B6).withAlpha(dark ? 50 : 30),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_today_rounded,
+                    size: 14, color: Color(0xFF9B59B6)),
+                const SizedBox(width: 6),
+                Text(dmy(r.date),
+                    style: const TextStyle(
+                        color: Color(0xFF9B59B6),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12)),
+                const Spacer(),
+                const Icon(Icons.receipt_long_outlined,
+                    size: 14, color: Color(0xFF9B59B6)),
+                const SizedBox(width: 6),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(r.no.isEmpty ? '—' : r.no,
+                      style: const TextStyle(
+                          color: Color(0xFF9B59B6),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+          for (int i = 0; i < r.items.length; i++)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              color: i.isOdd
+                  ? (dark
+                      ? Colors.white.withAlpha(8)
+                      : Colors.black.withAlpha(6))
+                  : Colors.transparent,
+              child: Row(
+                children: [
+                  SizedBox(
+                      width: 30,
+                      child: Text('${i + 1}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800))),
+                  Expanded(
+                      child: Text(r.items[i].name,
+                          style: TextStyle(
+                              color: dark ? Colors.white : AppColors.ink,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700))),
+                  SizedBox(
+                      width: 50,
+                      child: Center(
+                        child: Text('${r.items[i].qty}',
+                            style: const TextStyle(
+                                color: Color(0xFF9B59B6),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12)),
+                      )),
+                ],
+              ),
+            ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            color: const Color(0xFF9B59B6).withAlpha(dark ? 30 : 15),
+            child: Row(
+              children: [
+                Text(s.isArabic ? 'إجمالي المرتجع' : 'Return total',
+                    style: TextStyle(
+                        color: dark ? Colors.white : AppColors.ink,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800)),
+                const Spacer(),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text('-${fmtThousands(r.total.abs())}',
+                      style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _moneyField(String hint, TextEditingController c) {
@@ -876,6 +1075,10 @@ class _OrderDetailState extends State<_OrderDetail> {
                 ],
               ),
             ),
+            if (_returns.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _noteCard(s, dark),
+            ],
             const SizedBox(height: 18),
             Container(
               decoration: BoxDecoration(
@@ -927,6 +1130,10 @@ class _OrderDetailState extends State<_OrderDetail> {
                 ],
               ),
             ),
+            if (_returns.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _noteCard(s, dark),
+            ],
           ] else if (o.status == 'returned') ...[
             Container(
               padding: const EdgeInsets.all(20),
