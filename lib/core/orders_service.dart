@@ -185,15 +185,55 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
-  /// 📋 سجل المرتجعات (للمعلومة فقط — لا يؤثر على المحفظة)
   static Future<List<Map<String, dynamic>>> loadReturns() async {
     final d = await _fetchJson('assets/data/returns.json');
     if (d is List) {
-      return d
-          .map((e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      return d.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
     return [];
+  }
+
+  /// 🗑️ حذف فاتورة شراء + مرتجعاتها المرتبطة
+  static Future<void> deleteInvoice(String id) async {
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is List) {
+      invs.removeWhere((i) => i is Map && i['id'] == id);
+      await _putJson('assets/data/invoices.json', invs);
+    }
+    final rets = await loadReturns();
+    if (rets.isNotEmpty) {
+      rets.removeWhere((r) => r['orderId'] == id);
+      await _putJson('assets/data/returns.json', rets);
+    }
+  }
+
+  /// 🗑️ حذف سجل مرتجع واحد
+  static Future<void> deleteReturn(String id) async {
+    final rets = await loadReturns();
+    rets.removeWhere((r) => r['id'] == id);
+    await _putJson('assets/data/returns.json', rets);
+  }
+
+  /// 🗑️ حذف مستخدم + كل فواتيره + مرتجعاته + طلباته
+  static Future<void> deleteUserAll(String userId) async {
+    final users = await _fetchJson('assets/data/users.json');
+    if (users is List) {
+      users.removeWhere((u) => u is Map && u['id'] == userId);
+      await _putJson('assets/data/users.json', users);
+    }
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is List) {
+      invs.removeWhere((i) => i is Map && i['userId'] == userId);
+      await _putJson('assets/data/invoices.json', invs);
+    }
+    final rets = await _fetchJson('assets/data/returns.json');
+    if (rets is List) {
+      rets.removeWhere((r) => r is Map && r['userId'] == userId);
+      await _putJson('assets/data/returns.json', rets);
+    }
+    final orders = await loadOrders();
+    orders.removeWhere((o) => o.userId == userId);
+    await _putJson(kOrdersPath, orders.map((e) => e.toJson()).toList());
   }
 
   static Future<void> acceptOrder(Order o) async {
@@ -245,9 +285,7 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  /// 🔁 مرتجع:
-  /// 1) يعدّل فاتورة الشراء نفسها: يحذف المواد المرتجعة ويعيد حساب النقاط والرصيد
-  /// 2) يسجّل المرتجع في returns.json كمعلومة (رقم فاتورة الشراء + رقم فاتورة المرتجع)
+  /// 🔁 مرتجع: يعدّل فاتورة الشراء + يسجّل المرتجع كمعلومة
   static Future<void> markReturned(
     Order o, {
     List<OrderItem>? returnedItems,
@@ -260,7 +298,6 @@ class OrdersService {
     final pts = (total ~/ kPointUnit).toInt();
     final st = (total % kPointUnit).toInt();
 
-    // 1) تعديل فاتورة الشراء الأصلية
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
       final idx = invs.indexWhere(
@@ -292,7 +329,6 @@ class OrdersService {
       }
     }
 
-    // 2) سجل المرتجع (معلومة فقط)
     final rets = await loadReturns();
     rets.add({
       'id': '${o.id}_ret_${DateTime.now().millisecondsSinceEpoch}',
