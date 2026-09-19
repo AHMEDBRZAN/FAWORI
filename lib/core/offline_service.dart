@@ -8,8 +8,8 @@ class OfflineService {
   static bool _listenersAttached = false;
   static final List<void Function(bool)> _listeners = [];
 
-  /// هل المتصفح متصل الآن؟
-  static bool get isOnline => html.window.navigator.onLine;
+  /// ✅ هل المتصفح متصل الآن؟ (مع معالجة null)
+  static bool get isOnline => html.window.navigator.onLine ?? true;
 
   static void addListener(void Function(bool online) cb) {
     _listeners.add(cb);
