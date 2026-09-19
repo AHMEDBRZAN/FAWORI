@@ -9,7 +9,6 @@ const String kOrdersPath = 'assets/data/orders.json';
 const int kPointUnit = 125000;
 const String kWriteProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
-/// ✅ التعديل الجديد: إشارة السالب في البداية دائماً (-125,000)
 String fmtThousands(num n) {
   final bool neg = n < 0;
   final s = n.abs().toStringAsFixed(0);
@@ -235,6 +234,7 @@ class OrdersService {
     await updateOrder(o);
   }
 
+  /// 🔁 مرتجع: لا يغيّر حالة الفاتورة (تبقى مقبولة) — يسجّل مرتجعاً مرتبطاً بها
   static Future<void> markReturned(
     Order o, {
     List<OrderItem>? returnedItems,
@@ -243,25 +243,22 @@ class OrdersService {
   }) async {
     final items = returnedItems ?? o.items;
     final total = customTotal ?? o.total;
-    final invNo = customInvoiceNo ?? o.invoiceNo;
+    final invNo = customInvoiceNo ?? '';
     final pts = (total ~/ kPointUnit).toInt();
     final st = (total % kPointUnit).toInt();
-    o.status = 'returned';
-    o.total = total;
-    o.invoiceNo = invNo;
-    await updateOrder(o);
 
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
       invs.add({
-        'id': '${o.id}_ret',
+        'id': '${o.id}_ret_${DateTime.now().millisecondsSinceEpoch}',
         'userId': o.userId,
-        'date': o.date,
+        'date': DateTime.now().toString().substring(0, 10),
         'type': 'return',
         'no': invNo,
         'total': -(total.toInt()),
         'points': -pts,
         'stored': -st,
+        'orderId': o.id,
         'items': items
             .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
             .toList(),
