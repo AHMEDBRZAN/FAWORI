@@ -10,10 +10,10 @@
   <link rel="icon" type="image/png" href="icons/Icon-192.png">
   <meta name="theme-color" content="#F26B0F">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <style>
-    /* ✅ تدرج برتقالي فاتح احترافي — ثابت لا يتغير */
     html, body {
       margin: 0;
       padding: 0;
@@ -36,32 +36,29 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 22px;
+      gap: 18px;
     }
 
-    /* ✅ شعار أكبر */
     .brand img {
-      width: 160px;
-      height: 160px;
+      width: 140px;
+      height: 140px;
       object-fit: cover;
-      border-radius: 36px;
+      border-radius: 32px;
       border: 3px solid #FFFFFF;
       background: #111111;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.30);
+      box-shadow: 0 10px 34px rgba(0, 0, 0, 0.32);
     }
 
-    /* ✅ اسم لاتيني ثابت — لا يتشوه أبداً — أغمق وأكبر */
     .brand .title {
       color: #3B1A00;
-      font-size: 34px;
+      font-size: 28px;
       font-weight: 900;
-      letter-spacing: 6px;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
     }
 
     .spinner {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       border: 3px solid rgba(59, 26, 0, 0.25);
       border-top-color: #3B1A00;
       border-radius: 50%;
@@ -75,7 +72,7 @@
     <div class="brand">
       <img src="assets/assets/images/logo.webp" alt="FAWORI"
            onerror="this.style.display='none'">
-      <div class="title">FAWORI</div>
+      <div class="title">شركة فاورِي</div>
       <div class="spinner"></div>
     </div>
   </div>
@@ -85,6 +82,17 @@
     window.addEventListener('flutter-first-frame', function () {
       const l = document.getElementById('loader');
       if (l) { l.classList.add('hide'); setTimeout(() => l.remove(), 300); }
+    });
+  </script>
+
+  <!-- ✅ تسجيل Service Worker الخاص بنا بعد تحميل التطبيق (ليكون هو المتحكم) -->
+  <script>
+    window.addEventListener('load', function () {
+      if ('serviceWorker' in navigator) {
+        setTimeout(function () {
+          navigator.serviceWorker.register('sw.js').catch(function () {});
+        }, 5000);
+      }
     });
   </script>
 </body>
