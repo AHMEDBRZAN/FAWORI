@@ -236,6 +236,32 @@ class OrdersService {
     await _putJson(kOrdersPath, orders.map((e) => e.toJson()).toList());
   }
 
+  /// ✏️ تعديل بيانات مستخدم بدون فقدان الحقول الإضافية
+  static Future<void> patchUser(
+      String id, Map<String, dynamic> patch) async {
+    final users = await _fetchJson('assets/data/users.json');
+    if (users is List) {
+      final i = users.indexWhere((u) => u is Map && u['id'] == id);
+      if (i >= 0) {
+        final m = Map<String, dynamic>.from(users[i] as Map);
+        m.addAll(patch);
+        users[i] = m;
+        await _putJson('assets/data/users.json', users);
+      }
+    }
+  }
+
+  /// ➕ إنشاء حساب جديد بحقول إضافية
+  static Future<void> addUserRaw(Map<String, dynamic> entry) async {
+    final users = await _fetchJson('assets/data/users.json');
+    if (users is List) {
+      users.add(entry);
+      await _putJson('assets/data/users.json', users);
+    } else {
+      await _putJson('assets/data/users.json', [entry]);
+    }
+  }
+
   static Future<void> acceptOrder(Order o) async {
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
