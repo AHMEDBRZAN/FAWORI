@@ -746,7 +746,7 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
-  /// 📋 بطاقة مرتجع: رأس (تاريخ + رقم فاتورة) + جدول مواد + إجمالي
+  /// 📋 بطاقة مرتجع: رأس + جدول مواد + إجمالي + نقاط ورصيد مخصوم
   Widget _retCard(Invoice r, AppSettings s, bool dark) {
     return Container(
       decoration: BoxDecoration(
@@ -826,21 +826,69 @@ class _OrderDetailState extends State<_OrderDetail> {
           Container(
             padding: const EdgeInsets.all(10),
             color: const Color(0xFF9B59B6).withAlpha(dark ? 30 : 15),
-            child: Row(
+            child: Column(
               children: [
-                Text(s.isArabic ? 'إجمالي المرتجع' : 'Return total',
-                    style: TextStyle(
-                        color: dark ? Colors.white : AppColors.ink,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800)),
-                const Spacer(),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text('-${fmtThousands(r.total.abs())}',
-                      style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13)),
+                Row(
+                  children: [
+                    Text(s.isArabic ? 'إجمالي المرتجع' : 'Return total',
+                        style: TextStyle(
+                            color: dark ? Colors.white : AppColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('-${fmtThousands(r.total.abs())}',
+                          style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                        s.isArabic
+                            ? 'نقاط مخصومة منه'
+                            : 'Points deducted',
+                        style: TextStyle(
+                            color: dark ? Colors.white : AppColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('-${fmtThousands(r.points.abs())}',
+                          style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Text(
+                        s.isArabic
+                            ? 'رصيد مخزن مخصوم منه'
+                            : 'Stored deducted',
+                        style: TextStyle(
+                            color: dark ? Colors.white : AppColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('-${fmtThousands(r.stored.abs())}',
+                          style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
                 ),
               ],
             ),
