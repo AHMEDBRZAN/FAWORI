@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
-import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
 
@@ -300,7 +299,7 @@ class _OrderDetail extends StatefulWidget {
 class _OrderDetailState extends State<_OrderDetail> {
   final _total = TextEditingController();
   bool _busy = false;
-  List<Invoice> _returns = [];
+  List<Map<String, dynamic>> _returns = [];
 
   @override
   void initState() {
@@ -308,14 +307,14 @@ class _OrderDetailState extends State<_OrderDetail> {
     _loadReturns();
   }
 
-  /// ✅ جلب المرتجعات المرتبطة بهذه الفاتورة
+  /// ✅ جلب سجلات المرتجع المرتبطة بهذه الفاتورة
   Future<void> _loadReturns() async {
     try {
-      final invs = await StoreService.loadInvoices();
+      final rets = await OrdersService.loadReturns();
       if (mounted) {
         setState(() {
-          _returns = invs
-              .where((i) => i.id.startsWith('${widget.order.id}_ret'))
+          _returns = rets
+              .where((r) => r['orderId'] == widget.order.id)
               .toList();
         });
       }
@@ -656,7 +655,10 @@ class _OrderDetailState extends State<_OrderDetail> {
         await context.read<AppSettings>().refreshUser();
       } catch (_) {}
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() {
+          _busy = false;
+        });
+        _loadReturns();
         Navigator.pop(context);
       }
     } catch (e) {
@@ -703,7 +705,7 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
-  /// 🪟 نافذة المرتجعات: جدول بسيط متناسق لكل مرتجع
+  /// 🪟 نافذة المرتجعات
   void _showReturnsDialog() {
     final s = context.read<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -714,7 +716,7 @@ class _OrderDetailState extends State<_OrderDetail> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7),
+              maxHeight: MediaQuery.of(context).size.height * 0.75),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -746,8 +748,18 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
-  /// 📋 بطاقة مرتجع: رأس + جدول مواد + إجمالي + نقاط ورصيد مخصوم
-  Widget _retCard(Invoice r, AppSettings s, bool dark) {
+  /// 📋 بطاقة مرتجع: تاريخ + رقم فاتورة المرتجع + رقم فاتورة الشراء + جدول + الخصومات
+  Widget _retCard(Map<String, dynamic> r, AppSettings s, bool dark) {
+    final items = List<Map<String, dynamic>>.from(
+        (r['items'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map)));
+    final date = (r['date'] as String? ?? '');
+    final no = (r['no'] as String? ?? '');
+    final pNo = (r['purchaseNo'] as String? ?? '');
+    final total = ((r['total'] as num?)?.toInt() ?? 0);
+    final pts = ((r['points'] as num?)?.toInt() ?? 0);
+    final st = ((r['stored'] as num?)?.toInt() ?? 0);
+
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFF9B59B6).withAlpha(60)),
@@ -764,18 +776,18 @@ class _OrderDetailState extends State<_OrderDetail> {
                 const Icon(Icons.calendar_today_rounded,
                     size: 14, color: Color(0xFF9B59B6)),
                 const SizedBox(width: 6),
-                Text(dmy(r.date),
+                Text(dmy(date),
                     style: const TextStyle(
                         color: Color(0xFF9B59B6),
                         fontWeight: FontWeight.w800,
                         fontSize: 12)),
                 const Spacer(),
-                const Icon(Icons.receipt_long_outlined,
+                const Icon(Icons.assignment_return_rounded,
                     size: 14, color: Color(0xFF9B59B6)),
                 const SizedBox(width: 6),
                 Directionality(
                   textDirection: TextDirection.ltr,
-                  child: Text(r.no.isEmpty ? '—' : r.no,
+                  child: Text(no.isEmpty ? '—' : no,
                       style: const TextStyle(
                           color: Color(0xFF9B59B6),
                           fontWeight: FontWeight.w900,
@@ -784,7 +796,33 @@ class _OrderDetailState extends State<_OrderDetail> {
               ],
             ),
           ),
-          for (int i = 0; i < r.items.length; i++)
+          // ✅ رقم فاتورة الشراء كمعلومة
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            color: const Color(0xFF9B59B6).withAlpha(dark ? 30 : 18),
+            child: Row(
+              children: [
+                Text(
+                    s.isArabic
+                        ? 'فاتورة الشراء المرتبط بها'
+                        : 'Linked purchase invoice',
+                    style: TextStyle(
+                        color: dark ? Colors.grey.shade200 : AppColors.ink,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800)),
+                const Spacer(),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(pNo.isEmpty ? '—' : pNo,
+                      style: const TextStyle(
+                          color: AppColors.orange,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+          for (int i = 0; i < items.length; i++)
             Container(
               padding:
                   const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -806,7 +844,7 @@ class _OrderDetailState extends State<_OrderDetail> {
                               fontSize: 12,
                               fontWeight: FontWeight.w800))),
                   Expanded(
-                      child: Text(r.items[i].name,
+                      child: Text('${items[i]['name']}',
                           style: TextStyle(
                               color: dark ? Colors.white : AppColors.ink,
                               fontSize: 12,
@@ -814,7 +852,7 @@ class _OrderDetailState extends State<_OrderDetail> {
                   SizedBox(
                       width: 50,
                       child: Center(
-                        child: Text('${r.items[i].qty}',
+                        child: Text('${items[i]['qty']}',
                             style: const TextStyle(
                                 color: Color(0xFF9B59B6),
                                 fontWeight: FontWeight.w900,
@@ -838,7 +876,7 @@ class _OrderDetailState extends State<_OrderDetail> {
                     const Spacer(),
                     Directionality(
                       textDirection: TextDirection.ltr,
-                      child: Text('-${fmtThousands(r.total.abs())}',
+                      child: Text('-${fmtThousands(total)}',
                           style: const TextStyle(
                               color: Colors.red,
                               fontWeight: FontWeight.w900,
@@ -860,7 +898,7 @@ class _OrderDetailState extends State<_OrderDetail> {
                     const Spacer(),
                     Directionality(
                       textDirection: TextDirection.ltr,
-                      child: Text('-${fmtThousands(r.points.abs())}',
+                      child: Text('-${fmtThousands(pts)}',
                           style: const TextStyle(
                               color: Colors.red,
                               fontWeight: FontWeight.w900,
@@ -882,7 +920,7 @@ class _OrderDetailState extends State<_OrderDetail> {
                     const Spacer(),
                     Directionality(
                       textDirection: TextDirection.ltr,
-                      child: Text('-${fmtThousands(r.stored.abs())}',
+                      child: Text('-${fmtThousands(st)}',
                           style: const TextStyle(
                               color: Colors.red,
                               fontWeight: FontWeight.w900,
