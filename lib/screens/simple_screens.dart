@@ -10,6 +10,7 @@ import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
+import 'admin_users.dart';
 import 'product_detail_screen.dart';
 
 const String _kProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
@@ -840,6 +841,31 @@ class _AdminPointsViewState extends State<AdminPointsView> {
             color: dark ? Colors.white : AppColors.ink,
           ),
         ),
+        // ✅ زر إنشاء حساب
+        actions: _sel == null
+            ? [
+                IconButton(
+                  tooltip: s.isArabic ? 'إنشاء حساب' : 'Create account',
+                  icon: const Icon(Icons.person_add_alt_1_rounded,
+                      color: AppColors.teal),
+                  onPressed: () async {
+                    final created = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CreateAccountPage()));
+                    if (created == true) {
+                      await _load();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    '✅ تم إنشاء الحساب والسجل بنجاح')));
+                      }
+                    }
+                  },
+                ),
+              ]
+            : null,
       ),
       body: _loading
           ? const Center(
@@ -1307,7 +1333,27 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                 ],
               ),
               const SizedBox(width: 4),
+              // ✅ زر تعديل
               IconButton(
+                tooltip: s.isArabic ? 'تعديل' : 'Edit',
+                icon: const Icon(Icons.edit_rounded,
+                    color: AppColors.teal, size: 20),
+                onPressed: () async {
+                  final done = await EditUserDialog.show(context, u);
+                  if (done == true) {
+                    await _load();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(s.isArabic
+                              ? '✅ تم تحديث بيانات المستخدم'
+                              : 'User updated')));
+                    }
+                  }
+                },
+              ),
+              // ✅ زر حذف
+              IconButton(
+                tooltip: s.isArabic ? 'حذف' : 'Delete',
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: Colors.red, size: 20),
                 onPressed: () => _confirmDelete(u, s),
@@ -1579,8 +1625,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   ),
                 ],
               ),
-              // ✅ حذف فاتورة واحدة
               IconButton(
+                tooltip: s.isArabic ? 'حذف الفاتورة' : 'Delete invoice',
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: Colors.red, size: 18),
                 onPressed: () => _confirmDeleteInvoice(i, s),
@@ -1696,8 +1742,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   ),
                 ],
               ),
-              // ✅ حذف مرتجع واحد
               IconButton(
+                tooltip: s.isArabic ? 'حذف المرتجع' : 'Delete return',
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: Colors.red, size: 18),
                 onPressed: () => _confirmDeleteReturn(r, s),
