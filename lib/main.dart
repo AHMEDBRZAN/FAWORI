@@ -3,19 +3,48 @@ import 'package:provider/provider.dart';
 import 'core/app_settings.dart';
 import 'core/favorites.dart';
 import 'core/messenger.dart';
+import 'core/offline_service.dart';
 import 'core/theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MultiProvider(
-    providers: [
-      ChangeNotifierProvider(create: (_) => AppSettings()),
-      ChangeNotifierProvider(create: (_) => Favorites()),
-    ],
-    child: const FaworiApp(),
-  ));
+
+  // ✅ تهيئة خدمة بدون إنترنت + تنبيهات + إرسال تلقائي
+  OfflineService.init();
+  OfflineService.addListener((online) async {
+    if (online) {
+      final sent = await OfflineService.flushQueue();
+      messengerKey.currentState
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(sent > 0
+              ? '📶 عاد الاتصال — تم إرسال $sent طلب معلّق'
+              : '📶 عاد الاتصال بالإنترنت'),
+          backgroundColor: const Color(0xFF0D9668),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ));
+    } else {
+      messengerKey.currentState
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(
+              '📵 لا يوجد إنترنت — وضع التصفح، والطلبات تُحفظ في جهازك'),
+          backgroundColor: const Color(0xFFF26B0F),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ));
+    }
+  });
+  // محاولة إرسال أي معلّقات عند فتح التطبيق
+  OfflineService.flushQueue();
+
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider(create: (_) => AppSettings()),
+    ChangeNotifierProvider(create: (_) => Favorites()),
+  ], child: const FaworiApp()));
 }
 
 class FaworiApp extends StatelessWidget {
@@ -39,7 +68,6 @@ class FaworiApp extends StatelessWidget {
   }
 }
 
-/// ✅ بوابة بهوية فاوري الموحّدة: تدرج برتقالي فاتح + شعار كبير + اسم أغمق
 class _Gate extends StatefulWidget {
   const _Gate();
   @override
@@ -68,9 +96,15 @@ class _GateState extends State<_Gate> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
-    if (_ready) {
-      return s.isLoggedIn ? const MainScreen() : const LoginScreen();
-    }
+    if (!_ready) return const SplashView();
+    return s.isLoggedIn ? const MainScreen() : const LoginScreen();
+  }
+}
+
+class SplashView extends StatelessWidget {
+  const SplashView({super.key});
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF26B0F),
       body: Container(
@@ -91,7 +125,6 @@ class _GateState extends State<_Gate> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ✅ شعار أكبر ومتناسق
               Container(
                 width: 160,
                 height: 160,
@@ -101,7 +134,7 @@ class _GateState extends State<_Gate> {
                   border: Border.all(color: Colors.white, width: 3),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withAlpha(80),
+                        color: Colors.black.withAlpha(90),
                         blurRadius: 40,
                         offset: const Offset(0, 12)),
                   ],
@@ -123,7 +156,6 @@ class _GateState extends State<_Gate> {
                 ),
               ),
               const SizedBox(height: 22),
-              // ✅ اسم أغمق وأكبر ومتناسق مع الشعار
               const Text(
                 'شركة فاورِي',
                 style: TextStyle(
