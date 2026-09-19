@@ -185,6 +185,17 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
+  /// 📋 سجل المرتجعات (للمعلومة فقط — لا يؤثر على المحفظة)
+  static Future<List<Map<String, dynamic>>> loadReturns() async {
+    final d = await _fetchJson('assets/data/returns.json');
+    if (d is List) {
+      return d
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    }
+    return [];
+  }
+
   static Future<void> acceptOrder(Order o) async {
     o.points = (o.total ~/ kPointUnit).toDouble();
     o.stored = (o.total % kPointUnit).toDouble();
@@ -234,7 +245,9 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  /// 🔁 مرتجع: لا يغيّر حالة الفاتورة (تبقى مقبولة) — يسجّل مرتجعاً مرتبطاً بها
+  /// 🔁 مرتجع:
+  /// 1) يعدّل فاتورة الشراء نفسها: يحذف المواد المرتجعة ويعيد حساب النقاط والرصيد
+  /// 2) يسجّل المرتجع في returns.json كمعلومة (رقم فاتورة الشراء + رقم فاتورة المرتجع)
   static Future<void> markReturned(
     Order o, {
     List<OrderItem>? returnedItems,
@@ -247,24 +260,55 @@ class OrdersService {
     final pts = (total ~/ kPointUnit).toInt();
     final st = (total % kPointUnit).toInt();
 
+    // 1) تعديل فاتورة الشراء الأصلية
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
-      invs.add({
-        'id': '${o.id}_ret_${DateTime.now().millisecondsSinceEpoch}',
-        'userId': o.userId,
-        'date': DateTime.now().toString().substring(0, 10),
-        'type': 'return',
-        'no': invNo,
-        'total': -(total.toInt()),
-        'points': -pts,
-        'stored': -st,
-        'orderId': o.id,
-        'items': items
-            .map((e) => {'name': e.name, 'price': 0, 'qty': e.qty})
-            .toList(),
-      });
-      await _putJson('assets/data/invoices.json', invs);
+      final idx = invs.indexWhere(
+          (i) => i is Map && i['id'] == o.id && i['type'] == 'sale');
+      if (idx >= 0) {
+        final sale = Map<String, dynamic>.from(invs[idx] as Map);
+        final saleItems = List<Map<String, dynamic>>.from(
+            (sale['items'] as List? ?? [])
+                .map((e) => Map<String, dynamic>.from(e as Map)));
+        for (final ret in items) {
+          final match =
+              saleItems.where((si) => si['name'] == ret.name).toList();
+          if (match.isNotEmpty) {
+            match.first['qty'] =
+                ((match.first['qty'] as num?)?.toInt() ?? 0) - ret.qty;
+          }
+        }
+        saleItems.removeWhere(
+            (si) => ((si['qty'] as num?)?.toInt() ?? 0) <= 0);
+        final oldTotal = ((sale['total'] as num?)?.toDouble() ?? 0);
+        final newTotal =
+            (oldTotal - total).clamp(0.0, double.infinity).toInt();
+        sale['items'] = saleItems;
+        sale['total'] = newTotal;
+        sale['points'] = newTotal ~/ kPointUnit;
+        sale['stored'] = newTotal % kPointUnit;
+        invs[idx] = sale;
+        await _putJson('assets/data/invoices.json', invs);
+      }
     }
+
+    // 2) سجل المرتجع (معلومة فقط)
+    final rets = await loadReturns();
+    rets.add({
+      'id': '${o.id}_ret_${DateTime.now().millisecondsSinceEpoch}',
+      'orderId': o.id,
+      'userId': o.userId,
+      'date': DateTime.now().toString().substring(0, 10),
+      'no': invNo,
+      'purchaseNo': o.invoiceNo,
+      'total': total.toInt(),
+      'points': pts,
+      'stored': st,
+      'items': items
+          .map((e) => {'name': e.name, 'qty': e.qty})
+          .toList(),
+    });
+    await _putJson('assets/data/returns.json', rets);
   }
 
   static Future<bool> convertStoredToPoints(String userId) async {
