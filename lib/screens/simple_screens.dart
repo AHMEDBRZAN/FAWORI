@@ -102,7 +102,6 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
-    // ✅ المدير يرى صفحة النقاط والرصيد
     if (s.isAdmin || s.isImageAdmin) return const AdminPointsView();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final mine = _invoices.where((i) => i.userId == s.user?.id).toList();
@@ -720,7 +719,7 @@ class _WalletScreenState extends State<WalletScreen> {
 }
 
 // ======================================================
-// 📊 صفحة النقاط والرصيد (للمدير) — تصميم ناعم متدرج
+// 📊 صفحة النقاط والرصيد (للمدير)
 // ======================================================
 
 class AdminPointsView extends StatefulWidget {
@@ -809,9 +808,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final q = _q.trim().toLowerCase();
 
     return Scaffold(
-      backgroundColor: dark
-          ? const Color(0xFF141419)
-          : const Color(0xFFFFF8F1),
+      backgroundColor:
+          dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -844,7 +842,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.orange))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.orange))
           : RefreshIndicator(
               onRefresh: _load,
               color: AppColors.orange,
@@ -937,7 +936,176 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  // ---------- قسم المستخدمين ----------
+  // ---------- حذف مستخدم ----------
+
+  Future<void> _confirmDelete(User u, AppSettings s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  s.isArabic ? 'حذف نهائي' : 'Permanent delete',
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+        content: Text(
+            s.isArabic
+                ? 'سيُحذف المستخدم "${u.name}" مع جميع فواتيره ومرتجعاته وطلباته. لا يمكن التراجع!'
+                : 'User "${u.name}" will be deleted with all invoices, returns and orders. Cannot undo!',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.isArabic ? 'حذف الكل' : 'Delete all'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await OrdersService.deleteUserAll(u.id);
+      if (_sel?.id == u.id) _sel = null;
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(s.isArabic
+                ? '🗑️ تم حذف ${u.name} وكل فواتيره'
+                : 'Deleted ${u.name} and all invoices')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
+    }
+  }
+
+  // ---------- حذف فاتورة واحدة ----------
+
+  Future<void> _confirmDeleteInvoice(Invoice i, AppSettings s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  s.isArabic ? 'حذف الفاتورة' : 'Delete invoice',
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+        content: Text(
+            s.isArabic
+                ? 'ستُحذف الفاتورة رقم ${i.no.isEmpty ? i.id : i.no} مع مرتجعاتها، وتُخصم نقاطها ورصيدها من المستخدم. لا يمكن التراجع!'
+                : 'Invoice ${i.no.isEmpty ? i.id : i.no} and its returns will be deleted. Cannot undo!',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.isArabic ? 'حذف' : 'Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await OrdersService.deleteInvoice(i.id);
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(s.isArabic
+                ? '🗑️ تم حذف الفاتورة ومرتجعاتها'
+                : 'Invoice and its returns deleted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
+    }
+  }
+
+  // ---------- حذف مرتجع واحد ----------
+
+  Future<void> _confirmDeleteReturn(
+      Map<String, dynamic> r, AppSettings s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  s.isArabic ? 'حذف المرتجع' : 'Delete return',
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+        content: Text(
+            s.isArabic
+                ? 'سيُحذف سجل المرتجع فقط (فاتورة الشراء تبقى كما هي بعد التعديل). لا يمكن التراجع!'
+                : 'Only the return record will be deleted. Cannot undo!',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.isArabic ? 'حذف' : 'Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await OrdersService.deleteReturn('${r['id']}');
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                s.isArabic ? '🗑️ تم حذف المرتجع' : 'Return deleted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
+    }
+  }
+
+  // ---------- الأقسام ----------
 
   List<Widget> _usersSection(AppSettings s, bool dark, String q) {
     if (q.isEmpty) {
@@ -999,9 +1167,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
           Expanded(
             child: Text(title,
                 style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: c)),
+                    fontSize: 14, fontWeight: FontWeight.w900, color: c)),
           ),
         ],
       ),
@@ -1140,14 +1306,18 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   ),
                 ],
               ),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Colors.red, size: 20),
+                onPressed: () => _confirmDelete(u, s),
+              ),
             ],
           ),
         ),
       ),
     );
   }
-
-  // ---------- قسم فواتير المستخدم ----------
 
   List<Widget> _userInvoicesSection(AppSettings s, bool dark) {
     final u = _sel!;
@@ -1158,7 +1328,11 @@ class _AdminPointsViewState extends State<AdminPointsView> {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F), Color(0xFFE8A33C)],
+            colors: <Color>[
+              Color(0xFFFF8C00),
+              Color(0xFFF26B0F),
+              Color(0xFFE8A33C)
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             stops: <double>[0.0, 0.55, 1.0],
@@ -1180,10 +1354,12 @@ class _AdminPointsViewState extends State<AdminPointsView> {
               decoration: BoxDecoration(
                 color: Colors.white.withAlpha(35),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withAlpha(60), width: 2),
+                border:
+                    Border.all(color: Colors.white.withAlpha(60), width: 2),
               ),
               child: Center(
-                child: Text(u.name.isNotEmpty ? u.name[0].toUpperCase() : '?',
+                child: Text(
+                    u.name.isNotEmpty ? u.name[0].toUpperCase() : '?',
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -1403,6 +1579,12 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   ),
                 ],
               ),
+              // ✅ حذف فاتورة واحدة
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Colors.red, size: 18),
+                onPressed: () => _confirmDeleteInvoice(i, s),
+              ),
             ],
           ),
         ),
@@ -1513,6 +1695,12 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                             color: Colors.grey.shade500, fontSize: 11)),
                   ),
                 ],
+              ),
+              // ✅ حذف مرتجع واحد
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Colors.red, size: 18),
+                onPressed: () => _confirmDeleteReturn(r, s),
               ),
             ],
           ),
@@ -1689,7 +1877,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
               _sheetTable(items, dark, s),
               const SizedBox(height: 12),
               _sheetRow(s.isArabic ? 'إجمالي المرتجع' : 'Return total',
-                  '-${fmtThousands(total)}', Colors.red, dark, big: true),
+                  '-${fmtThousands(total)}', Colors.red, dark,
+                  big: true),
               _sheetRow(s.isArabic ? 'نقاط مخصومة' : 'Points deducted',
                   '-${fmtThousands(pts)}', Colors.red, dark),
               _sheetRow(s.isArabic ? 'رصيد مخزن مخصوم' : 'Stored deducted',
@@ -1817,7 +2006,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   }
 }
 
-/// ✨ وميض ناعم للعنصر المطابق 100%
+/// ✨ وميض ناعم للمطابق 100%
 class _Glow extends StatefulWidget {
   final bool glow;
   final Widget child;
@@ -2003,7 +2192,7 @@ class _FavoritesView extends StatelessWidget {
 }
 
 // ======================================================
-// 🛠️ شاشة الإدارة: ملفات الكود في المستودع
+// 🛠️ شاشة الإدارة: ملفات الكود
 // ======================================================
 
 class AdminCodeView extends StatefulWidget {
