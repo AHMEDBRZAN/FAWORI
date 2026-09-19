@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
+import '../core/offline_service.dart';
 import '../core/orders_service.dart';
 import '../core/theme.dart';
 
@@ -60,7 +61,6 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _checkout() async {
     final s = context.read<AppSettings>();
     final inv = _invNo.text.trim();
-    // ✅ لا يتم الطلب بدون رقم فاتورة
     if (inv.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -69,19 +69,81 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
     if (_items.isEmpty) return;
+
+    final now = DateTime.now();
+    final order = Order(
+      id: '${now.millisecondsSinceEpoch}',
+      userId: s.user?.id ?? '',
+      userName: s.user?.name ?? '',
+      userRole: s.user?.role ?? '',
+      date:
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+      items: _items.map((e) => OrderItem(name: e.name, qty: e.qty)).toList(),
+      invoiceNo: inv,
+    );
+
+    // 📴 بدون إنترنت: تأكيد ثم تعليق الطلب محلياً
+    if (!OfflineService.isOnline) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.wifi_off_rounded, color: Color(0xFFF26B0F)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                    s.isArabic ? 'لا يوجد إنترنت' : 'No internet',
+                    style: const TextStyle(
+                        color: Color(0xFFF26B0F),
+                        fontWeight: FontWeight.w900)),
+              ),
+            ],
+          ),
+          content: Text(
+              s.isArabic
+                  ? 'أنت غير متصل الآن. سيتم حفظ الطلب في جهازك، ويكتمل الشراء تلقائياً عند الاتصال بالإنترنت. هل توافق؟'
+                  : 'You are offline. The order will be saved on your device and completed automatically when online. Agree?',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF26B0F),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(s.isArabic ? 'موافق' : 'Agree'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      await OfflineService.enqueueOrder(order);
+      await OrdersService.clearCart(s.user?.id ?? '');
+      if (mounted) {
+        setState(() {
+          _items = [];
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(s.isArabic
+                ? '✅ تم حفظ الطلب — سيُرسل تلقائياً عند الاتصال'
+                : 'Order saved — will send when online'),
+            backgroundColor: const Color(0xFFF26B0F)));
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    // 📶 متصل: إرسال مباشر
     setState(() => _busy = true);
     try {
-      final now = DateTime.now();
-      final order = Order(
-        id: '${now.millisecondsSinceEpoch}',
-        userId: s.user?.id ?? '',
-        userName: s.user?.name ?? '',
-        userRole: s.user?.role ?? '',
-        date:
-            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
-        items: _items.map((e) => OrderItem(name: e.name, qty: e.qty)).toList(),
-        invoiceNo: inv, // ✅ رقم الفاتورة من المستخدم
-      );
       await OrdersService.submitOrder(order);
       await OrdersService.clearCart(s.user?.id ?? '');
       if (mounted) {
@@ -175,7 +237,6 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ),
                     const SizedBox(height: 8),
-                    // ✅ حقل رقم الفاتورة — كيبورد أرقام فقط
                     TextField(
                       controller: _invNo,
                       keyboardType: TextInputType.number,
