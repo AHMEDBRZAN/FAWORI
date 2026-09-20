@@ -10,7 +10,9 @@ import 'product_detail_screen.dart';
 import 'products_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  /// ✅ اختياري: تستخدمه main_screen للانتقال لتبويب المنتجات
+  final VoidCallback? onOpenProducts;
+  const HomeScreen({super.key, this.onOpenProducts});
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -62,6 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
     await _refreshCount();
   }
 
+  Future<void> _openProducts() async {
+    if (widget.onOpenProducts != null) {
+      widget.onOpenProducts!();
+      return;
+    }
+    await Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const ProductsScreen()));
+    await _refreshCount();
+  }
+
   Future<void> _openDetail(Product p) async {
     final s = context.read<AppSettings>();
     final canBuy = s.user != null && s.user!.role != 'guest';
@@ -101,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_cartCount > 0)
                   Positioned(
                     top: 0,
-                    end: 0,
+                    right: 0,
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
@@ -182,13 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: Pressable(
-                  onTap: () async {
-                    await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ProductsScreen()));
-                    await _refreshCount();
-                  },
+                  onTap: _openProducts,
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -243,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             if (_cartCount > 0)
                               Positioned(
                                 top: 0,
-                                end: 0,
+                                right: 0,
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: const BoxDecoration(
@@ -286,7 +292,6 @@ class _HomeScreenState extends State<HomeScreen> {
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, i) {
                 final p = sampleData[i];
-                // ✅ بطاقة + زر إضافة منفصلان
                 return Stack(
                   children: [
                     Pressable(
