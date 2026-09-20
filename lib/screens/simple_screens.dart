@@ -25,7 +25,7 @@ String _dmy(String iso) {
 }
 
 // ======================================================
-// المحفظة (مستخدم) + صفحة النقاط (مدير)
+// المحفظة (مستخدم) — شراء + مرتجع فقط (بدون الرصيد المخزن)
 // ======================================================
 
 class WalletScreen extends StatefulWidget {
@@ -36,6 +36,7 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   List<Invoice> _invoices = [];
+  List<Map<String, dynamic>> _returns = [];
   int _lastVersion = -1;
 
   @override
@@ -60,7 +61,13 @@ class _WalletScreenState extends State<WalletScreen> {
       await s.refreshUser();
     } catch (_) {}
     final invs = await StoreService.loadInvoices();
-    if (mounted) setState(() => _invoices = invs);
+    final rets = await OrdersService.loadReturns();
+    if (mounted) {
+      setState(() {
+        _invoices = invs;
+        _returns = rets;
+      });
+    }
   }
 
   String _typeLabel(Invoice inv, bool ar) {
@@ -106,6 +113,17 @@ class _WalletScreenState extends State<WalletScreen> {
     if (s.isAdmin || s.isImageAdmin) return const AdminPointsView();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final mine = _invoices.where((i) => i.userId == s.user?.id).toList();
+
+    // ✅ صفوف موحّدة: شراء + مرتجع (قديم وجديد) — بدون الرصيد المخزن
+    final rows = <Map<String, dynamic>>[
+      for (final i in mine.where((x) => x.type == 'sale'))
+        {'kind': 'sale', 'inv': i},
+      for (final i in mine.where((x) => x.type == 'return'))
+        {'kind': 'return', 'inv': i},
+      for (final r in _returns.where((x) => x['userId'] == s.user?.id))
+        {'kind': 'return', 'ret': r},
+    ].reversed.toList();
+
     final int storedMod = s.stored % kPointUnit;
     final int remaining = kPointUnit - storedMod;
     final double progress = storedMod / kPointUnit;
@@ -135,7 +153,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       color: AppColors.orange.withAlpha(30),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('${mine.length}',
+                    child: Text('${rows.length}',
                         style: const TextStyle(
                             color: AppColors.orange,
                             fontWeight: FontWeight.w900)),
@@ -250,7 +268,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
-              if (mine.isEmpty)
+              if (rows.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Center(
@@ -259,8 +277,8 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                 )
               else
-                ...mine.reversed.map((inv) => _tile(s, inv, dark)),
-              if (mine.isNotEmpty) ...[
+                ...rows.map((r) => _uniTile(s, r, dark)),
+              if (rows.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -298,13 +316,26 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  Widget _tile(AppSettings s, Invoice inv, bool dark) {
-    final c = _typeColor(inv);
-    final num shownTotal =
-        inv.type == 'stored_point' ? kPointUnit : inv.total;
-    final bool neg = shownTotal < 0;
+  /// ✅ بطاقة موحّدة: شراء أو مرتجع (من الفواتير أو من سجل المرتجعات)
+  Widget _uniTile(AppSettings s, Map<String, dynamic> row, bool dark) {
+    final isSale = row['kind'] == 'sale';
+    final Invoice? inv = row['inv'] as Invoice?;
+    final Map<String, dynamic>? ret = row['ret'] as Map<String, dynamic>?;
+    final String date = inv != null ? inv.date : '${ret?['date'] ?? ''}';
+    final String no = inv != null ? inv.no : '${ret?['no'] ?? ''}';
+    final int total = inv != null
+        ? inv.total.toInt()
+        : -(((ret?['total'] as num?)?.toInt() ?? 0).abs());
+    final int pts = inv != null
+        ? inv.points.toInt()
+        : -(((ret?['points'] as num?)?.toInt() ?? 0).abs());
+    final c = isSale ? AppColors.teal : Colors.red;
+    final bool neg = total < 0;
+
     return Pressable(
-      onTap: () => _openDetails(s, inv),
+      onTap: () => inv != null
+          ? _openDetails(s, inv)
+          : _openReturnSheet(s, ret!, dark),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
@@ -322,14 +353,14 @@ class _WalletScreenState extends State<WalletScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_dmy(inv.date),
+                    Text(_dmy(date),
                         style: TextStyle(
                             color: Colors.grey.shade500, fontSize: 12)),
                     const SizedBox(height: 4),
                     Directionality(
                       textDirection: TextDirection.ltr,
                       child: Text(
-                        fmtThousands(shownTotal),
+                        fmtThousands(total),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: 18,
@@ -354,7 +385,10 @@ class _WalletScreenState extends State<WalletScreen> {
                       color: c.withAlpha(30),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(_typeLabel(inv, s.isArabic),
+                    child: Text(
+                        isSale
+                            ? (s.isArabic ? 'شراء' : 'Sale')
+                            : (s.isArabic ? 'مرتجع' : 'Return'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -373,7 +407,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: inv.points >= 0
+                      color: pts >= 0
                           ? AppColors.orange.withAlpha(30)
                           : Colors.red.withAlpha(30),
                       borderRadius: BorderRadius.circular(8),
@@ -381,11 +415,9 @@ class _WalletScreenState extends State<WalletScreen> {
                     child: Directionality(
                       textDirection: TextDirection.ltr,
                       child: Text(
-                          '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                          pts >= 0 ? '+$pts' : '-${pts.abs()}',
                           style: TextStyle(
-                              color: inv.points >= 0
-                                  ? AppColors.orange
-                                  : Colors.red,
+                              color: pts >= 0 ? AppColors.orange : Colors.red,
                               fontSize: 11,
                               fontWeight: FontWeight.w900)),
                     ),
@@ -395,6 +427,197 @@ class _WalletScreenState extends State<WalletScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 🪟 تفاصيل مرتجع جديد (من سجل المرتجعات)
+  void _openReturnSheet(
+      AppSettings s, Map<String, dynamic> r, bool dark) {
+    final items = List<Map<String, dynamic>>.from((r['items'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map)));
+    final no = '${r['no'] ?? ''}';
+    final pNo = '${r['purchaseNo'] ?? ''}';
+    final date = '${r['date'] ?? ''}';
+    final total = ((r['total'] as num?)?.toInt() ?? 0).abs();
+    final pts = ((r['points'] as num?)?.toInt() ?? 0).abs();
+    final st = ((r['stored'] as num?)?.toInt() ?? 0).abs();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      const Color(0xFF9B59B6).withAlpha(dark ? 50 : 25),
+                      const Color(0xFF9B59B6).withAlpha(dark ? 20 : 8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: const Color(0xFF9B59B6).withAlpha(70)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 15, color: Color(0xFF9B59B6)),
+                    const SizedBox(width: 6),
+                    Text(_dmy(date),
+                        style: TextStyle(
+                            color: dark ? Colors.grey.shade200 : AppColors.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13)),
+                    const Spacer(),
+                    const Icon(Icons.assignment_return_rounded,
+                        size: 15, color: Color(0xFF9B59B6)),
+                    const SizedBox(width: 6),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(no.isEmpty ? '—' : no,
+                          style: const TextStyle(
+                              color: Color(0xFF9B59B6),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF9B59B6).withAlpha(dark ? 30 : 18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Text(s.isArabic ? 'فاتورة الشراء' : 'Purchase invoice',
+                        style: TextStyle(
+                            color: dark ? Colors.grey.shade300 : AppColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(pNo.isEmpty ? '—' : pNo,
+                          style: const TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _miniTable(items, dark, s),
+              const SizedBox(height: 12),
+              _row(s.isArabic ? 'إجمالي المرتجع' : 'Return total',
+                  '-${fmtThousands(total)}', Colors.red, big: true),
+              _row(s.isArabic ? 'نقاط مخصومة' : 'Points deducted',
+                  '-${fmtThousands(pts)}', Colors.red),
+              _row(s.isArabic ? 'رصيد مخزن مخصوم' : 'Stored deducted',
+                  '-${fmtThousands(st)}', Colors.red),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _miniTable(
+      List<Map<String, dynamic>> rows, bool dark, AppSettings s) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFF9B59B6).withAlpha(60)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            padding:
+                const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            color: const Color(0xFF9B59B6).withAlpha(dark ? 50 : 30),
+            child: Row(
+              children: [
+                SizedBox(
+                    width: 34,
+                    child: Text(s.isArabic ? 'ت' : '#',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Color(0xFF9B59B6),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13))),
+                Expanded(
+                    child: Text(s.isArabic ? 'اسم المادة' : 'Item',
+                        style: const TextStyle(
+                            color: Color(0xFF9B59B6),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13))),
+                SizedBox(
+                    width: 56,
+                    child: Text(s.isArabic ? 'العدد' : 'Qty',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Color(0xFF9B59B6),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13))),
+              ],
+            ),
+          ),
+          for (int i = 0; i < rows.length; i++)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              color: i.isOdd
+                  ? (dark
+                      ? Colors.white.withAlpha(8)
+                      : Colors.black.withAlpha(6))
+                  : Colors.transparent,
+              child: Row(
+                children: [
+                  SizedBox(
+                      width: 34,
+                      child: Text('${i + 1}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800))),
+                  Expanded(
+                      child: Text('${rows[i]['name']}',
+                          style: TextStyle(
+                              color: dark ? Colors.white : AppColors.ink,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700))),
+                  SizedBox(
+                      width: 56,
+                      child: Center(
+                        child: Text('${rows[i]['qty']}',
+                            style: const TextStyle(
+                                color: Color(0xFF9B59B6),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12)),
+                      )),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -720,7 +943,7 @@ class _WalletScreenState extends State<WalletScreen> {
 }
 
 // ======================================================
-// 📊 صفحة النقاط والرصيد (للمدير)
+// 📊 صفحة النقاط والرصيد (للمدير) — نفس طريقة احتساب المحفظة
 // ======================================================
 
 class AdminPointsView extends StatefulWidget {
@@ -773,14 +996,48 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   List<Invoice> _salesOf(User u) =>
       _invoices.where((i) => i.userId == u.id && i.type == 'sale').toList();
 
-  List<Map<String, dynamic>> _returnsOf(User u) =>
-      _returns.where((r) => r['userId'] == u.id).toList();
+  /// ✅ المرتجعات: الجديدة (returns.json) + القديمة (invoices.json نوع return)
+  List<Map<String, dynamic>> _returnsOf(User u) {
+    return <Map<String, dynamic>>[
+      ..._returns.where((r) => r['userId'] == u.id),
+      for (final i
+          in _invoices.where((x) => x.userId == u.id && x.type == 'return'))
+        {
+          'id': i.id,
+          'legacy': true,
+          'no': i.no,
+          'date': i.date,
+          'total': i.total,
+          'points': i.points,
+          'stored': i.stored,
+          'purchaseNo': '',
+          'items': i.items
+              .map((it) => {'name': it.name, 'qty': it.qty})
+              .toList(),
+        },
+    ];
+  }
 
-  int _pointsOf(User u) =>
-      _invoices.where((i) => i.userId == u.id).fold(0, (p, i) => p + i.points);
+  /// ✅ نفس طريقة احتساب المحفظة: فواتير − مرتجعات جديدة
+  int _pointsOf(User u) {
+    int p = _invoices
+        .where((i) => i.userId == u.id)
+        .fold(0, (s, i) => s + i.points);
+    p -= _returns
+        .where((r) => r['userId'] == u.id)
+        .fold(0, (s, r) => s + ((r['points'] as num?)?.toInt() ?? 0));
+    return p;
+  }
 
-  int _storedOf(User u) =>
-      _invoices.where((i) => i.userId == u.id).fold(0, (p, i) => p + i.stored);
+  int _storedOf(User u) {
+    int s2 = _invoices
+        .where((i) => i.userId == u.id)
+        .fold(0, (s, i) => s + i.stored);
+    s2 -= _returns
+        .where((r) => r['userId'] == u.id)
+        .fold(0, (s, r) => s + ((r['stored'] as num?)?.toInt() ?? 0));
+    return s2;
+  }
 
   bool _exactUser(User u, String q) =>
       u.name.trim().toLowerCase() == q || u.phone.trim() == q;
@@ -796,11 +1053,26 @@ class _AdminPointsViewState extends State<AdminPointsView> {
       .where((i) => i.type == 'sale' && i.no.toLowerCase().contains(q))
       .toList();
 
-  List<Map<String, dynamic>> _matchReturns(String q) => _returns
-      .where((r) =>
-          '${r['no']}'.toLowerCase().contains(q) ||
-          '${r['purchaseNo']}'.toLowerCase().contains(q))
-      .toList();
+  List<Map<String, dynamic>> _matchReturns(String q) => [
+        ..._returns.where((r) =>
+            '${r['no']}'.toLowerCase().contains(q) ||
+            '${r['purchaseNo']}'.toLowerCase().contains(q)),
+        for (final i in _invoices.where((x) =>
+            x.type == 'return' && x.no.toLowerCase().contains(q)))
+          {
+            'id': i.id,
+            'legacy': true,
+            'no': i.no,
+            'date': i.date,
+            'total': i.total,
+            'points': i.points,
+            'stored': i.stored,
+            'purchaseNo': '',
+            'items': i.items
+                .map((it) => {'name': it.name, 'qty': it.qty})
+                .toList(),
+          },
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -961,8 +1233,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  // ---------- حذف مستخدم ----------
-
   Future<void> _confirmDelete(User u, AppSettings s) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -1018,8 +1288,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     }
   }
 
-  // ---------- حذف فاتورة واحدة ----------
-
   Future<void> _confirmDeleteInvoice(Invoice i, AppSettings s) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -1074,8 +1342,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     }
   }
 
-  // ---------- حذف مرتجع واحد ----------
-
+  /// 🗑️ حذف مرتجع (جديد أو قديم)
   Future<void> _confirmDeleteReturn(
       Map<String, dynamic> r, AppSettings s) async {
     final ok = await showDialog<bool>(
@@ -1097,8 +1364,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
         ),
         content: Text(
             s.isArabic
-                ? 'سيُحذف سجل المرتجع فقط (فاتورة الشراء تبقى كما هي بعد التعديل). لا يمكن التراجع!'
-                : 'Only the return record will be deleted. Cannot undo!',
+                ? 'سيُحذف سجل المرتجع هذا نهائياً. لا يمكن التراجع!'
+                : 'This return record will be deleted. Cannot undo!',
             style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           TextButton(
@@ -1115,7 +1382,11 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
     if (ok != true) return;
     try {
-      await OrdersService.deleteReturn('${r['id']}');
+      if (r['legacy'] == true) {
+        await OrdersService.deleteInvoice('${r['id']}');
+      } else {
+        await OrdersService.deleteReturn('${r['id']}');
+      }
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1129,8 +1400,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
       }
     }
   }
-
-  // ---------- الأقسام ----------
 
   List<Widget> _usersSection(AppSettings s, bool dark, String q) {
     if (q.isEmpty) {
@@ -1523,7 +1792,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  /// ✅ صف فاتورة شراء: نوع يمين ← مبلغ وسط ← نقاط بارزة (+) ← حذف داخل البطاقة
   Widget _saleRow(Invoice i, AppSettings s, bool dark, bool glow) {
     return _Glow(
       glow: glow,
@@ -1652,12 +1920,11 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  /// ✅ صف مرتجع: نوع يمين ← مبلغ وسط ← نقاط بارزة (-) ← حذف داخل البطاقة
   Widget _returnRow(
       Map<String, dynamic> r, AppSettings s, bool dark, bool glow) {
     final no = '${r['no'] ?? ''}';
-    final total = ((r['total'] as num?)?.toInt() ?? 0);
-    final pts = ((r['points'] as num?)?.toInt() ?? 0);
+    final total = ((r['total'] as num?)?.toInt() ?? 0).abs();
+    final pts = ((r['points'] as num?)?.toInt() ?? 0).abs();
     final date = '${r['date'] ?? ''}';
     return _Glow(
       glow: glow,
@@ -1786,8 +2053,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  // ---------- التفاصيل ----------
-
   void _openSaleDetails(Invoice inv, AppSettings s, bool dark) {
     showModalBottomSheet(
       context: context,
@@ -1851,7 +2116,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   fmtThousands(inv.total), AppColors.orange, dark,
                   big: true),
               _sheetRow(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
-                  '+${inv.points}', AppColors.teal, dark),
+                  '${inv.points >= 0 ? '+' : ''}${fmtThousands(inv.points)}',
+                  inv.points >= 0 ? AppColors.teal : Colors.red, dark),
               _sheetRow(s.isArabic ? 'رصيد مخزن منها' : 'Stored',
                   fmtThousands(inv.stored), AppColors.teal, dark),
               const SizedBox(height: 16),
@@ -1869,9 +2135,9 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final no = '${r['no'] ?? ''}';
     final pNo = '${r['purchaseNo'] ?? ''}';
     final date = '${r['date'] ?? ''}';
-    final total = ((r['total'] as num?)?.toInt() ?? 0);
-    final pts = ((r['points'] as num?)?.toInt() ?? 0);
-    final st = ((r['stored'] as num?)?.toInt() ?? 0);
+    final total = ((r['total'] as num?)?.toInt() ?? 0).abs();
+    final pts = ((r['points'] as num?)?.toInt() ?? 0).abs();
+    final st = ((r['stored'] as num?)?.toInt() ?? 0).abs();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
