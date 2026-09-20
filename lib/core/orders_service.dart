@@ -158,6 +158,24 @@ class OrdersService {
     await p.remove('cart_$uid');
   }
 
+  /// ✅ إضافة مركزية متسلسلة: قراءة حديثة + كتابة مؤمّنة ضد التعارض
+  static Future<void> _cartChain = Future<void>.value();
+  static Future<void> addToCart(String uid, String id, String name,
+      String image, String brand, int qty) async {
+    _cartChain = _cartChain.then((_) async {
+      final cart = await loadCart(uid);
+      final exist = cart.where((c) => c.id == id).toList();
+      if (exist.isNotEmpty) {
+        exist.first.qty += qty;
+      } else {
+        cart.add(CartItem(
+            id: id, name: name, image: image, brand: brand, qty: qty));
+      }
+      await saveCart(uid, cart);
+    });
+    await _cartChain;
+  }
+
   static Future<List<Order>> loadOrders() async {
     final d = await _fetchJson(kOrdersPath);
     if (d is List) {
@@ -185,7 +203,6 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
-  /// 📋 سجل المرتجعات (للمعلومة والخصم الموحّد)
   static Future<List<Map<String, dynamic>>> loadReturns() async {
     final d = await _fetchJson('assets/data/returns.json');
     if (d is List) {
@@ -194,7 +211,6 @@ class OrdersService {
     return [];
   }
 
-  /// 🗑️ حذف فاتورة شراء + مرتجعاتها المرتبطة
   static Future<void> deleteInvoice(String id) async {
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is List) {
@@ -208,14 +224,12 @@ class OrdersService {
     }
   }
 
-  /// 🗑️ حذف سجل مرتجع واحد
   static Future<void> deleteReturn(String id) async {
     final rets = await loadReturns();
     rets.removeWhere((r) => r['id'] == id);
     await _putJson('assets/data/returns.json', rets);
   }
 
-  /// 🗑️ حذف مستخدم + كل فواتيره + مرتجعاته + طلباته
   static Future<void> deleteUserAll(String userId) async {
     final users = await _fetchJson('assets/data/users.json');
     if (users is List) {
@@ -237,7 +251,6 @@ class OrdersService {
     await _putJson(kOrdersPath, orders.map((e) => e.toJson()).toList());
   }
 
-  /// ✏️ تعديل بيانات مستخدم بدون فقدان الحقول الإضافية
   static Future<void> patchUser(
       String id, Map<String, dynamic> patch) async {
     final users = await _fetchJson('assets/data/users.json');
@@ -252,7 +265,6 @@ class OrdersService {
     }
   }
 
-  /// ➕ إنشاء حساب جديد بحقول إضافية
   static Future<void> addUserRaw(Map<String, dynamic> entry) async {
     final users = await _fetchJson('assets/data/users.json');
     if (users is List) {
@@ -312,7 +324,6 @@ class OrdersService {
     await updateOrder(o);
   }
 
-  /// 🔁 مرتجع: يعدّل فاتورة الشراء + يسجّل المرتجع كمعلومة
   static Future<void> markReturned(
     Order o, {
     List<OrderItem>? returnedItems,
@@ -374,8 +385,6 @@ class OrdersService {
     await _putJson('assets/data/returns.json', rets);
   }
 
-  /// 💰 كل ما بلغ الرصيد التراكمي 125,000 ← فاتورة نقطة جديدة SP-متسلسل
-  /// ✅ يخصم المرتجعات الجديدة قبل الاحتساب (توحيد مع الصفحتين)
   static Future<bool> convertStoredToPoints(String userId) async {
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is! List) return false;
@@ -387,7 +396,6 @@ class OrdersService {
         if (i['type'] == 'stored_point') existing++;
       }
     }
-    // ✅ خصم المرتجعات الجديدة من الرصيد قبل احتساب النقطة
     final rets = await loadReturns();
     for (final r in rets) {
       if (r['userId'] == userId) {
