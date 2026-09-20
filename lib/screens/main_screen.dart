@@ -30,6 +30,7 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     return Scaffold(
+      // ✅ تمرير index لعرض الصفحة المختارة
       body: IndexedStack(index: _idx, children: screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _idx,
