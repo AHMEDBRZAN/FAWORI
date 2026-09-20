@@ -2529,19 +2529,16 @@ class FavoritesScreen extends StatelessWidget {
 class _FavoritesView extends StatelessWidget {
   const _FavoritesView();
 
-  /// ✅ إضافة للسلة بقراءة لحظية + دعم الكمية
-  Future<void> _addToCart(BuildContext context, Product p,
-      [int qty = 1]) async {
+  Future<void> _addToCart(BuildContext context, Product p) async {
     final s = context.read<AppSettings>();
     final uid = s.user?.id ?? '';
     if (uid.isEmpty) return;
     final cart = await OrdersService.loadCart(uid);
     final exist = cart.where((c) => c.id == p.id).toList();
     if (exist.isNotEmpty) {
-      exist.first.qty += qty;
+      exist.first.qty++;
     } else {
-      cart.add(CartItem(
-          id: p.id, name: p.name, image: '', brand: p.brand, qty: qty));
+      cart.add(CartItem(id: p.id, name: p.name, image: '', brand: p.brand));
     }
     await OrdersService.saveCart(uid, cart);
     if (context.mounted) {
@@ -2585,7 +2582,7 @@ class _FavoritesView extends StatelessWidget {
                           builder: (_) => ProductDetailScreen(
                                 product: p,
                                 canBuy: canBuy,
-                                onAdd: (q) => _addToCart(context, p, q),
+                                onAdd: () => _addToCart(context, p),
                               ))),
                   child: Container(
                     padding: const EdgeInsets.all(14),
