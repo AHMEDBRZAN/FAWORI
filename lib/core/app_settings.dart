@@ -175,15 +175,24 @@ class AppSettings extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// ✅ احتساب موحّد مع صفحة النقاط والرصيد:
+  /// مجموع الفواتير − مرتجعات returns.json
   Future<User> _withInvoiceTotals(User base) async {
     try {
       final invs = await StoreService.loadInvoices();
+      final rets = await OrdersService.loadReturns();
       int pts = 0;
       int st = 0;
       for (final i in invs) {
         if (i.userId == base.id) {
           pts += i.points;
           st += i.stored;
+        }
+      }
+      for (final r in rets) {
+        if (r['userId'] == base.id) {
+          pts -= ((r['points'] as num?)?.toInt() ?? 0);
+          st -= ((r['stored'] as num?)?.toInt() ?? 0);
         }
       }
       return User(
