@@ -307,7 +307,6 @@ class _OrderDetailState extends State<_OrderDetail> {
     _loadReturns();
   }
 
-  /// ✅ جلب سجلات المرتجع المرتبطة بهذه الفاتورة
   Future<void> _loadReturns() async {
     try {
       final rets = await OrdersService.loadReturns();
@@ -387,7 +386,7 @@ class _OrderDetailState extends State<_OrderDetail> {
     }
   }
 
-  /// 🔄 نافذة المرتجع: حقول فارغة — سعر ورقم فاتورة المرتجع مختلفان
+  /// 🔄 نافذة المرتجع: حقول فارغة + فواصل تلقائية في السعر
   Future<void> _showReturnDialog() async {
     final s = context.read<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -529,12 +528,14 @@ class _OrderDetailState extends State<_OrderDetail> {
                     );
                   }),
                   const SizedBox(height: 16),
+                  // ✅ سعر المرتجع: فواصل تلقائية أثناء الكتابة
                   TextField(
                     controller: totalCtrl,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly
-                    ],
+                    onChanged: (_) {
+                      _applyMoneyFormat(totalCtrl);
+                      setDialogState(() {});
+                    },
                     style: TextStyle(
                         color: dark ? Colors.white : AppColors.ink,
                         fontSize: 16),
@@ -627,7 +628,8 @@ class _OrderDetailState extends State<_OrderDetail> {
 
     if (result != true || !mounted) return;
 
-    final customTotal = double.tryParse(totalCtrl.text) ?? 0;
+    final customTotal =
+        double.tryParse(totalCtrl.text.replaceAll(',', '')) ?? 0;
     if (customTotal <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -655,9 +657,7 @@ class _OrderDetailState extends State<_OrderDetail> {
         await context.read<AppSettings>().refreshUser();
       } catch (_) {}
       if (mounted) {
-        setState(() {
-          _busy = false;
-        });
+        setState(() => _busy = false);
         _loadReturns();
         Navigator.pop(context);
       }
@@ -748,14 +748,13 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
-  /// 📋 بطاقة مرتجع: تاريخ + رقم فاتورة المرتجع + رقم فاتورة الشراء + جدول + الخصومات
+  /// 📋 بطاقة مرتجع: رأس + فاتورة الشراء + جدول + الخصومات
   Widget _retCard(Map<String, dynamic> r, AppSettings s, bool dark) {
-    final items = List<Map<String, dynamic>>.from(
-        (r['items'] as List? ?? [])
-            .map((e) => Map<String, dynamic>.from(e as Map)));
-    final date = (r['date'] as String? ?? '');
-    final no = (r['no'] as String? ?? '');
-    final pNo = (r['purchaseNo'] as String? ?? '');
+    final items = List<Map<String, dynamic>>.from((r['items'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map)));
+    final no = '${r['no'] ?? ''}';
+    final pNo = '${r['purchaseNo'] ?? ''}';
+    final date = '${r['date'] ?? ''}';
     final total = ((r['total'] as num?)?.toInt() ?? 0);
     final pts = ((r['points'] as num?)?.toInt() ?? 0);
     final st = ((r['stored'] as num?)?.toInt() ?? 0);
@@ -796,9 +795,9 @@ class _OrderDetailState extends State<_OrderDetail> {
               ],
             ),
           ),
-          // ✅ رقم فاتورة الشراء كمعلومة
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             color: const Color(0xFF9B59B6).withAlpha(dark ? 30 : 18),
             child: Row(
               children: [
