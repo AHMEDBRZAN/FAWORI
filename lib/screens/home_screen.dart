@@ -34,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
-  /// ✅ إضافة بقراءة لحظية من التخزين
   Future<void> _addToCart(Product p, int qty) async {
     final s = context.read<AppSettings>();
     final uid = s.user?.id ?? '';
@@ -47,15 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return;
     }
-    final cart = await OrdersService.loadCart(uid);
-    final exist = cart.where((c) => c.id == p.id).toList();
-    if (exist.isNotEmpty) {
-      exist.first.qty += qty;
-    } else {
-      cart.add(CartItem(
-          id: p.id, name: p.name, image: '', brand: p.brand, qty: qty));
-    }
-    await OrdersService.saveCart(uid, cart);
+    await OrdersService.addToCart(uid, p.id, p.name, '', p.brand, qty);
     await _refreshCount();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -295,72 +286,86 @@ class _HomeScreenState extends State<HomeScreen> {
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (context, i) {
                 final p = sampleData[i];
-                return Pressable(
-                  onTap: () => _openDetail(p),
-                  child: Container(
-                    width: 150,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: dark
-                            ? <Color>[
-                                const Color(0xFF1E1E28),
-                                const Color(0xFF26262E)
-                              ]
-                            : <Color>[Colors.white, const Color(0xFFFFF8F1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      border:
-                          Border.all(color: AppColors.orange.withAlpha(50)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: Icon(Icons.format_paint_rounded,
-                                size: 40, color: AppColors.orange),
+                // ✅ بطاقة + زر إضافة منفصلان
+                return Stack(
+                  children: [
+                    Pressable(
+                      onTap: () => _openDetail(p),
+                      child: Container(
+                        width: 150,
+                        height: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: dark
+                                ? <Color>[
+                                    const Color(0xFF1E1E28),
+                                    const Color(0xFF26262E)
+                                  ]
+                                : <Color>[
+                                    Colors.white,
+                                    const Color(0xFFFFF8F1)
+                                  ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                              color: AppColors.orange.withAlpha(50)),
                         ),
-                        Text(p.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                                color: dark ? Colors.white : AppColors.ink)),
-                        const SizedBox(height: 8),
-                        Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Expanded(
+                              child: Center(
+                                child: Icon(Icons.format_paint_rounded,
+                                    size: 40, color: AppColors.orange),
+                              ),
+                            ),
+                            Text(p.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                    color: dark
+                                        ? Colors.white
+                                        : AppColors.ink)),
+                            const SizedBox(height: 6),
                             Text(p.brand,
                                 style: const TextStyle(
                                     color: AppColors.teal,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800)),
-                            const Spacer(),
-                            InkWell(
-                              onTap: () => _addToCart(p, 1),
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                      colors: <Color>[
-                                        Color(0xFFFF8C00),
-                                        Color(0xFFF26B0F)
-                                      ]),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(Icons.add_rounded,
-                                    color: Colors.white, size: 14),
-                              ),
-                            ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    PositionedDirectional(
+                      bottom: 8,
+                      end: 8,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _addToCart(p, 1),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                  colors: <Color>[
+                                    Color(0xFFFF8C00),
+                                    Color(0xFFF26B0F)
+                                  ]),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.add_rounded,
+                                color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
