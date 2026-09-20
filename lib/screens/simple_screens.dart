@@ -15,17 +15,25 @@ import 'product_detail_screen.dart';
 
 const String _kProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
+/// ✅ صيغة العرض: سنة-شهر-يوم (السنة يسار، الشهر وسط، اليوم يمين)
 String _dmy(String iso) {
-  try {
-    final p = iso.split('-');
-    return '${p[2].padLeft(2, '0')}-${p[1].padLeft(2, '0')}-${p[0]}';
-  } catch (_) {
-    return iso;
+  final p = iso.split('-');
+  if (p.length == 3 && p[0].length == 4) return iso;
+  if (p.length == 3 && p[2].length == 4) return '${p[2]}-${p[1]}-${p[0]}';
+  return iso;
+}
+
+/// ✅ طابع زمني للترتيب (الأحدث أولاً)
+int _tsId(String id) {
+  if (id.contains('_ret_')) return int.tryParse(id.split('_ret_').last) ?? 0;
+  if (id.endsWith('_ret')) {
+    return int.tryParse(id.substring(0, id.length - 4)) ?? 0;
   }
+  return int.tryParse(id) ?? 0;
 }
 
 // ======================================================
-// المحفظة (مستخدم) — شراء + مرتجع فقط (بدون الرصيد المخزن)
+// المحفظة (مستخدم) — شراء + مرتجع + فرز + الأحدث أولاً
 // ======================================================
 
 class WalletScreen extends StatefulWidget {
@@ -38,6 +46,7 @@ class _WalletScreenState extends State<WalletScreen> {
   List<Invoice> _invoices = [];
   List<Map<String, dynamic>> _returns = [];
   int _lastVersion = -1;
+  String _wFilter = 'all';
 
   @override
   void didChangeDependencies() {
@@ -122,7 +131,17 @@ class _WalletScreenState extends State<WalletScreen> {
         {'kind': 'return', 'inv': i},
       for (final r in _returns.where((x) => x['userId'] == s.user?.id))
         {'kind': 'return', 'ret': r},
-    ].reversed.toList();
+    ];
+
+    // ✅ الفرز
+    final filtered = _wFilter == 'sale'
+        ? rows.where((r) => r['kind'] == 'sale').toList()
+        : _wFilter == 'return'
+            ? rows.where((r) => r['kind'] == 'return').toList()
+            : rows;
+
+    // ✅ الأحدث أولاً
+    filtered.sort((a, b) => _tsOfRow(b).compareTo(_tsOfRow(a)));
 
     final int storedMod = s.stored % kPointUnit;
     final int remaining = kPointUnit - storedMod;
@@ -153,7 +172,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       color: AppColors.orange.withAlpha(30),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('${rows.length}',
+                    child: Text('${filtered.length}',
                         style: const TextStyle(
                             color: AppColors.orange,
                             fontWeight: FontWeight.w900)),
@@ -264,11 +283,24 @@ class _WalletScreenState extends State<WalletScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text(s.isArabic ? 'الفواتير' : 'Invoices',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w900)),
+              // ✅ عنوان الفواتير يمين + أزرار الفرز يسار
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(s.isArabic ? 'الفواتير' : 'Invoices',
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w900)),
+                  ),
+                  _wChip(s.isArabic ? 'الكل' : 'All', 'all',
+                      AppColors.orange),
+                  _wChip(s.isArabic ? 'شراء' : 'Sale', 'sale',
+                      AppColors.teal),
+                  _wChip(s.isArabic ? 'مرتجع' : 'Return', 'return',
+                      Colors.red),
+                ],
+              ),
               const SizedBox(height: 12),
-              if (rows.isEmpty)
+              if (filtered.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Center(
@@ -277,8 +309,8 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                 )
               else
-                ...rows.map((r) => _uniTile(s, r, dark)),
-              if (rows.isNotEmpty) ...[
+                ...filtered.map((r) => _uniTile(s, r, dark)),
+              if (filtered.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -316,7 +348,40 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// ✅ بطاقة موحّدة: شراء أو مرتجع (من الفواتير أو من سجل المرتجعات)
+  int _tsOfRow(Map<String, dynamic> row) {
+    final inv = row['inv'] as Invoice?;
+    final ret = row['ret'] as Map<String, dynamic>?;
+    final id = inv != null ? inv.id : '${ret?['id'] ?? ''}';
+    return _tsId(id);
+  }
+
+  Widget _wChip(String label, String value, Color c) {
+    final active = _wFilter == value;
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 6),
+      child: InkWell(
+        onTap: () => setState(() => _wFilter = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: active
+                ? LinearGradient(colors: <Color>[c, c.withAlpha(180)])
+                : null,
+            color: active ? null : c.withAlpha(18),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: c.withAlpha(active ? 180 : 80)),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: active ? Colors.white : c,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 11)),
+        ),
+      ),
+    );
+  }
+
   Widget _uniTile(AppSettings s, Map<String, dynamic> row, bool dark) {
     final isSale = row['kind'] == 'sale';
     final Invoice? inv = row['inv'] as Invoice?;
@@ -353,9 +418,12 @@ class _WalletScreenState extends State<WalletScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_dmy(date),
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 12)),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy(date),
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 12)),
+                    ),
                     const SizedBox(height: 4),
                     Directionality(
                       textDirection: TextDirection.ltr,
@@ -431,7 +499,6 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  /// 🪟 تفاصيل مرتجع جديد (من سجل المرتجعات)
   void _openReturnSheet(
       AppSettings s, Map<String, dynamic> r, bool dark) {
     final items = List<Map<String, dynamic>>.from((r['items'] as List? ?? [])
@@ -473,11 +540,15 @@ class _WalletScreenState extends State<WalletScreen> {
                     const Icon(Icons.calendar_today_rounded,
                         size: 15, color: Color(0xFF9B59B6)),
                     const SizedBox(width: 6),
-                    Text(_dmy(date),
-                        style: TextStyle(
-                            color: dark ? Colors.grey.shade200 : AppColors.ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13)),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy(date),
+                          style: TextStyle(
+                              color:
+                                  dark ? Colors.grey.shade200 : AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13)),
+                    ),
                     const Spacer(),
                     const Icon(Icons.assignment_return_rounded,
                         size: 15, color: Color(0xFF9B59B6)),
@@ -680,12 +751,14 @@ class _WalletScreenState extends State<WalletScreen> {
                   const Icon(Icons.calendar_today_rounded,
                       size: 15, color: AppColors.teal),
                   const SizedBox(width: 6),
-                  Text(_dmy(inv.date),
-                      style: TextStyle(
-                          color:
-                              dark ? Colors.grey.shade200 : AppColors.ink,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13)),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(_dmy(inv.date),
+                        style: TextStyle(
+                            color: dark ? Colors.grey.shade200 : AppColors.ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13)),
+                  ),
                   const Spacer(),
                   const Icon(Icons.receipt_long_outlined,
                       size: 15, color: AppColors.orange),
@@ -943,7 +1016,7 @@ class _WalletScreenState extends State<WalletScreen> {
 }
 
 // ======================================================
-// 📊 صفحة النقاط والرصيد (للمدير) — نفس طريقة احتساب المحفظة
+// 📊 صفحة النقاط والرصيد (للمدير) — الأحدث أولاً
 // ======================================================
 
 class AdminPointsView extends StatefulWidget {
@@ -993,15 +1066,21 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     return 'عميل';
   }
 
-  List<Invoice> _salesOf(User u) =>
-      _invoices.where((i) => i.userId == u.id && i.type == 'sale').toList();
+  /// ✅ فواتير الشراء — الأحدث أولاً
+  List<Invoice> _salesOf(User u) {
+    final list = _invoices
+        .where((i) => i.userId == u.id && i.type == 'sale')
+        .toList();
+    list.sort((a, b) => _tsId(b.id).compareTo(_tsId(a.id)));
+    return list;
+  }
 
-  /// ✅ المرتجعات: الجديدة (returns.json) + القديمة (invoices.json نوع return)
+  /// ✅ المرتجعات (جديدة + قديمة) — الأحدث أولاً
   List<Map<String, dynamic>> _returnsOf(User u) {
-    return <Map<String, dynamic>>[
+    final list = <Map<String, dynamic>>[
       ..._returns.where((r) => r['userId'] == u.id),
-      for (final i
-          in _invoices.where((x) => x.userId == u.id && x.type == 'return'))
+      for (final i in _invoices
+          .where((x) => x.userId == u.id && x.type == 'return'))
         {
           'id': i.id,
           'legacy': true,
@@ -1016,9 +1095,11 @@ class _AdminPointsViewState extends State<AdminPointsView> {
               .toList(),
         },
     ];
+    list.sort((a, b) =>
+        _tsId('${b['id']}').compareTo(_tsId('${a['id']}')));
+    return list;
   }
 
-  /// ✅ نفس طريقة احتساب المحفظة: فواتير − مرتجعات جديدة
   int _pointsOf(User u) {
     int p = _invoices
         .where((i) => i.userId == u.id)
@@ -1049,30 +1130,39 @@ class _AdminPointsViewState extends State<AdminPointsView> {
           u.name.toLowerCase().contains(q) || u.phone.contains(q))
       .toList();
 
-  List<Invoice> _matchSales(String q) => _invoices
-      .where((i) => i.type == 'sale' && i.no.toLowerCase().contains(q))
-      .toList();
+  List<Invoice> _matchSales(String q) {
+    final list = _invoices
+        .where((i) => i.type == 'sale' && i.no.toLowerCase().contains(q))
+        .toList();
+    list.sort((a, b) => _tsId(b.id).compareTo(_tsId(a.id)));
+    return list;
+  }
 
-  List<Map<String, dynamic>> _matchReturns(String q) => [
-        ..._returns.where((r) =>
-            '${r['no']}'.toLowerCase().contains(q) ||
-            '${r['purchaseNo']}'.toLowerCase().contains(q)),
-        for (final i in _invoices.where((x) =>
-            x.type == 'return' && x.no.toLowerCase().contains(q)))
-          {
-            'id': i.id,
-            'legacy': true,
-            'no': i.no,
-            'date': i.date,
-            'total': i.total,
-            'points': i.points,
-            'stored': i.stored,
-            'purchaseNo': '',
-            'items': i.items
-                .map((it) => {'name': it.name, 'qty': it.qty})
-                .toList(),
-          },
-      ];
+  List<Map<String, dynamic>> _matchReturns(String q) {
+    final list = <Map<String, dynamic>>[
+      ..._returns.where((r) =>
+          '${r['no']}'.toLowerCase().contains(q) ||
+          '${r['purchaseNo']}'.toLowerCase().contains(q)),
+      for (final i in _invoices.where((x) =>
+          x.type == 'return' && x.no.toLowerCase().contains(q)))
+        {
+          'id': i.id,
+          'legacy': true,
+          'no': i.no,
+          'date': i.date,
+          'total': i.total,
+          'points': i.points,
+          'stored': i.stored,
+          'purchaseNo': '',
+          'items': i.items
+              .map((it) => {'name': it.name, 'qty': it.qty})
+              .toList(),
+        },
+    ];
+    list.sort((a, b) =>
+        _tsId('${b['id']}').compareTo(_tsId('${a['id']}')));
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1342,7 +1432,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     }
   }
 
-  /// 🗑️ حذف مرتجع (جديد أو قديم)
   Future<void> _confirmDeleteReturn(
       Map<String, dynamic> r, AppSettings s) async {
     final ok = await showDialog<bool>(
@@ -1850,9 +1939,12 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(_dmy(i.date),
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 11)),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy(i.date),
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 11)),
+                    ),
                     const SizedBox(height: 4),
                     Directionality(
                       textDirection: TextDirection.ltr,
@@ -1983,9 +2075,12 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(_dmy(date),
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 11)),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy(date),
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 11)),
+                    ),
                     const SizedBox(height: 4),
                     Directionality(
                       textDirection: TextDirection.ltr,
@@ -2084,11 +2179,15 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                     const Icon(Icons.calendar_today_rounded,
                         size: 15, color: AppColors.teal),
                     const SizedBox(width: 6),
-                    Text(_dmy(inv.date),
-                        style: TextStyle(
-                            color: dark ? Colors.grey.shade200 : AppColors.ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13)),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy(inv.date),
+                          style: TextStyle(
+                              color:
+                                  dark ? Colors.grey.shade200 : AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13)),
+                    ),
                     const Spacer(),
                     const Icon(Icons.receipt_long_outlined,
                         size: 15, color: AppColors.orange),
@@ -2169,11 +2268,15 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                     const Icon(Icons.calendar_today_rounded,
                         size: 15, color: Color(0xFF9B59B6)),
                     const SizedBox(width: 6),
-                    Text(_dmy(date),
-                        style: TextStyle(
-                            color: dark ? Colors.grey.shade200 : AppColors.ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13)),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy(date),
+                          style: TextStyle(
+                              color:
+                                  dark ? Colors.grey.shade200 : AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13)),
+                    ),
                     const Spacer(),
                     const Icon(Icons.assignment_return_rounded,
                         size: 15, color: Color(0xFF9B59B6)),
