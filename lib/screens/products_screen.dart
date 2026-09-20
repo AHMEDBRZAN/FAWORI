@@ -109,7 +109,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 if (_cartCount > 0)
                   Positioned(
                     top: 0,
-                    end: 0,
+                    right: 0,
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
