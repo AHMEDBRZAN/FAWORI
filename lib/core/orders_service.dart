@@ -135,10 +135,6 @@ class OrdersService {
     return [];
   }
 
-  // ====================================================
-  //  السلة
-  // ====================================================
-
   static Future<List<CartItem>> loadCart(String uid) async {
     try {
       final p = await SharedPreferences.getInstance();
@@ -161,28 +157,6 @@ class OrdersService {
     final p = await SharedPreferences.getInstance();
     await p.remove('cart_$uid');
   }
-
-  /// ✅ إضافة مركزية متسلسلة: قراءة حديثة + كتابة مؤمّنة ضد التعارض
-  static Future<void> _cartChain = Future<void>.value();
-  static Future<void> addToCart(String uid, String id, String name,
-      String image, String brand, int qty) async {
-    _cartChain = _cartChain.then((_) async {
-      final cart = await loadCart(uid);
-      final exist = cart.where((c) => c.id == id).toList();
-      if (exist.isNotEmpty) {
-        exist.first.qty += qty;
-      } else {
-        cart.add(CartItem(
-            id: id, name: name, image: image, brand: brand, qty: qty));
-      }
-      await saveCart(uid, cart);
-    });
-    await _cartChain;
-  }
-
-  // ====================================================
-  // 📦 الطلبات
-  // ====================================================
 
   static Future<List<Order>> loadOrders() async {
     final d = await _fetchJson(kOrdersPath);
@@ -288,10 +262,6 @@ class OrdersService {
       await _putJson('assets/data/users.json', [entry]);
     }
   }
-
-  // ====================================================
-  // ✅ دورة الطلب
-  // ====================================================
 
   static Future<void> acceptOrder(Order o) async {
     o.points = (o.total ~/ kPointUnit).toDouble();
