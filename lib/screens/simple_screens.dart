@@ -841,7 +841,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
             color: dark ? Colors.white : AppColors.ink,
           ),
         ),
-        // ✅ زر إنشاء حساب
         actions: _sel == null
             ? [
                 IconButton(
@@ -1333,7 +1332,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                 ],
               ),
               const SizedBox(width: 4),
-              // ✅ زر تعديل
               IconButton(
                 tooltip: s.isArabic ? 'تعديل' : 'Edit',
                 icon: const Icon(Icons.edit_rounded,
@@ -1351,7 +1349,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   }
                 },
               ),
-              // ✅ زر حذف
               IconButton(
                 tooltip: s.isArabic ? 'حذف' : 'Delete',
                 icon: const Icon(Icons.delete_outline_rounded,
@@ -1526,6 +1523,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
+  /// ✅ صف فاتورة شراء: نوع يمين ← مبلغ وسط ← نقاط بارزة (+) ← حذف داخل البطاقة
   Widget _saleRow(Invoice i, AppSettings s, bool dark, bool glow) {
     return _Glow(
       glow: glow,
@@ -1559,29 +1557,30 @@ class _AdminPointsViewState extends State<AdminPointsView> {
             children: [
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: <Color>[
-                      AppColors.teal.withAlpha(50),
-                      AppColors.teal.withAlpha(20),
-                    ],
+                  gradient: const LinearGradient(
+                    colors: <Color>[AppColors.teal, Color(0xFF0AA87A)],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.teal.withAlpha(40),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text('${i.points}',
-                      style: const TextStyle(
-                          color: AppColors.teal,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900)),
-                ),
+                child: Text(s.isArabic ? 'شراء' : 'Sale',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800)),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(_dmy(i.date),
                         style: TextStyle(
@@ -1595,41 +1594,56 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                               fontWeight: FontWeight.w900,
                               color: dark ? Colors.white : AppColors.ink)),
                     ),
+                    if (i.no.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(i.no,
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 10)),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      AppColors.teal.withAlpha(60),
+                      AppColors.teal.withAlpha(25),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.teal.withAlpha(120)),
+                ),
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text('+${i.points}',
+                      style: const TextStyle(
+                          color: AppColors.teal,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 4),
+                child: InkWell(
+                  onTap: () => _confirmDeleteInvoice(i, s),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: <Color>[AppColors.teal, Color(0xFF0AA87A)],
-                      ),
+                      color: Colors.red.withAlpha(20),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(s.isArabic ? 'شراء' : 'Sale',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800)),
+                    child: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.red, size: 16),
                   ),
-                  const SizedBox(height: 4),
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(i.no.isEmpty ? '—' : i.no,
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 11)),
-                  ),
-                ],
-              ),
-              IconButton(
-                tooltip: s.isArabic ? 'حذف الفاتورة' : 'Delete invoice',
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.red, size: 18),
-                onPressed: () => _confirmDeleteInvoice(i, s),
+                ),
               ),
             ],
           ),
@@ -1638,6 +1652,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
+  /// ✅ صف مرتجع: نوع يمين ← مبلغ وسط ← نقاط بارزة (-) ← حذف داخل البطاقة
   Widget _returnRow(
       Map<String, dynamic> r, AppSettings s, bool dark, bool glow) {
     final no = '${r['no'] ?? ''}';
@@ -1676,29 +1691,30 @@ class _AdminPointsViewState extends State<AdminPointsView> {
             children: [
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: <Color>[
-                      Colors.red.withAlpha(50),
-                      Colors.red.withAlpha(20),
-                    ],
+                  gradient: const LinearGradient(
+                    colors: <Color>[Colors.red, Color(0xFFB02A2A)],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.red.withAlpha(40),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text('-$pts',
-                      style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900)),
-                ),
+                child: Text(s.isArabic ? 'مرتجع' : 'Return',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800)),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(_dmy(date),
                         style: TextStyle(
@@ -1712,41 +1728,56 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                               fontWeight: FontWeight.w900,
                               color: Colors.red.shade300)),
                     ),
+                    if (no.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(no,
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 10)),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      Colors.red.withAlpha(60),
+                      Colors.red.withAlpha(25),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withAlpha(120)),
+                ),
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text('-$pts',
+                      style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 4),
+                child: InkWell(
+                  onTap: () => _confirmDeleteReturn(r, s),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: <Color>[Colors.red, Color(0xFFB02A2A)],
-                      ),
+                      color: Colors.red.withAlpha(20),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(s.isArabic ? 'مرتجع' : 'Return',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800)),
+                    child: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.red, size: 16),
                   ),
-                  const SizedBox(height: 4),
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(no.isEmpty ? '—' : no,
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 11)),
-                  ),
-                ],
-              ),
-              IconButton(
-                tooltip: s.isArabic ? 'حذف المرتجع' : 'Delete return',
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.red, size: 18),
-                onPressed: () => _confirmDeleteReturn(r, s),
+                ),
               ),
             ],
           ),
@@ -1820,7 +1851,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   fmtThousands(inv.total), AppColors.orange, dark,
                   big: true),
               _sheetRow(s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
-                  '${inv.points}', AppColors.teal, dark),
+                  '+${inv.points}', AppColors.teal, dark),
               _sheetRow(s.isArabic ? 'رصيد مخزن منها' : 'Stored',
                   fmtThousands(inv.stored), AppColors.teal, dark),
               const SizedBox(height: 16),
