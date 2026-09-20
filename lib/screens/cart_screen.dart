@@ -17,6 +17,9 @@ class _CartScreenState extends State<CartScreen> {
   bool _busy = false;
   final _invNo = TextEditingController();
 
+  /// ✅ سلسلة كتابة متسلسلة: لا عملية حفظ تكتمل بعد التفريغ
+  Future<void> _writeChain = Future<void>.value();
+
   @override
   void initState() {
     super.initState();
@@ -29,20 +32,29 @@ class _CartScreenState extends State<CartScreen> {
     super.dispose();
   }
 
+  /// ✅ تحميل لحظي من التخزين عند كل فتح
   Future<void> _load() async {
     final s = context.read<AppSettings>();
-    final cart = await OrdersService.loadCart(s.user?.id ?? '');
-    if (mounted) {
-      setState(() {
-        _items = cart;
-        _loading = false;
-      });
+    try {
+      final cart = await OrdersService.loadCart(s.user?.id ?? '');
+      if (mounted) {
+        setState(() {
+          _items = cart;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
+  /// ✅ حفظ عبر السلسلة المتسلسلة
   Future<void> _save() async {
     final s = context.read<AppSettings>();
-    await OrdersService.saveCart(s.user?.id ?? '', _items);
+    final snapshot = List<CartItem>.from(_items);
+    _writeChain = _writeChain
+        .then((_) => OrdersService.saveCart(s.user?.id ?? '', snapshot));
+    await _writeChain;
   }
 
   Future<void> _chg(int i, int d) async {
@@ -60,7 +72,6 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _checkout() async {
     final s = context.read<AppSettings>();
     final inv = _invNo.text.trim();
-    // ✅ لا يتم الطلب بدون رقم فاتورة
     if (inv.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -68,9 +79,19 @@ class _CartScreenState extends State<CartScreen> {
           backgroundColor: Colors.red));
       return;
     }
-    if (_items.isEmpty) return;
+    if (_items.isEmpty) return; // ✅ بدون أي إشعار إذا كانت فارغة
     setState(() => _busy = true);
     try {
+      // ✅ انتظر أي عمليات حفظ معلّقة
+      await _writeChain;
+      final captured = List<CartItem>.from(_items);
+
+      // ✅ تفريغ فوري (ذاكرة + تخزين) قبل الإرسال
+      setState(() {
+        _items = [];
+      });
+      await OrdersService.clearCart(s.user?.id ?? '');
+
       final now = DateTime.now();
       final order = Order(
         id: '${now.millisecondsSinceEpoch}',
@@ -79,21 +100,19 @@ class _CartScreenState extends State<CartScreen> {
         userRole: s.user?.role ?? '',
         date:
             '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
-        items: _items.map((e) => OrderItem(name: e.name, qty: e.qty)).toList(),
-        invoiceNo: inv, // ✅ رقم الفاتورة من المستخدم
+        items: captured
+            .map((e) => OrderItem(name: e.name, qty: e.qty))
+            .toList(),
+        invoiceNo: inv,
       );
       await OrdersService.submitOrder(order);
-      await OrdersService.clearCart(s.user?.id ?? '');
       if (mounted) {
-        setState(() {
-          _items = [];
-          _busy = false;
-        });
+        setState(() => _busy = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(s.isArabic
-                ? '✅ تم إرسال الطلب مع رقم الفاتورة إلى الإدارة'
-                : 'Order sent with invoice number')));
-        Navigator.pop(context);
+                ? '✅ تم إرسال الطلب إلى الإدارة'
+                : 'Order sent to admin')));
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
@@ -149,8 +168,7 @@ class _CartScreenState extends State<CartScreen> {
                                           : AppColors.ink)),
                             ),
                             IconButton(
-                              icon: const Icon(
-                                  Icons.remove_circle_outline,
+                              icon: const Icon(Icons.remove_circle_outline,
                                   color: AppColors.orange),
                               onPressed: _items[i].qty > 1
                                   ? () => _chg(i, -1)
@@ -175,7 +193,6 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ),
                     const SizedBox(height: 8),
-                    // ✅ حقل رقم الفاتورة — كيبورد أرقام فقط
                     TextField(
                       controller: _invNo,
                       keyboardType: TextInputType.number,
@@ -293,11 +310,10 @@ class _CartScreenState extends State<CartScreen> {
                     const SizedBox(height: 18),
                     Container(
                       decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                              colors: <Color>[
-                                Color(0xFFE8A33C),
-                                Color(0xFFF26B0F)
-                              ]),
+                          gradient: const LinearGradient(colors: <Color>[
+                            Color(0xFFE8A33C),
+                            Color(0xFFF26B0F)
+                          ]),
                           borderRadius: BorderRadius.circular(14)),
                       child: SizedBox(
                         height: 54,
@@ -313,8 +329,7 @@ class _CartScreenState extends State<CartScreen> {
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white))
+                                      strokeWidth: 2, color: Colors.white))
                               : Text(
                                   s.isArabic ? 'إتمام الشراء' : 'Checkout',
                                   style: const TextStyle(
