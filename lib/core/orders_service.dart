@@ -185,6 +185,7 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
+  /// 📋 سجل المرتجعات (للمعلومة والخصم الموحّد)
   static Future<List<Map<String, dynamic>>> loadReturns() async {
     final d = await _fetchJson('assets/data/returns.json');
     if (d is List) {
@@ -373,6 +374,8 @@ class OrdersService {
     await _putJson('assets/data/returns.json', rets);
   }
 
+  /// 💰 كل ما بلغ الرصيد التراكمي 125,000 ← فاتورة نقطة جديدة SP-متسلسل
+  /// ✅ يخصم المرتجعات الجديدة قبل الاحتساب (توحيد مع الصفحتين)
   static Future<bool> convertStoredToPoints(String userId) async {
     final invs = await _fetchJson('assets/data/invoices.json');
     if (invs is! List) return false;
@@ -382,6 +385,13 @@ class OrdersService {
       if (i is Map && i['userId'] == userId) {
         net += ((i['stored'] as num?)?.toInt() ?? 0);
         if (i['type'] == 'stored_point') existing++;
+      }
+    }
+    // ✅ خصم المرتجعات الجديدة من الرصيد قبل احتساب النقطة
+    final rets = await loadReturns();
+    for (final r in rets) {
+      if (r['userId'] == userId) {
+        net -= ((r['stored'] as num?)?.toInt() ?? 0);
       }
     }
     final gross = net + existing * kPointUnit;
