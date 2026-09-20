@@ -6,13 +6,12 @@ import '../core/orders_service.dart';
 import '../core/theme.dart';
 import '../widgets/pressable.dart';
 
+/// ✅ صيغة العرض: سنة-شهر-يوم (السنة يسار، الشهر وسط، اليوم يمين)
 String dmy(String iso) {
-  try {
-    final p = iso.split('-');
-    return '${p[2].padLeft(2, '0')}-${p[1].padLeft(2, '0')}-${p[0]}';
-  } catch (_) {
-    return iso;
-  }
+  final p = iso.split('-');
+  if (p.length == 3 && p[0].length == 4) return iso;
+  if (p.length == 3 && p[2].length == 4) return '${p[2]}-${p[1]}-${p[0]}';
+  return iso;
 }
 
 String time12(String idMillis) {
@@ -156,7 +155,10 @@ class _OrdersScreenState extends State<OrdersScreen>
                 Center(child: CircularProgressIndicator()),
               ]);
             }
-            var orders = snap.data ?? [];
+            // ✅ الأحدث أولاً (آخر فاتورة مضافة في الأعلى)
+            var orders = List<Order>.from(snap.data ?? [])
+              ..sort((a, b) => (int.tryParse(b.id) ?? 0)
+                  .compareTo(int.tryParse(a.id) ?? 0));
             if (isAdmin) {
               switch (_tabIndex) {
                 case 0:
@@ -269,11 +271,15 @@ class _OrdersScreenState extends State<OrdersScreen>
               ],
             ),
             const SizedBox(height: 6),
-            Text(
-              '${dmy(o.date)} • ${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${time12(o.id)}',
-              style: TextStyle(
-                  color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  fontSize: 12),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Text(
+                '${dmy(o.date)} • ${o.items.length} ${s.isArabic ? 'المواد' : 'items'} • ${time12(o.id)}',
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                    color: dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    fontSize: 12),
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -755,9 +761,9 @@ class _OrderDetailState extends State<_OrderDetail> {
     final no = '${r['no'] ?? ''}';
     final pNo = '${r['purchaseNo'] ?? ''}';
     final date = '${r['date'] ?? ''}';
-    final total = ((r['total'] as num?)?.toInt() ?? 0);
-    final pts = ((r['points'] as num?)?.toInt() ?? 0);
-    final st = ((r['stored'] as num?)?.toInt() ?? 0);
+    final total = ((r['total'] as num?)?.toInt() ?? 0).abs();
+    final pts = ((r['points'] as num?)?.toInt() ?? 0).abs();
+    final st = ((r['stored'] as num?)?.toInt() ?? 0).abs();
 
     return Container(
       decoration: BoxDecoration(
@@ -775,11 +781,14 @@ class _OrderDetailState extends State<_OrderDetail> {
                 const Icon(Icons.calendar_today_rounded,
                     size: 14, color: Color(0xFF9B59B6)),
                 const SizedBox(width: 6),
-                Text(dmy(date),
-                    style: const TextStyle(
-                        color: Color(0xFF9B59B6),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12)),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(dmy(date),
+                      style: const TextStyle(
+                          color: Color(0xFF9B59B6),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12)),
+                ),
                 const Spacer(),
                 const Icon(Icons.assignment_return_rounded,
                     size: 14, color: Color(0xFF9B59B6)),
@@ -1026,13 +1035,18 @@ class _OrderDetailState extends State<_OrderDetail> {
                         fontSize: 16,
                         color: dark ? Colors.white : AppColors.ink)),
                 const SizedBox(height: 4),
-                Text(
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
                     '${s.isArabic ? 'التاريخ' : 'Date'}: ${dmy(o.date)} • ${time12(o.id)}',
+                    textAlign: TextAlign.start,
                     style: TextStyle(
                         color: dark
                             ? Colors.grey.shade400
                             : Colors.grey.shade600,
-                        fontSize: 12)),
+                        fontSize: 12),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 ...o.items.map((it) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
