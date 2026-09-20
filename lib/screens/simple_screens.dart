@@ -15,7 +15,6 @@ import 'product_detail_screen.dart';
 
 const String _kProxy = 'https://fawori.ahmdkaka1997.workers.dev/put';
 
-/// ✅ صيغة العرض: سنة-شهر-يوم (السنة يسار، الشهر وسط، اليوم يمين)
 String _dmy(String iso) {
   final p = iso.split('-');
   if (p.length == 3 && p[0].length == 4) return iso;
@@ -23,7 +22,6 @@ String _dmy(String iso) {
   return iso;
 }
 
-/// ✅ طابع زمني للترتيب (الأحدث أولاً)
 int _tsId(String id) {
   if (id.contains('_ret_')) return int.tryParse(id.split('_ret_').last) ?? 0;
   if (id.endsWith('_ret')) {
@@ -31,10 +29,6 @@ int _tsId(String id) {
   }
   return int.tryParse(id) ?? 0;
 }
-
-// ======================================================
-// المحفظة (مستخدم) — شراء + مرتجع + فرز + الأحدث أولاً
-// ======================================================
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -123,7 +117,6 @@ class _WalletScreenState extends State<WalletScreen> {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final mine = _invoices.where((i) => i.userId == s.user?.id).toList();
 
-    // ✅ صفوف موحّدة: شراء + مرتجع (قديم وجديد) — بدون الرصيد المخزن
     final rows = <Map<String, dynamic>>[
       for (final i in mine.where((x) => x.type == 'sale'))
         {'kind': 'sale', 'inv': i},
@@ -133,14 +126,12 @@ class _WalletScreenState extends State<WalletScreen> {
         {'kind': 'return', 'ret': r},
     ];
 
-    // ✅ الفرز
     final filtered = _wFilter == 'sale'
         ? rows.where((r) => r['kind'] == 'sale').toList()
         : _wFilter == 'return'
             ? rows.where((r) => r['kind'] == 'return').toList()
             : rows;
 
-    // ✅ الأحدث أولاً
     filtered.sort((a, b) => _tsOfRow(b).compareTo(_tsOfRow(a)));
 
     final int storedMod = s.stored % kPointUnit;
@@ -283,7 +274,6 @@ class _WalletScreenState extends State<WalletScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // ✅ عنوان الفواتير يمين + أزرار الفرز يسار
               Row(
                 children: [
                   Expanded(
@@ -1015,10 +1005,6 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 }
 
-// ======================================================
-// 📊 صفحة النقاط والرصيد (للمدير) — الأحدث أولاً
-// ======================================================
-
 class AdminPointsView extends StatefulWidget {
   const AdminPointsView({super.key});
   @override
@@ -1066,7 +1052,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     return 'عميل';
   }
 
-  /// ✅ فواتير الشراء — الأحدث أولاً
   List<Invoice> _salesOf(User u) {
     final list = _invoices
         .where((i) => i.userId == u.id && i.type == 'sale')
@@ -1075,7 +1060,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     return list;
   }
 
-  /// ✅ المرتجعات (جديدة + قديمة) — الأحدث أولاً
   List<Map<String, dynamic>> _returnsOf(User u) {
     final list = <Map<String, dynamic>>[
       ..._returns.where((r) => r['userId'] == u.id),
@@ -2452,7 +2436,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   }
 }
 
-/// ✨ وميض ناعم للمطابق 100%
 class _Glow extends StatefulWidget {
   final bool glow;
   final Widget child;
@@ -2511,10 +2494,6 @@ class _GlowState extends State<_Glow> with SingleTickerProviderStateMixin {
   }
 }
 
-// ======================================================
-// المفضلة (مستخدم) / الإدارة (مدير)
-// ======================================================
-
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
@@ -2529,16 +2508,19 @@ class FavoritesScreen extends StatelessWidget {
 class _FavoritesView extends StatelessWidget {
   const _FavoritesView();
 
-  Future<void> _addToCart(BuildContext context, Product p) async {
+  /// ✅ إضافة للسلة بقراءة لحظية + دعم الكمية
+  Future<void> _addToCart(BuildContext context, Product p,
+      [int qty = 1]) async {
     final s = context.read<AppSettings>();
     final uid = s.user?.id ?? '';
     if (uid.isEmpty) return;
     final cart = await OrdersService.loadCart(uid);
     final exist = cart.where((c) => c.id == p.id).toList();
     if (exist.isNotEmpty) {
-      exist.first.qty++;
+      exist.first.qty += qty;
     } else {
-      cart.add(CartItem(id: p.id, name: p.name, image: '', brand: p.brand));
+      cart.add(CartItem(
+          id: p.id, name: p.name, image: '', brand: p.brand, qty: qty));
     }
     await OrdersService.saveCart(uid, cart);
     if (context.mounted) {
@@ -2582,7 +2564,7 @@ class _FavoritesView extends StatelessWidget {
                           builder: (_) => ProductDetailScreen(
                                 product: p,
                                 canBuy: canBuy,
-                                onAdd: () => _addToCart(context, p),
+                                onAdd: (q) => _addToCart(context, p, q),
                               ))),
                   child: Container(
                     padding: const EdgeInsets.all(14),
@@ -2636,10 +2618,6 @@ class _FavoritesView extends StatelessWidget {
     );
   }
 }
-
-// ======================================================
-// 🛠️ شاشة الإدارة: ملفات الكود
-// ======================================================
 
 class AdminCodeView extends StatefulWidget {
   const AdminCodeView({super.key});
@@ -2805,10 +2783,6 @@ class _AdminCodeViewState extends State<AdminCodeView> {
     );
   }
 }
-
-// ======================================================
-// 📝 محرر الكود
-// ======================================================
 
 class CodeEditorPage extends StatefulWidget {
   final String path;
