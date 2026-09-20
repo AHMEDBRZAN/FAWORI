@@ -8,8 +8,18 @@ import '../widgets/pressable.dart';
 import 'cart_screen.dart';
 import 'product_detail_screen.dart';
 
+/// ✅ خريطة أسماء الشركات للفلتر القادم من الرئيسية
+const Map<String, String> _brandAr = {
+  'fawori': 'فاوري',
+  'isomat': 'آيزومات',
+  'cadence': 'كادينز',
+  'sibax': 'سيباكس',
+};
+
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key});
+  /// ✅ اختياري: فتح الشاشة مفلترة على شركة معينة (تستخدمه الرئيسية)
+  final String? initialBrand;
+  const ProductsScreen({super.key, this.initialBrand});
   @override
   State<ProductsScreen> createState() => _ProductsScreenState();
 }
@@ -21,6 +31,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialBrand != null) {
+      _q = _brandAr[widget.initialBrand] ?? widget.initialBrand!;
+    }
     _refreshCount();
   }
 
@@ -159,6 +172,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     color: dark ? Colors.grey.shade500 : Colors.grey.shade400),
                 prefixIcon:
                     const Icon(Icons.search_rounded, color: AppColors.orange),
+                suffixIcon: _q.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded,
+                            color: Colors.red, size: 18),
+                        onPressed: () => setState(() => _q = ''),
+                      )
+                    : null,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 14),
@@ -178,7 +198,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
             itemCount: list.length,
             itemBuilder: (context, i) {
               final p = list[i];
-              // ✅ البطاقة وزر الإضافة طبقتان منفصلتان — لا لمسة مزدوجة
               return Stack(
                 children: [
                   Pressable(
