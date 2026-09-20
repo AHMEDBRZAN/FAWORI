@@ -1,16 +1,73 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
-import '../core/orders_service.dart';
+import '../core/store_service.dart';
 import '../core/theme.dart';
-import '../data/sample_data.dart';
+import '../widgets/fawori_logo.dart';
+import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
-import 'cart_screen.dart';
-import 'product_detail_screen.dart';
+import 'orders_screen.dart';
 import 'products_screen.dart';
 
+const String _base = 'https://ahmedbrzan.github.io/FAWORI';
+const int _kPages = 10000;
+const int _kStart = 1000;
+
+final String _cacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+String _imgUrl(String p) => '$_base/assets/$p?t=$_cacheBuster';
+
+class _AdvancedImageCache {
+  final Map<String, ImageProvider> _cache = {};
+  ImageProvider getProvider(String url) {
+    if (_cache.containsKey(url)) return _cache[url]!;
+    final provider = NetworkImage(url);
+    _cache[url] = provider;
+    return provider;
+  }
+}
+
+final _AdvancedImageCache _imgCache = _AdvancedImageCache();
+
+Future<Map<String, dynamic>> _loadImgs() async {
+  try {
+    final r = await http.get(Uri.parse(
+        '$_base/assets/assets/data/images.json?t=$_cacheBuster'));
+    if (r.statusCode == 200) return Map<String, dynamic>.from(jsonDecode(r.body));
+  } catch (_) {}
+  return {};
+}
+
+const List<String> _companyKeys = ['fawori', 'isomat', 'cadence', 'sibax'];
+const Map<String, String> _companyAr = {
+  'fawori': 'فاوري',
+  'isomat': 'آيزومات',
+  'cadence': 'كادينز',
+  'sibax': 'سيباكس',
+};
+const Map<String, String> _companyEn = {
+  'fawori': 'FAWORI',
+  'isomat': 'ISOMAT',
+  'cadence': 'CADENCE',
+  'sibax': 'SIBAX',
+};
+const Map<String, Color> _companyColor = {
+  'fawori': AppColors.orange,
+  'isomat': Color(0xFFE5484D),
+  'cadence': Color(0xFF9B59B6),
+  'sibax': Color(0xFFC8961E),
+};
+const Map<String, IconData> _companyIcon = {
+  'fawori': Icons.inventory_2_rounded,
+  'isomat': Icons.grid_view_rounded,
+  'cadence': Icons.palette_rounded,
+  'sibax': Icons.build_rounded,
+};
+
 class HomeScreen extends StatefulWidget {
-  /// ✅ اختياري: تستخدمه main_screen للانتقال لتبويب المنتجات
   final VoidCallback? onOpenProducts;
   const HomeScreen({super.key, this.onOpenProducts});
   @override
@@ -18,364 +75,460 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _cartCount = 0;
+  late final PageController _ctrl = PageController(initialPage: _kStart);
+  Timer? _timer;
+  int _idx = 0;
+  List<String> _homeImages = [];
+  Map<String, String> _brandMap = {};
+
+  static const List<String> _defaultBanners = <String>[
+    'assets/images/BB-1.webp',
+    'assets/images/BB-2.webp',
+    'assets/images/BB-3.webp',
+    'assets/images/BB-4.webp',
+    'assets/images/BB-5.webp',
+  ];
+
+  int get _count =>
+      _homeImages.isNotEmpty ? _homeImages.length : _defaultBanners.length;
 
   @override
   void initState() {
     super.initState();
-    _refreshCount();
+    _loadImages();
+    _startAuto();
   }
 
-  Future<void> _refreshCount() async {
-    final s = context.read<AppSettings>();
-    try {
-      final cart = await OrdersService.loadCart(s.user?.id ?? '');
-      if (mounted) {
-        setState(() => _cartCount = cart.fold(0, (p, c) => p + c.qty));
-      }
-    } catch (_) {}
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
   }
 
-  Future<void> _addToCart(Product p, int qty) async {
-    final s = context.read<AppSettings>();
-    final uid = s.user?.id ?? '';
-    if (uid.isEmpty || s.isGuest) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(s.isArabic
-                ? 'سجّل الدخول أولاً للشراء'
-                : 'Login first to buy')));
-      }
-      return;
-    }
-    await OrdersService.addToCart(uid, p.id, p.name, '', p.brand, qty);
-    await _refreshCount();
+  Future<void> _loadImages() async {
+    final m = await _loadImgs();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(s.isArabic
-              ? '✅ أُضيف إلى السلة: ${p.name}'
-              : 'Added: ${p.name}')));
+      setState(() {
+        _homeImages = List<String>.from(m['home'] ?? []);
+        _brandMap = Map<String, String>.from(m['brands'] ?? {});
+      });
+      for (final img in _homeImages.take(5)) {
+        precacheImage(NetworkImage(_imgUrl(img)), context);
+      }
+      for (final img in _brandMap.values) {
+        if (img.isNotEmpty) precacheImage(NetworkImage(_imgUrl(img)), context);
+      }
     }
   }
 
-  Future<void> _openCart() async {
-    await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const CartScreen()));
-    await _refreshCount();
+  void _startAuto() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_ctrl.hasClients) return;
+      _ctrl.nextPage(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
-  Future<void> _openProducts() async {
-    if (widget.onOpenProducts != null) {
-      widget.onOpenProducts!();
-      return;
+  Future<void> _uploadBrand(String key) async {
+    String tk = await ImagesService.resolveToken();
+    if (tk.isEmpty) {
+      final t = await ImagesService.askGitHubToken(context);
+      if (t == null) return;
+      tk = t;
     }
-    await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const ProductsScreen()));
-    await _refreshCount();
+    final f = await ImagePicker().pickImage(
+        source: ImageSource.gallery, imageQuality: 80, maxWidth: 600);
+    if (f == null) return;
+    final bytes = await f.readAsBytes();
+    try {
+      final path = 'assets/images/brand_$key.webp';
+      await ImagesService.putBytes(path, bytes, tk, 'brand $key');
+      await ImagesService.setMapping('brands', key, path, tk);
+      final m = await _loadImgs();
+      if (mounted) {
+        setState(() {
+          _brandMap = Map<String, String>.from(m['brands'] ?? {});
+        });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('✅ تم رفع صورة $key')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل الرفع: $e')));
+      }
+    }
   }
 
-  Future<void> _openDetail(Product p) async {
-    final s = context.read<AppSettings>();
-    final canBuy = s.user != null && s.user!.role != 'guest';
-    await Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(
-                product: p,
-                canBuy: canBuy,
-                onAdd: (q) => _addToCart(p, q))));
-    await _refreshCount();
+  Widget _banner(int real) {
+    String url;
+    if (_homeImages.isNotEmpty) {
+      url = _imgUrl(_homeImages[real % _homeImages.length]);
+    } else {
+      url = _imgUrl(_defaultBanners[real % _defaultBanners.length]);
+    }
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: AppColors.orange.withAlpha(20),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Image(
+          image: _imgCache.getProvider(url),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          gaplessPlayback: true,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: AppColors.orange.withAlpha(20),
+              child: const Center(child: FaworiLogo(size: 60)),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) =>
+              const Center(child: FaworiLogo(size: 60)),
+        ),
+      ),
+    );
+  }
+
+  Widget _gradText(String t, double size) {
+    return ShaderMask(
+      shaderCallback: (Rect r) =>
+          const LinearGradient(colors: <Color>[AppColors.orange, Color(0xFFF26B0F)])
+              .createShader(r),
+      child: Text(t,
+          style: TextStyle(
+              fontSize: size, fontWeight: FontWeight.w900, color: Colors.white)),
+    );
+  }
+
+  Widget _secTitle(String t) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(t,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+
+  Widget _quick(IconData ic, String label, Color c, VoidCallback? onTap) {
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: <Color>[c.withAlpha(40), Theme.of(context).colorScheme.surface],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: c.withAlpha(100), width: 1.5),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: <Color>[c, c.withAlpha(180)]),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(ic, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            ),
+            Icon(Icons.chevron_left_rounded, color: c, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _companyText(String key, Color c) {
+    return Container(
+      color: c.withAlpha(20),
+      child: Center(
+        child: Text(_companyEn[key] ?? key,
+            style: TextStyle(color: c, fontSize: 20, fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+
+  Widget _fadedImage(String key, String? img, Color c, bool isAdmin) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          (img != null && img.isNotEmpty)
+              ? Image(
+                  image: _imgCache.getProvider(_imgUrl(img)),
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  errorBuilder: (c2, o, st) => _companyText(key, c),
+                )
+              : _companyText(key, c),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 0.95,
+                colors: <Color>[Colors.transparent, surface.withAlpha(210)],
+                stops: const <double>[0.55, 1.0],
+              ),
+            ),
+          ),
+          if (isAdmin)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: InkWell(
+                onTap: () => _uploadBrand(key),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.orange,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(Icons.photo_camera_rounded,
+                      size: 18, color: Colors.white),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _company(String key, bool isAdmin) {
+    final Color c = _companyColor[key] ?? AppColors.orange;
+    final String? img = _brandMap[key];
+    final AppSettings s = context.watch<AppSettings>();
+    final String name = s.isArabic ? (_companyAr[key] ?? key) : (_companyEn[key] ?? key);
+    return Pressable(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ProductsScreen(initialBrand: key))),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: <Color>[c.withAlpha(30), Theme.of(context).colorScheme.surface],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: c.withAlpha(80), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+                color: c.withAlpha(30), blurRadius: 14, offset: const Offset(0, 6)),
+          ],
+        ),
+        child: Column(
+          children: <Widget>[
+            Expanded(child: _fadedImage(key, img, c, isAdmin)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: <Widget>[
+                  Icon(_companyIcon[key] ?? Icons.store_rounded, color: c, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(name,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 14, color: c)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<AppSettings>();
+    final AppSettings s = context.watch<AppSettings>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final bool isAdmin = s.isImageAdmin;
 
-    return Scaffold(
-      backgroundColor:
-          dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(s.isArabic ? 'الرئيسية' : 'Home',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: dark ? Colors.white : AppColors.ink)),
-        actions: [
-          IconButton(
-            onPressed: _openCart,
-            icon: Stack(
-              children: [
-                const Icon(Icons.shopping_cart_outlined,
-                    color: AppColors.orange, size: 24),
-                if (_cartCount > 0)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                          color: Colors.red, shape: BoxShape.circle),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text('$_cartCount',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900)),
-                    ),
-                  ),
-              ],
+    return Directionality(
+      textDirection: s.isArabic ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: dark
+                  ? const <Color>[Color(0xFF23232B), Color(0xFF2B2B34)]
+                  : const <Color>[Color(0xFFFFF8F1), Color(0xFFFDEFDE)],
             ),
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: <Color>[Color(0xFFF26B0F), Color(0xFFE8A33C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.orange.withAlpha(80),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    s.isArabic
-                        ? 'مرحباً ${s.user?.name ?? 'ضيف'} 👋'
-                        : 'Hello ${s.user?.name ?? 'Guest'} 👋',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900)),
-                const SizedBox(height: 8),
+          child: SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: <Widget>[
                 Row(
-                  children: [
+                  children: <Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Image.asset('assets/images/logo.webp',
+                            width: 44, height: 44, fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            errorBuilder: (c, o, st) => const FaworiLogo(size: 44)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: _gradText(s.tr('appName'), 18)),
+                    // 🔔 الجرس + شارة غير المقروء (مدير ومستخدم)
+                    Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_none_rounded,
+                              color: AppColors.orange),
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const OrdersScreen())),
+                        ),
+                        if (s.unseenCount > 0)
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                  color: Colors.red, shape: BoxShape.circle),
+                              child: Text('${s.unseenCount}',
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 10)),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  height: 180,
+                  child: PageView.builder(
+                    controller: _ctrl,
+                    itemCount: _kPages,
+                    onPageChanged: (int i) {
+                      setState(() {
+                        _idx = i % _count;
+                      });
+                    },
+                    itemBuilder: (BuildContext c, int i) => _banner(i),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(_count, (int i) {
+                    final bool active = i == _idx;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: active ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        gradient: active
+                            ? const LinearGradient(colors: <Color>[
+                                AppColors.orange, Color(0xFFF26B0F)
+                              ])
+                            : null,
+                        color: active ? null : Colors.grey.shade600,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 24),
+                _secTitle(s.isArabic ? 'الوصول السريع' : 'Quick access'),
+                Row(
+                  children: <Widget>[
                     Expanded(
-                      child: Text(
-                          s.isArabic
-                              ? 'مواد بناء أصلية بنظام نقاط مكافآت'
-                              : 'Genuine materials with rewards points',
-                          style: TextStyle(
-                              color: Colors.white.withAlpha(220),
-                              fontSize: 12)),
+                      child: _quick(
+                        Icons.inventory_2_rounded,
+                        s.isArabic ? 'المنتجات' : 'Products',
+                        AppColors.orange,
+                        widget.onOpenProducts,
+                      ),
                     ),
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: Text('${fmtThousands(s.points)} ⭐',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _quick(
+                        Icons.redeem_rounded,
+                        s.isArabic ? 'الهدايا' : 'Gifts',
+                        AppColors.teal,
+                        () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => Scaffold(
+                                      appBar: AppBar(
+                                          title: Text(
+                                              s.isArabic ? 'الهدايا' : 'Gifts')),
+                                      body: const GiftsView(),
+                                    ))),
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 26),
+                _secTitle(s.isArabic ? 'الشركات' : 'Companies'),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.85,
+                  children: <Widget>[
+                    for (final key in _companyKeys) _company(key, isAdmin),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: Pressable(
-                  onTap: _openProducts,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: <Color>[
-                          AppColors.teal.withAlpha(dark ? 50 : 30),
-                          AppColors.teal.withAlpha(dark ? 20 : 10),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      border:
-                          Border.all(color: AppColors.teal.withAlpha(70)),
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.storefront_rounded,
-                            color: AppColors.teal, size: 28),
-                        const SizedBox(height: 6),
-                        Text(s.isArabic ? 'المنتجات' : 'Products',
-                            style: TextStyle(
-                                color: dark ? Colors.white : AppColors.ink,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Pressable(
-                  onTap: _openCart,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: <Color>[
-                          AppColors.orange.withAlpha(dark ? 50 : 30),
-                          AppColors.orange.withAlpha(dark ? 20 : 10),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      border:
-                          Border.all(color: AppColors.orange.withAlpha(70)),
-                    ),
-                    child: Column(
-                      children: [
-                        Stack(
-                          children: [
-                            const Icon(Icons.shopping_cart_rounded,
-                                color: AppColors.orange, size: 28),
-                            if (_cartCount > 0)
-                              Positioned(
-                                top: 0,
-                                right: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle),
-                                  child: Text('$_cartCount',
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900)),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(s.isArabic ? 'السلة' : 'Cart',
-                            style: TextStyle(
-                                color: dark ? Colors.white : AppColors.ink,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(s.isArabic ? 'منتجات مميزة' : 'Featured',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: dark ? Colors.white : AppColors.ink)),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 190,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: sampleData.length > 8 ? 8 : sampleData.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) {
-                final p = sampleData[i];
-                return Stack(
-                  children: [
-                    Pressable(
-                      onTap: () => _openDetail(p),
-                      child: Container(
-                        width: 150,
-                        height: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: dark
-                                ? <Color>[
-                                    const Color(0xFF1E1E28),
-                                    const Color(0xFF26262E)
-                                  ]
-                                : <Color>[
-                                    Colors.white,
-                                    const Color(0xFFFFF8F1)
-                                  ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                              color: AppColors.orange.withAlpha(50)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Center(
-                                child: Icon(Icons.format_paint_rounded,
-                                    size: 40, color: AppColors.orange),
-                              ),
-                            ),
-                            Text(p.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12,
-                                    color: dark
-                                        ? Colors.white
-                                        : AppColors.ink)),
-                            const SizedBox(height: 6),
-                            Text(p.brand,
-                                style: const TextStyle(
-                                    color: AppColors.teal,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    PositionedDirectional(
-                      bottom: 8,
-                      end: 8,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _addToCart(p, 1),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                  colors: <Color>[
-                                    Color(0xFFFF8C00),
-                                    Color(0xFFF26B0F)
-                                  ]),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.add_rounded,
-                                color: Colors.white, size: 16),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
