@@ -24,7 +24,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
     _refreshCount();
   }
 
-  /// ✅ تحديث عدّاد السلة من التخزين مباشرة
   Future<void> _refreshCount() async {
     final s = context.read<AppSettings>();
     try {
@@ -35,7 +34,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     } catch (_) {}
   }
 
-  /// ✅ إضافة بقراءة لحظية من التخزين — لا نسخة قديمة أبداً
+  /// ✅ إضافة عبر الدالة المركزية المتسلسلة
   Future<void> _addToCart(Product p, int qty) async {
     final s = context.read<AppSettings>();
     final uid = s.user?.id ?? '';
@@ -48,15 +47,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       }
       return;
     }
-    final cart = await OrdersService.loadCart(uid);
-    final exist = cart.where((c) => c.id == p.id).toList();
-    if (exist.isNotEmpty) {
-      exist.first.qty += qty;
-    } else {
-      cart.add(CartItem(
-          id: p.id, name: p.name, image: '', brand: p.brand, qty: qty));
-    }
-    await OrdersService.saveCart(uid, cart);
+    await OrdersService.addToCart(uid, p.id, p.name, '', p.brand, qty);
     await _refreshCount();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -123,8 +114,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
                           color: Colors.red, shape: BoxShape.circle),
-                      constraints: const BoxConstraints(
-                          minWidth: 16, minHeight: 16),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text('$_cartCount',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
@@ -146,7 +137,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
               borderRadius: BorderRadius.circular(22),
               gradient: LinearGradient(
                 colors: dark
-                    ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+                    ? <Color>[
+                        const Color(0xFF1E1E28),
+                        const Color(0xFF26262E)
+                      ]
                     : <Color>[Colors.white, const Color(0xFFFFF8F1)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -184,51 +178,57 @@ class _ProductsScreenState extends State<ProductsScreen> {
             itemCount: list.length,
             itemBuilder: (context, i) {
               final p = list[i];
-              return Pressable(
-                onTap: () => _openDetail(p),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: dark
-                          ? <Color>[
-                              const Color(0xFF1E1E28),
-                              const Color(0xFF26262E)
-                            ]
-                          : <Color>[Colors.white, const Color(0xFFFFF8F1)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: AppColors.orange.withAlpha(50)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(dark ? 50 : 10),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Center(
-                          child: Icon(Icons.format_paint_rounded,
-                              size: 46, color: AppColors.orange),
+              // ✅ البطاقة وزر الإضافة طبقتان منفصلتان — لا لمسة مزدوجة
+              return Stack(
+                children: [
+                  Pressable(
+                    onTap: () => _openDetail(p),
+                    child: Container(
+                      height: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: dark
+                              ? <Color>[
+                                  const Color(0xFF1E1E28),
+                                  const Color(0xFF26262E)
+                                ]
+                              : <Color>[
+                                  Colors.white,
+                                  const Color(0xFFFFF8F1)
+                                ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(20),
+                        border:
+                            Border.all(color: AppColors.orange.withAlpha(50)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(dark ? 50 : 10),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      Text(p.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              color: dark ? Colors.white : AppColors.ink)),
-                      const SizedBox(height: 8),
-                      Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Expanded(
+                            child: Center(
+                              child: Icon(Icons.format_paint_rounded,
+                                  size: 46, color: AppColors.orange),
+                            ),
+                          ),
+                          Text(p.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  color:
+                                      dark ? Colors.white : AppColors.ink)),
+                          const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 3),
@@ -242,28 +242,41 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800)),
                           ),
-                          const Spacer(),
-                          InkWell(
-                            onTap: () => _addToCart(p, 1),
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(colors: <Color>[
+                        ],
+                      ),
+                    ),
+                  ),
+                  PositionedDirectional(
+                    bottom: 10,
+                    end: 10,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _addToCart(p, 1),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                                colors: <Color>[
                                   Color(0xFFFF8C00),
                                   Color(0xFFF26B0F)
                                 ]),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.add_rounded,
-                                  color: Colors.white, size: 16),
-                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: AppColors.orange.withAlpha(90),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3)),
+                            ],
                           ),
-                        ],
+                          child: const Icon(Icons.add_rounded,
+                              color: Colors.white, size: 18),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               );
             },
           ),
