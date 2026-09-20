@@ -3,17 +3,14 @@ import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
-import '../widgets/fawori_logo.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
-  final String? imageUrl;
   final bool canBuy;
-  final VoidCallback onAdd;
+  final void Function(int qty) onAdd;
   const ProductDetailScreen({
     super.key,
     required this.product,
-    this.imageUrl,
     required this.canBuy,
     required this.onAdd,
   });
@@ -26,89 +23,123 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final AppSettings s = context.watch<AppSettings>();
-    final String base = 'https://ahmedbrzan.github.io/FAWORI';
+    final s = context.watch<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final p = widget.product;
+
     return Scaffold(
+      backgroundColor:
+          dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(widget.product.name,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(p.name,
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: dark ? Colors.white : AppColors.ink)),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(22),
-            child: AspectRatio(
-              aspectRatio: 1.2,
-              child: widget.imageUrl != null && widget.imageUrl!.isNotEmpty
-                  ? Image.network('$base/assets/${widget.imageUrl}',
-                      fit: BoxFit.cover, gaplessPlayback: true,
-                      errorBuilder: (c, o, st) => const _PhBig())
-                  : const _PhBig(),
+          Container(
+            height: 320,
+            decoration: BoxDecoration(
+              color: dark ? const Color(0xFF1E1E28) : const Color(0xFFE7E3DE),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Center(
+              child: Image.asset(
+                'assets/logo.png',
+                width: 120,
+                height: 120,
+                errorBuilder: (_, __, ___) => Icon(
+                    Icons.format_paint_rounded,
+                    size: 90,
+                    color: AppColors.orange),
+              ),
             ),
           ),
           const SizedBox(height: 20),
-          Text(widget.product.name,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(widget.product.desc,
+          Text(p.name,
               style: TextStyle(
-                  color: Colors.grey.shade500, fontSize: 14, height: 1.6)),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: dark ? Colors.white : AppColors.ink)),
+          const SizedBox(height: 8),
+          Text(p.desc,
+              style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.teal.withAlpha(25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(p.brand,
+                style: const TextStyle(
+                    color: AppColors.teal,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800)),
+          ),
           const SizedBox(height: 24),
           if (widget.canBuy) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconButton(
-                    icon: const Icon(Icons.remove_circle_outline,
-                        color: AppColors.orange),
-                    onPressed: () => setState(() {
-                          if (_qty > 1) _qty--;
-                        })),
+                InkWell(
+                  onTap: _qty > 1 ? () => setState(() => _qty--) : null,
+                  child: Icon(Icons.remove_circle_outline,
+                      color: _qty > 1 ? AppColors.orange : Colors.grey,
+                      size: 30),
+                ),
+                const SizedBox(width: 20),
                 Text('$_qty',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w900)),
-                IconButton(
-                    icon: const Icon(Icons.add_circle_outline,
-                        color: AppColors.orange),
-                    onPressed: () => setState(() => _qty++)),
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: dark ? Colors.white : AppColors.ink)),
+                const SizedBox(width: 20),
+                InkWell(
+                  onTap: _qty < 99 ? () => setState(() => _qty++) : null,
+                  child: Icon(Icons.add_circle_outline,
+                      color: _qty < 99 ? AppColors.orange : Colors.grey,
+                      size: 30),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Container(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                      color: AppColors.orange.withAlpha(80),
-                      blurRadius: 18,
-                      offset: const Offset(0, 7)),
-                ],
-              ),
+                  gradient: const LinearGradient(colors: <Color>[
+                    Color(0xFFE8A33C),
+                    Color(0xFFF26B0F)
+                  ]),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.orange.withAlpha(80),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6)),
+                  ]),
               child: SizedBox(
+                height: 56,
                 width: double.infinity,
-                height: 54,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
                       foregroundColor: Colors.white),
-                  onPressed: () {
-                    for (int i = 0; i < _qty; i++) {
-                      widget.onAdd();
-                    }
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.add_shopping_cart_rounded, size: 24),
+                  onPressed: () => widget.onAdd(_qty),
+                  icon: const Icon(Icons.add_shopping_cart_rounded),
                   label: Text(
-                    s.isArabic ? 'أضف إلى السلة' : 'Add to cart',
-                    style: const TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.w900),
-                  ),
+                      s.isArabic ? 'أضف إلى السلة' : 'Add to cart',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900, fontSize: 16)),
                 ),
               ),
             ),
@@ -116,30 +147,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                  color: Colors.red.withAlpha(25),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.red.withAlpha(80))),
-              child: Text(
-                s.isArabic
-                    ? 'سجّل الدخول للشراء وإضافة المنتجات للسلة'
-                    : 'Login to purchase and add to cart',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w700),
+                color: Colors.red.withAlpha(dark ? 40 : 20),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.red.withAlpha(70)),
               ),
+              child: Text(
+                  s.isArabic
+                      ? 'سجّل الدخول للشراء من هذا المنتج'
+                      : 'Login to purchase this product',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: dark ? Colors.white : Colors.red.shade400,
+                      fontWeight: FontWeight.w800)),
             ),
         ],
       ),
-    );
-  }
-}
-
-class _PhBig extends StatelessWidget {
-  const _PhBig();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.orange.withAlpha(25),
-      child: const Center(child: FaworiLogo(size: 90)),
     );
   }
 }
