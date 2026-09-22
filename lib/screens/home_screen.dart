@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -31,6 +32,11 @@ class _AdvancedImageCache {
 }
 
 final _AdvancedImageCache _imgCache = _AdvancedImageCache();
+
+// ✅ روابط الاستفسارات (عدّلها هنا وقتما تشاء)
+const String _kInstagram = 'https://www.instagram.com/';
+const String _kFacebook = 'https://www.facebook.com/';
+const String _kWhatsapp = 'https://wa.me/9647803827260';
 
 Future<Map<String, dynamic>> _loadImgs() async {
   try {
@@ -162,6 +168,296 @@ class _HomeScreenState extends State<HomeScreen> {
             .showSnackBar(SnackBar(content: Text('فشل الرفع: $e')));
       }
     }
+  }
+
+  void _openSettings(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          final s2 = ctx.watch<AppSettings>();
+          return AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.settings_rounded,
+                    color: AppColors.orange),
+                const SizedBox(width: 8),
+                Text(s2.isArabic ? 'الإعدادات' : 'Settings',
+                    style:
+                        const TextStyle(fontWeight: FontWeight.w900)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                          s2.isArabic ? 'الوضع الداكن' : 'Dark mode',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700)),
+                    ),
+                    Switch(
+                      value: s2.isDark,
+                      activeColor: AppColors.orange,
+                      onChanged: (_) {
+                        s2.toggleDark();
+                        setSt(() {});
+                      },
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                          s2.isArabic ? 'اللغة الإنجليزية' : 'Arabic',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700)),
+                    ),
+                    Switch(
+                      value: !s2.isArabic,
+                      activeColor: AppColors.orange,
+                      onChanged: (_) {
+                        s2.toggleLanguage();
+                        setSt(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(s2.isArabic ? 'إغلاق' : 'Close',
+                    style: const TextStyle(color: AppColors.orange)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _socialBtn({
+    required IconData icon,
+    required List<Color> colors,
+    required String url,
+  }) {
+    return InkWell(
+      onTap: () => html.window.open(url, '_blank'),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: colors.first.withAlpha(90),
+                blurRadius: 10,
+                offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Icon(icon, color: Colors.white, size: 22),
+      ),
+    );
+  }
+
+  Widget _buildDrawer(AppSettings s, bool dark) {
+    return Drawer(
+      width: 280,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: dark
+                ? <Color>[const Color(0xFF23232B), const Color(0xFF1A1A21)]
+                : <Color>[const Color(0xFFFFF8F1), const Color(0xFFFDEFDE)],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.orange.withAlpha(90),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset('assets/images/logo.webp',
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          errorBuilder: (c, o, st) =>
+                              const FaworiLogo(size: 92)),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(s.isArabic ? 'شركة فاوري' : 'FAWORI Co.',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openSettings(context);
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF26262E) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border:
+                          Border.all(color: AppColors.orange.withAlpha(70)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.settings_rounded,
+                            color: AppColors.orange),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                              s.isArabic ? 'الإعدادات' : 'Settings',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: dark
+                                      ? Colors.white
+                                      : AppColors.ink)),
+                        ),
+                        const Icon(Icons.chevron_left_rounded,
+                            color: AppColors.orange),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: <Color>[
+                            AppColors.orange,
+                            Color(0xFFF26B0F)
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(s.isArabic ? 'للاستفسارات' : 'Inquiries',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                            color: dark ? Colors.white : AppColors.ink)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _socialBtn(
+                    icon: Icons.photo_camera_rounded,
+                    colors: const <Color>[
+                      Color(0xFF833AB4),
+                      Color(0xFFE1306C),
+                      Color(0xFFF77737)
+                    ],
+                    url: _kInstagram,
+                  ),
+                  const SizedBox(width: 14),
+                  _socialBtn(
+                    icon: Icons.facebook_rounded,
+                    colors: const <Color>[
+                      Color(0xFF1877F2),
+                      Color(0xFF0E5AA7)
+                    ],
+                    url: _kFacebook,
+                  ),
+                  const SizedBox(width: 14),
+                  _socialBtn(
+                    icon: Icons.chat_bubble_rounded,
+                    colors: const <Color>[
+                      Color(0xFF25D366),
+                      Color(0xFF128C7E)
+                    ],
+                    url: _kWhatsapp,
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  children: [
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                    ShaderMask(
+                      shaderCallback: (Rect r) =>
+                          const LinearGradient(colors: <Color>[
+                        AppColors.orange,
+                        Color(0xFFF26B0F)
+                      ]).createShader(r),
+                      child: Text(
+                          s.isArabic
+                              ? 'برمجة شركة فاوري'
+                              : 'Programmed by FAWORI Co.',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _banner(int real) {
@@ -383,6 +679,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Directionality(
       textDirection: s.isArabic ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
+        drawer: _buildDrawer(s, dark),
         body: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -400,19 +697,26 @@ class _HomeScreenState extends State<HomeScreen> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
+                    Builder(
+                      builder: (bctx) => InkWell(
+                        onTap: () => Scaffold.of(bctx).openDrawer(),
                         borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(11),
-                        child: Image.asset('assets/images/logo.webp',
-                            width: 44, height: 44, fit: BoxFit.cover,
-                            gaplessPlayback: true,
-                            errorBuilder: (c, o, st) => const FaworiLogo(size: 44)),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                                colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(11),
+                            child: Image.asset('assets/images/logo.webp',
+                                width: 44, height: 44, fit: BoxFit.cover,
+                                gaplessPlayback: true,
+                                errorBuilder: (c, o, st) =>
+                                    const FaworiLogo(size: 44)),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
