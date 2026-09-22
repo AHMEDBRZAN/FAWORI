@@ -3036,6 +3036,43 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
                                         ? Colors.grey.shade500
                                         : Colors.grey.shade400,
                                     fontSize: 11),
+                                suffixIcon: IconButton(
+                                  tooltip: s.isArabic ? 'لصق' : 'Paste',
+                                  icon: const Icon(
+                                      Icons.content_paste_rounded,
+                                      size: 18,
+                                      color: AppColors.teal),
+                                  onPressed: () async {
+                                    final d =
+                                        await Clipboard.getData('text/plain');
+                                    if (d?.text != null) {
+                                      setSt(() => p.old.text = d!.text!);
+                                    }
+                                  },
+                                ),
+                                filled: true,
+                                fillColor: dark
+                                    ? const Color(0xFF1E1E28)
+                                    : Colors.white,
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                              style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                  color: dark
+                                      ? Colors.grey.shade100
+                                      : AppColors.ink),
+                              decoration: InputDecoration(
+                                hintText: s.isArabic
+                                    ? 'الكود القديم (المراد استبداله)...'
+                                    : 'Old code to replace...',
+                                hintStyle: TextStyle(
+                                    color: dark
+                                        ? Colors.grey.shade500
+                                        : Colors.grey.shade400,
+                                    fontSize: 11),
                                 filled: true,
                                 fillColor: dark
                                     ? const Color(0xFF1E1E28)
