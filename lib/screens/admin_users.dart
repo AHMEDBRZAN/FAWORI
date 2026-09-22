@@ -16,109 +16,154 @@ class EditUserDialog {
     final phoneC = TextEditingController(text: u.phone);
     final passC = TextEditingController(text: u.password ?? '');
     String role = u.role;
+    bool adminUnlocked = false;
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSt) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-          title: Row(
-            children: [
-              const Icon(Icons.edit_rounded, color: AppColors.teal),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                    s.isArabic ? 'تعديل المستخدم' : 'Edit user',
-                    style: const TextStyle(
-                        color: AppColors.teal,
-                        fontWeight: FontWeight.w900)),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _fld(context, nameC,
-                    s.isArabic ? 'اسم المستخدم' : 'Name',
-                    Icons.person_rounded, AppColors.orange),
-                const SizedBox(height: 10),
-                _fld(context, phoneC,
-                    s.isArabic ? 'رقم الهاتف' : 'Phone',
-                    Icons.phone_rounded, AppColors.teal,
-                    kt: TextInputType.phone),
-                const SizedBox(height: 10),
-                _fld(context, passC,
-                    s.isArabic ? 'كلمة السر' : 'Password',
-                    Icons.lock_rounded, const Color(0xFF9B59B6),
-                    obscure: true),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+        builder: (ctx, setSt) {
+          // ✅ شارة دور داخل نافذة التعديل
+          Widget roleChip(String label, String value, Color c,
+              {VoidCallback? onLongPress}) {
+            final active = role == value;
+            return Padding(
+              padding: const EdgeInsetsDirectional.only(end: 8, bottom: 8),
+              child: InkWell(
+                onTap: () => setSt(() => role = value),
+                onLongPress: onLongPress,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                   decoration: BoxDecoration(
-                    color: AppColors.orange.withAlpha(18),
+                    gradient: active
+                        ? LinearGradient(colors: <Color>[c, c.withAlpha(180)])
+                        : null,
+                    color: active ? null : c.withAlpha(18),
                     borderRadius: BorderRadius.circular(14),
                     border:
-                        Border.all(color: AppColors.orange.withAlpha(70)),
+                        Border.all(color: c.withAlpha(active ? 180 : 80)),
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: role,
-                      isExpanded: true,
-                      dropdownColor: Theme.of(context).colorScheme.surface,
+                  child: Text(label,
                       style: TextStyle(
-                          color: Theme.of(context).brightness ==
-                                  Brightness.dark
-                              ? Colors.white
-                              : AppColors.ink,
-                          fontWeight: FontWeight.w800),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'client', child: Text('عميل')),
-                        DropdownMenuItem(
-                            value: 'agent', child: Text('وكيل')),
-                        DropdownMenuItem(
-                            value: 'tech', child: Text('صباغ')),
-                        DropdownMenuItem(
-                            value: 'admin', child: Text('مدير')),
-                      ],
-                      onChanged: (v) => setSt(() => role = v ?? 'client'),
-                    ),
-                  ),
+                          color: active ? Colors.white : c,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12)),
+                ),
+              ),
+            );
+          }
+
+          return AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22)),
+            title: Row(
+              children: [
+                const Icon(Icons.edit_rounded, color: AppColors.teal),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                      s.isArabic ? 'تعديل المستخدم' : 'Edit user',
+                      style: const TextStyle(
+                          color: AppColors.teal,
+                          fontWeight: FontWeight.w900)),
                 ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.teal,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _fld(context, nameC,
+                      s.isArabic ? 'اسم المستخدم' : 'Name',
+                      Icons.person_rounded, AppColors.orange),
+                  const SizedBox(height: 10),
+                  _fld(context, phoneC,
+                      s.isArabic ? 'رقم الهاتف' : 'Phone',
+                      Icons.phone_rounded, AppColors.teal,
+                      kt: TextInputType.phone),
+                  const SizedBox(height: 10),
+                  _fld(context, passC,
+                      s.isArabic ? 'كلمة السر' : 'Password',
+                      Icons.lock_rounded, const Color(0xFF9B59B6),
+                      obscure: true),
+                  const SizedBox(height: 14),
+                  // ✅ نوع الحساب: مدير مخفي حتى ضغط مطول على وكيل
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                        s.isArabic ? 'نوع الحساب:' : 'Account type:',
+                        style: TextStyle(
+                            color: Theme.of(context).brightness ==
+                                    Brightness.dark
+                                ? Colors.grey.shade300
+                                : Colors.grey.shade700,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12)),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Wrap(
+                      children: [
+                        roleChip(s.isArabic ? 'عميل' : 'Client', 'client',
+                            AppColors.teal),
+                        roleChip(s.isArabic ? 'صباغ' : 'Painter', 'tech',
+                            AppColors.orange),
+                        roleChip(
+                          s.isArabic ? 'وكيل' : 'Agent',
+                          'agent',
+                          const Color(0xFF9B59B6),
+                          onLongPress: () {
+                            if (!adminUnlocked) {
+                              setSt(() => adminUnlocked = true);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(s.isArabic
+                                          ? '🔓 تم فتح خيار المدير'
+                                          : 'Admin option unlocked')));
+                            }
+                          },
+                        ),
+                        if (adminUnlocked || role == 'admin')
+                          roleChip(s.isArabic ? 'مدير' : 'Admin', 'admin',
+                              Colors.red),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              onPressed: () {
-                if (nameC.text.trim().isEmpty ||
-                    phoneC.text.trim().isEmpty ||
-                    passC.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(s.isArabic
-                          ? 'يرجى ملء جميع الحقول'
-                          : 'Fill all fields'),
-                      backgroundColor: Colors.red));
-                  return;
-                }
-                Navigator.pop(ctx, true);
-              },
-              child: Text(s.isArabic ? 'حفظ' : 'Save'),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.teal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  if (nameC.text.trim().isEmpty ||
+                      phoneC.text.trim().isEmpty ||
+                      passC.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(s.isArabic
+                            ? 'يرجى ملء جميع الحقول'
+                            : 'Fill all fields'),
+                        backgroundColor: Colors.red));
+                    return;
+                  }
+                  Navigator.pop(ctx, true);
+                },
+                child: Text(s.isArabic ? 'حفظ' : 'Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -224,7 +269,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     }
   }
 
-  /// ✅ خيار عادي
   Widget _opt(String label, String value, String? current, Color c,
       ValueChanged<String> onPick, bool dark,
       {VoidCallback? onLongPress}) {
@@ -325,7 +369,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // الاسم + الهاتف بجانبه
           Row(
             children: [
               Expanded(
@@ -342,12 +385,10 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
             ],
           ),
           const SizedBox(height: 12),
-          // كلمة السر تحت
           _fld(_pass, s.isArabic ? 'كلمة السر' : 'Password',
               Icons.lock_rounded, const Color(0xFF9B59B6),
               obscure: true, dark: dark),
           const SizedBox(height: 20),
-          // ✅ نوع الحساب
           _title(s.isArabic ? 'نوع الحساب' : 'Account type',
               Icons.badge_rounded, const Color(0xFF9B59B6)),
           Wrap(
@@ -356,7 +397,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                   AppColors.teal, (v) => setState(() => _role = v), dark),
               _opt(s.isArabic ? 'صباغ' : 'Painter', 'tech', _role,
                   AppColors.orange, (v) => setState(() => _role = v), dark),
-              // ✅ وكيل — الضغط المطول يفتح خيار مدير
               _opt(s.isArabic ? 'وكيل' : 'Agent', 'agent', _role,
                   const Color(0xFF9B59B6), (v) => setState(() => _role = v),
                   dark,
@@ -375,7 +415,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
             ],
           ),
           const SizedBox(height: 12),
-          // نوع السكن
           _title(s.isArabic ? 'نوع السكن' : 'Housing type',
               Icons.home_rounded, AppColors.orange),
           Wrap(
@@ -388,7 +427,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
             ],
           ),
           const SizedBox(height: 12),
-          // وسائل النقل
           _title(s.isArabic ? 'وسائل النقل' : 'Transport',
               Icons.directions_bus_rounded, AppColors.teal),
           Wrap(
