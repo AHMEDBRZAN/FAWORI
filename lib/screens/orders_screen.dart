@@ -137,6 +137,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   TabController? _tabCtrl;
   int _tabIndex = 0;
   int _lastVersion = -1;
+  Timer? _autoTimer;
 
   Future<List<Order>> _loadAndMark() async {
     final os = await OrdersService.loadOrders();
@@ -160,11 +161,19 @@ class _OrdersScreenState extends State<OrdersScreen>
       setState(() {
         _future = _loadAndMark();
       });
+      // ✅ تحديث تلقائي كل 3 ثواني (للمدير فقط) لوصول الإشعارات فوراً
+      final st = context.read<AppSettings>();
+      if (st.isAdmin || st.isImageAdmin) {
+        _autoTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+          if (mounted) setState(() => _future = _loadAndMark());
+        });
+      }
     });
   }
 
   @override
   void dispose() {
+    _autoTimer?.cancel();
     _tabCtrl?.dispose();
     super.dispose();
   }
