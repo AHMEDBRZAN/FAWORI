@@ -161,7 +161,7 @@ class EditUserDialog {
 }
 
 // ======================================================
-// ➕ صفحة إنشاء حساب
+// ➕ صفحة إنشاء حساب (مع نوع الحساب)
 // ======================================================
 
 class CreateAccountPage extends StatefulWidget {
@@ -176,6 +176,8 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
   final _pass = TextEditingController();
   String? _housing;
   String? _transport;
+  String _role = 'client';
+  bool _adminUnlocked = false;
   bool _busy = false;
 
   @override
@@ -206,7 +208,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
         'name': _name.text.trim(),
         'phone': _phone.text.trim(),
         'password': _pass.text.trim(),
-        'role': 'client',
+        'role': _role,
         'points': 0,
         'stored': 0,
         'housing': _housing,
@@ -222,13 +224,17 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
     }
   }
 
+  /// ✅ خيار عادي
   Widget _opt(String label, String value, String? current, Color c,
-      ValueChanged<String> onPick, bool dark) {
+      ValueChanged<String> onPick, bool dark,
+      {VoidCallback? onLongPress}) {
     final active = current == value;
     return Padding(
       padding: const EdgeInsetsDirectional.only(end: 8, bottom: 8),
       child: InkWell(
         onTap: () => onPick(value),
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -341,13 +347,42 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
               Icons.lock_rounded, const Color(0xFF9B59B6),
               obscure: true, dark: dark),
           const SizedBox(height: 20),
+          // ✅ نوع الحساب
+          _title(s.isArabic ? 'نوع الحساب' : 'Account type',
+              Icons.badge_rounded, const Color(0xFF9B59B6)),
+          Wrap(
+            children: [
+              _opt(s.isArabic ? 'عميل' : 'Client', 'client', _role,
+                  AppColors.teal, (v) => setState(() => _role = v), dark),
+              _opt(s.isArabic ? 'صباغ' : 'Painter', 'tech', _role,
+                  AppColors.orange, (v) => setState(() => _role = v), dark),
+              // ✅ وكيل — الضغط المطول يفتح خيار مدير
+              _opt(s.isArabic ? 'وكيل' : 'Agent', 'agent', _role,
+                  const Color(0xFF9B59B6), (v) => setState(() => _role = v),
+                  dark,
+                  onLongPress: () {
+                    if (!_adminUnlocked) {
+                      setState(() => _adminUnlocked = true);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(s.isArabic
+                              ? '🔓 تم فتح خيار المدير'
+                              : 'Admin option unlocked')));
+                    }
+                  }),
+              if (_adminUnlocked)
+                _opt(s.isArabic ? 'مدير' : 'Admin', 'admin', _role,
+                    Colors.red, (v) => setState(() => _role = v), dark),
+            ],
+          ),
+          const SizedBox(height: 12),
           // نوع السكن
           _title(s.isArabic ? 'نوع السكن' : 'Housing type',
               Icons.home_rounded, AppColors.orange),
           Wrap(
             children: [
               _opt(s.isArabic ? 'إيجار' : 'Rent', 'rent', _housing,
-                  AppColors.orange, (v) => setState(() => _housing = v), dark),
+                  AppColors.orange,
+                  (v) => setState(() => _housing = v), dark),
               _opt(s.isArabic ? 'ملك' : 'Owned', 'own', _housing,
                   AppColors.teal, (v) => setState(() => _housing = v), dark),
             ],
@@ -359,9 +394,11 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
           Wrap(
             children: [
               _opt(s.isArabic ? 'دراجة' : 'Bike', 'bike', _transport,
-                  AppColors.teal, (v) => setState(() => _transport = v), dark),
+                  AppColors.teal,
+                  (v) => setState(() => _transport = v), dark),
               _opt(s.isArabic ? 'ستوتة' : 'Tuk-tuk', 'tuk', _transport,
-                  AppColors.orange, (v) => setState(() => _transport = v), dark),
+                  AppColors.orange,
+                  (v) => setState(() => _transport = v), dark),
               _opt(s.isArabic ? 'سيارة' : 'Car', 'car', _transport,
                   const Color(0xFF9B59B6),
                   (v) => setState(() => _transport = v), dark),
