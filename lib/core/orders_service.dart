@@ -176,12 +176,94 @@ class OrdersService {
     await _cartChain;
   }
 
+  // ====================================================
+  // 🚀 طبقة محلية: إخفاء/تحديث فوري قبل وصول السيرفر
+  // ====================================================
+  static const String _kTombKey = 'orders_tombstones';
+  static const String _kStatusKey = 'orders_status_override';
+
+  static Future<Map<String, int>> _loadTombs() async {
+    final p = await SharedPreferences.getInstance();
+    final m = <String, int>{};
+    for (final e in (p.getStringList(_kTombKey) ?? [])) {
+      final i = e.lastIndexOf('|');
+      if (i > 0) {
+        m[e.substring(0, i)] = int.tryParse(e.substring(i + 1)) ?? 0;
+      }
+    }
+    return m;
+  }
+
+  static Future<void> _saveTombs(Map<String, int> m) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    m.removeWhere((_, exp) => exp < now);
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(
+        _kTombKey, m.entries.map((e) => '${e.key}|${e.value}').toList());
+  }
+
+  static Future<void> _markTomb(String id) async {
+    final m = await _loadTombs();
+    m[id] = DateTime.now().millisecondsSinceEpoch + 86400000;
+    await _saveTombs(m);
+  }
+
+  static Future<Map<String, String>> _loadOverrides() async {
+    final p = await SharedPreferences.getInstance();
+    final s = p.getString(_kStatusKey);
+    if (s == null || s.isEmpty) return {};
+    try {
+      return Map<String, String>.from(jsonDecode(s) as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> _saveOverrides(Map<String, String> m) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kStatusKey, jsonEncode(m));
+  }
+
+  static Future<void> _saveOverride(String id, String status) async {
+    final m = await _loadOverrides();
+    m[id] = status;
+    await _saveOverrides(m);
+  }
+
   static Future<List<Order>> loadOrders() async {
     final d = await _fetchJson(kOrdersPath);
+    List<Order> list = [];
     if (d is List) {
-      return d.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
+      list = d.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList();
     }
-    return [];
+    try {
+      // ✅ إخفاء المحذوف محلياً + تنظيف السجل عند تطابق السيرفر
+      final tombs = await _loadTombs();
+      if (tombs.isNotEmpty) {
+        final serverIds = list.map((o) => o.id).toSet();
+        tombs.removeWhere((id, _) => !serverIds.contains(id));
+        await _saveTombs(tombs);
+        list.removeWhere((o) => tombs.containsKey(o.id));
+      }
+      // ✅ تطبيق الحالة المحلية فوراً + مسحها عند لحاق السيرفر
+      final ov = await _loadOverrides();
+      if (ov.isNotEmpty) {
+        bool changed = false;
+        for (final o in list) {
+          final st = ov[o.id];
+          if (st != null) {
+            if (o.status == st) {
+              ov.remove(o.id);
+              changed = true;
+            } else {
+              o.status = st;
+            }
+          }
+        }
+        if (changed) await _saveOverrides(ov);
+      }
+    } catch (_) {}
+    return list;
   }
 
   static Future<void> submitOrder(Order o) async {
@@ -191,6 +273,7 @@ class OrdersService {
   }
 
   static Future<void> updateOrder(Order o) async {
+    await _saveOverride(o.id, o.status); // ✅ الحالة تتحدث فوراً محلياً
     final list = await loadOrders();
     final i = list.indexWhere((x) => x.id == o.id);
     if (i >= 0) list[i] = o;
@@ -198,6 +281,7 @@ class OrdersService {
   }
 
   static Future<void> deleteOrder(String id) async {
+    await _markTomb(id); // ✅ إخفاء فوري محلياً قبل إرسال الحذف
     final list = await loadOrders();
     list.removeWhere((x) => x.id == id);
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
