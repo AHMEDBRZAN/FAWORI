@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/theme.dart';
 import 'home_screen.dart';
+import 'orders_screen.dart';
 import 'products_screen.dart';
 import 'profile_screen.dart';
 import 'simple_screens.dart';
@@ -26,7 +27,7 @@ class _MainScreenState extends State<MainScreen> {
       const ProductsScreen(),
       const WalletScreen(),
       const FavoritesScreen(),
-      const ProfileScreen(),
+      isAdmin ? const OrdersScreen() : const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -60,8 +61,12 @@ class _MainScreenState extends State<MainScreen> {
                   ? (isAdmin ? 'الإدارة' : 'المفضلة')
                   : (isAdmin ? 'Admin' : 'Favorites')),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.person_rounded),
-              label: s.isArabic ? 'ملف شخصي' : 'Profile'),
+              icon: Icon(isAdmin
+                  ? Icons.receipt_long_rounded
+                  : Icons.person_rounded),
+              label: s.isArabic
+                  ? (isAdmin ? 'الطلبات' : 'ملف شخصي')
+                  : (isAdmin ? 'Orders' : 'Profile')),
         ],
       ),
     );
