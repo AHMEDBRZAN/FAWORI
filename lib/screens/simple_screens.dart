@@ -30,6 +30,10 @@ int _tsId(String id) {
   return int.tryParse(id) ?? 0;
 }
 
+// ======================================================
+// المحفظة (مستخدم)
+// ======================================================
+
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
   @override
@@ -1004,6 +1008,10 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 }
+
+// ======================================================
+// 📊 صفحة النقاط والرصيد (للمدير)
+// ======================================================
 
 class AdminPointsView extends StatefulWidget {
   const AdminPointsView({super.key});
@@ -2436,6 +2444,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   }
 }
 
+/// ✨ وميض ناعم للمطابق 100%
 class _Glow extends StatefulWidget {
   final bool glow;
   final Widget child;
@@ -2494,6 +2503,10 @@ class _GlowState extends State<_Glow> with SingleTickerProviderStateMixin {
   }
 }
 
+// ======================================================
+// المفضلة (مستخدم) / الإدارة (مدير)
+// ======================================================
+
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
 
@@ -2508,7 +2521,6 @@ class FavoritesScreen extends StatelessWidget {
 class _FavoritesView extends StatelessWidget {
   const _FavoritesView();
 
-  /// ✅ إضافة للسلة بقراءة لحظية + دعم الكمية
   Future<void> _addToCart(BuildContext context, Product p,
       [int qty = 1]) async {
     final s = context.read<AppSettings>();
@@ -2619,6 +2631,10 @@ class _FavoritesView extends StatelessWidget {
   }
 }
 
+// ======================================================
+// 🛠️ شاشة الإدارة: ملفات الكود (تحديث بالسحب فقط)
+// ======================================================
+
 class AdminCodeView extends StatefulWidget {
   const AdminCodeView({super.key});
   @override
@@ -2636,6 +2652,7 @@ class _AdminCodeViewState extends State<AdminCodeView> {
     _load();
   }
 
+  /// ✅ جلب كامل لشجرة المستودع (كل الملفات حتى المضافة حديثاً)
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -2644,7 +2661,7 @@ class _AdminCodeViewState extends State<AdminCodeView> {
     try {
       final r = await http
           .get(Uri.parse(
-              'https://api.github.com/repos/AHMEDBRZAN/FAWORI/git/trees/main?recursive=1'))
+              'https://api.github.com/repos/AHMEDBRZAN/FAWORI/git/trees/main?recursive=1&t=${DateTime.now().millisecondsSinceEpoch}'))
           .timeout(const Duration(seconds: 12));
       if (r.statusCode != 200) throw Exception('HTTP ${r.statusCode}');
       final j = jsonDecode(r.body);
@@ -2692,28 +2709,29 @@ class _AdminCodeViewState extends State<AdminCodeView> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(s.isArabic ? 'الإدارة' : 'Admin'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.orange),
-            onPressed: _load,
-          ),
-        ],
+        // ✅ بدون زر تحديث — التحديث بالسحب للأسفل فقط
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? ListView(
-                  children: [
-                    const SizedBox(height: 100),
-                    Center(
-                        child: Text(
-                      s.isArabic ? 'فشل التحميل: $_error' : 'Failed: $_error',
-                      style: const TextStyle(color: Colors.red),
-                    )),
-                  ],
+              ? RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    children: [
+                      const SizedBox(height: 100),
+                      Center(
+                          child: Text(
+                        s.isArabic
+                            ? 'فشل التحميل: $_error'
+                            : 'Failed: $_error',
+                        style: const TextStyle(color: Colors.red),
+                      )),
+                    ],
+                  ),
                 )
               : RefreshIndicator(
                   onRefresh: _load,
+                  color: AppColors.orange,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -2781,6 +2799,19 @@ class _AdminCodeViewState extends State<AdminCodeView> {
                   ),
                 ),
     );
+  }
+}
+
+// ======================================================
+// 📝 محرر الكود + تعديل أجزاء متعددة
+// ======================================================
+
+class _Patch {
+  final TextEditingController old = TextEditingController();
+  final TextEditingController neu = TextEditingController();
+  void dispose() {
+    old.dispose();
+    neu.dispose();
   }
 }
 
@@ -2896,6 +2927,228 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
     );
   }
 
+  /// ✅ نافذة تعديل أجزاء متعددة: (قديم ← جديد) لكل جزء
+  void _openPatchDialog() {
+    final s = context.read<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final patches = <_Patch>[_Patch()];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => Dialog(
+          backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.find_replace_rounded,
+                          color: AppColors.teal),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                            s.isArabic
+                                ? 'تعديل أجزاء من الكود'
+                                : 'Patch code parts',
+                            style: const TextStyle(
+                                color: AppColors.teal,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16)),
+                      ),
+                      IconButton(
+                        tooltip: s.isArabic ? 'إضافة جزء' : 'Add part',
+                        icon: const Icon(Icons.add_circle_outline,
+                            color: AppColors.orange),
+                        onPressed: () => setSt(() => patches.add(_Patch())),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: patches.length,
+                    itemBuilder: (c, i) {
+                      final p = patches[i];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: dark
+                              ? const Color(0xFF26262E)
+                              : const Color(0xFFFFFDF9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: AppColors.teal.withAlpha(70)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.orange.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text('${i + 1}',
+                                      style: const TextStyle(
+                                          color: AppColors.orange,
+                                          fontWeight: FontWeight.w900)),
+                                ),
+                                const Spacer(),
+                                if (patches.length > 1)
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline,
+                                        color: Colors.red, size: 18),
+                                    onPressed: () => setSt(() {
+                                      patches[i].dispose();
+                                      patches.removeAt(i);
+                                    }),
+                                  ),
+                              ],
+                            ),
+                            TextField(
+                              controller: p.old,
+                              maxLines: null,
+                              minLines: 2,
+                              style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                  color: dark
+                                      ? Colors.grey.shade100
+                                      : AppColors.ink),
+                              decoration: InputDecoration(
+                                hintText: s.isArabic
+                                    ? 'الكود القديم (المراد استبداله)...'
+                                    : 'Old code to replace...',
+                                hintStyle: TextStyle(
+                                    color: dark
+                                        ? Colors.grey.shade500
+                                        : Colors.grey.shade400,
+                                    fontSize: 11),
+                                filled: true,
+                                fillColor: dark
+                                    ? const Color(0xFF1E1E28)
+                                    : Colors.white,
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: p.neu,
+                              maxLines: null,
+                              minLines: 2,
+                              style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                  color: dark
+                                      ? Colors.grey.shade100
+                                      : AppColors.ink),
+                              decoration: InputDecoration(
+                                hintText: s.isArabic
+                                    ? 'الكود الجديد (البديل)...'
+                                    : 'New replacement code...',
+                                hintStyle: TextStyle(
+                                    color: dark
+                                        ? Colors.grey.shade500
+                                        : Colors.grey.shade400,
+                                    fontSize: 11),
+                                filled: true,
+                                fillColor: dark
+                                    ? const Color(0xFF1E1E28)
+                                    : Colors.white,
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade700,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12))),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text(s.isArabic ? 'إلغاء' : 'Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.teal,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12))),
+                          onPressed: () {
+                            String content = _ctrl.text;
+                            int applied = 0;
+                            int failed = 0;
+                            for (final p in patches) {
+                              final old = p.old.text;
+                              if (old.isEmpty) {
+                                failed++;
+                                continue;
+                              }
+                              if (content.contains(old)) {
+                                content =
+                                    content.replaceAll(old, p.neu.text);
+                                applied++;
+                              } else {
+                                failed++;
+                              }
+                            }
+                            if (applied > 0) {
+                              setState(() => _ctrl.text = content);
+                            }
+                            Navigator.pop(ctx);
+                            for (final p in patches) {
+                              p.dispose();
+                            }
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(s.isArabic
+                                          ? '✅ طُبّق $applied جزء${failed > 0 ? ' — فشل $failed (نص غير موجود)' : ''}'
+                                          : 'Applied $applied${failed > 0 ? ' — $failed failed' : ''}')));
+                            }
+                          },
+                          icon: const Icon(Icons.check_rounded, size: 18),
+                          label: Text(s.isArabic ? 'تطبيق الكل' : 'Apply all'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
@@ -2908,6 +3161,12 @@ class _CodeEditorPageState extends State<CodeEditorPage> {
         elevation: 0,
         title: Text(name, style: const TextStyle(fontSize: 15)),
         actions: [
+          IconButton(
+            tooltip: s.isArabic ? 'تعديل أجزاء' : 'Patch parts',
+            icon: const Icon(Icons.find_replace_rounded,
+                color: AppColors.teal),
+            onPressed: _loading ? null : _openPatchDialog,
+          ),
           IconButton(
             tooltip: s.isArabic ? 'لصق' : 'Paste',
             icon: const Icon(Icons.content_paste_rounded,
