@@ -244,6 +244,48 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _confirmLogout(BuildContext context, AppSettings s) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  s.isArabic ? 'تسجيل الخروج' : 'Logout',
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+        content: Text(
+            s.isArabic
+                ? 'هل تريد تسجيل الخروج من حساب ${s.user?.name ?? ''}؟'
+                : 'Do you want to logout from ${s.user?.name ?? ''}?',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              s.logout();
+            },
+            child: Text(s.isArabic ? 'خروج' : 'Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _socialBtn({
     required IconData icon,
     required List<Color> colors,
@@ -329,127 +371,99 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.pop(context);
-                    _openSettings(context);
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: dark ? const Color(0xFF26262E) : Colors.white,
+                child: Column(
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openSettings(context);
+                      },
                       borderRadius: BorderRadius.circular(16),
-                      border:
-                          Border.all(color: AppColors.orange.withAlpha(70)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.settings_rounded,
-                            color: AppColors.orange),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                              s.isArabic ? 'الإعدادات' : 'Settings',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: dark
-                                      ? Colors.white
-                                      : AppColors.ink)),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color:
+                              dark ? const Color(0xFF26262E) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: AppColors.orange.withAlpha(70)),
                         ),
-                        const Icon(Icons.chevron_left_rounded,
-                            color: AppColors.orange),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: InkWell(
-                  onTap: () async {
-                    Navigator.pop(context);
-                    final ok = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.surface,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                        title: Row(
+                        child: Row(
                           children: [
-                            const Icon(Icons.logout_rounded,
-                                color: Colors.red),
-                            const SizedBox(width: 8),
-                            Text(
-                                s.isArabic
-                                    ? 'تسجيل الخروج'
-                                    : 'Logout',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w900)),
+                            const Icon(Icons.settings_rounded,
+                                color: AppColors.orange),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                  s.isArabic ? 'الإعدادات' : 'Settings',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                            ),
+                            const Icon(Icons.chevron_left_rounded,
+                                color: AppColors.orange),
                           ],
                         ),
-                        content: Text(
-                            s.isArabic
-                                ? 'هل تريد تسجيل الخروج من الحساب؟'
-                                : 'Do you want to logout?',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700)),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: Text(s.isArabic ? 'إلغاء' : 'Cancel',
-                                style: const TextStyle(
-                                    color: AppColors.orange)),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12))),
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: Text(
-                                s.isArabic ? 'خروج' : 'Logout'),
-                          ),
-                        ],
                       ),
-                    );
-                    if (ok == true && mounted) {
-                      s.logout();
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: dark ? const Color(0xFF26262E) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.red.withAlpha(70)),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.logout_rounded, color: Colors.red),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                              s.isArabic ? 'تسجيل الخروج' : 'Logout',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: dark
-                                      ? Colors.white
-                                      : AppColors.ink)),
+                    const SizedBox(height: 10),
+                    // ✅ زر تسجيل الخروج
+                    if (!s.isGuest)
+                      InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _confirmLogout(context, s);
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: <Color>[
+                                Colors.red.withAlpha(dark ? 60 : 25),
+                                Colors.red.withAlpha(dark ? 30 : 12),
+                              ],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border:
+                                Border.all(color: Colors.red.withAlpha(90)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withAlpha(30),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.logout_rounded,
+                                    color: Colors.red, size: 18),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                    s.isArabic
+                                        ? 'تسجيل الخروج'
+                                        : 'Logout',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.red.shade700)),
+                              ),
+                              const Icon(Icons.chevron_left_rounded,
+                                  color: Colors.red),
+                            ],
+                          ),
                         ),
-                        const Icon(Icons.chevron_left_rounded,
-                            color: Colors.red),
-                      ],
-                    ),
-                  ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 18),
