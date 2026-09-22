@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +25,103 @@ String time12(String idMillis) {
     return '$h:$m ${dt.hour < 12 ? 'ص' : 'م'}';
   } catch (_) {
     return '';
+  }
+}
+
+/// ✅ بانر علوي: ⏳ يرجى الانتظار (أثناء النشر) ← ✅ اكتملت (بعد لحاق السيرفر)
+class _SyncBanner extends StatefulWidget {
+  const _SyncBanner();
+  @override
+  State<_SyncBanner> createState() => _SyncBannerState();
+}
+
+class _SyncBannerState extends State<_SyncBanner> {
+  // null = مخفي | true = انتظار | false = اكتمل
+  bool? _state;
+  Timer? _timer;
+  Timer? _hideTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _check());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _check() async {
+    try {
+      await OrdersService.loadOrders(); // ينظّف السجلات عند لحاق السيرفر
+      final pending = await OrdersService.hasPendingSync();
+      if (!mounted) return;
+      if (pending) {
+        if (_state != true) setState(() => _state = true);
+      } else {
+        if (_state == true) {
+          setState(() => _state = false);
+          _hideTimer?.cancel();
+          _hideTimer = Timer(const Duration(seconds: 4), () {
+            if (mounted) setState(() => _state = null);
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_state == null) return const SizedBox.shrink();
+    final s = context.watch<AppSettings>();
+    final waiting = _state == true;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: waiting
+            ? AppColors.orange.withAlpha(30)
+            : AppColors.teal.withAlpha(30),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: waiting
+                ? AppColors.orange.withAlpha(90)
+                : AppColors.teal.withAlpha(90)),
+      ),
+      child: Row(
+        children: [
+          if (waiting)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.orange),
+            )
+          else
+            const Icon(Icons.check_circle_rounded,
+                color: AppColors.teal, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              waiting
+                  ? (s.isArabic
+                      ? 'يرجى الانتظار — جارٍ النشر على السيرفر...'
+                      : 'Please wait — syncing...')
+                  : (s.isArabic ? 'اكتملت العملية بنجاح' : 'Completed'),
+              style: TextStyle(
+                color: waiting ? AppColors.orange : AppColors.teal,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -197,6 +296,10 @@ class _OrdersScreenState extends State<OrdersScreen>
             }
             if (orders.isEmpty) {
               return ListView(children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _SyncBanner(),
+                ),
                 const SizedBox(height: 120),
                 Center(
                     child: Text(
@@ -207,11 +310,16 @@ class _OrdersScreenState extends State<OrdersScreen>
                 )),
               ]);
             }
-            return ListView.separated(
+            return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: orders.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _card(orders[i], isAdmin, s, dark),
+              itemCount: orders.length + 1,
+              itemBuilder: (context, i) {
+                if (i == 0) return const _SyncBanner();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _card(orders[i - 1], isAdmin, s, dark),
+                );
+              },
             );
           },
         ),
@@ -1013,6 +1121,7 @@ class _OrderDetailState extends State<_OrderDetail> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          const _SyncBanner(),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
