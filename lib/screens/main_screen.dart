@@ -52,7 +52,9 @@ class _MainScreenState extends State<MainScreen> {
               label: s.isArabic ? 'المنتجات' : 'Products'),
           BottomNavigationBarItem(
               icon: const Icon(Icons.account_balance_wallet_rounded),
-              label: s.isArabic ? 'المحفظة' : 'Wallet'),
+              label: s.isArabic
+                  ? (isAdmin ? 'إنشاء حساب' : 'المحفظة')
+                  : (isAdmin ? 'Create' : 'Wallet')),
           BottomNavigationBarItem(
               icon: Icon(isAdmin ? Icons.code_rounded : Icons.favorite_rounded),
               label: s.isArabic
