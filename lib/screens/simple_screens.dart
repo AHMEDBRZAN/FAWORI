@@ -304,40 +304,169 @@ class _WalletScreenState extends State<WalletScreen> {
                 )
               else
                 ...filtered.map((r) => _uniTile(s, r, dark)),
-              if (filtered.isNotEmpty) ...[
+              if (rows.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: dark ? const Color(0xFF1E1E28) : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.teal.withAlpha(70)),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                          s.isArabic
-                              ? 'إجمالي الرصيد المخزن'
-                              : 'Total stored',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              color: dark ? Colors.white : AppColors.ink)),
-                      const Spacer(),
-                      Directionality(
-                        textDirection: TextDirection.ltr,
-                        child: Text(fmtThousands(s.stored),
-                            style: const TextStyle(
-                                color: AppColors.teal,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16)),
-                      ),
-                    ],
-                  ),
-                ),
+                _netCard(s, dark, rows),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// ✅ بطاقة صافي المشتريات: مجموع الشراء − مجموع المرتجع
+  Widget _netCard(AppSettings s, bool dark, List<Map<String, dynamic>> rows) {
+    int sumSales = 0;
+    int sumReturns = 0;
+    for (final r in rows) {
+      if (r['kind'] == 'sale') {
+        sumSales += (r['inv'] as Invoice).total.toInt();
+      } else {
+        final inv = r['inv'] as Invoice?;
+        final ret = r['ret'] as Map<String, dynamic>?;
+        sumReturns += inv != null
+            ? inv.total.toInt().abs()
+            : ((ret?['total'] as num?)?.toInt() ?? 0).abs();
+      }
+    }
+    final net = sumSales - sumReturns;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: dark
+              ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+              : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.orange.withAlpha(60)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(dark ? 60 : 15),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.teal.withAlpha(25),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.shopping_bag_rounded,
+                    color: AppColors.teal, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                    s.isArabic ? 'مجموع الشراء' : 'Total purchases',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: dark ? Colors.white : AppColors.ink)),
+              ),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(fmtThousands(sumSales),
+                    style: const TextStyle(
+                        color: AppColors.teal,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15)),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(
+                color: Colors.grey.withAlpha(60), height: 1),
+          ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withAlpha(25),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.assignment_return_rounded,
+                    color: Colors.red, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                    s.isArabic ? 'مجموع المرتجع' : 'Total returns',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: dark ? Colors.white : AppColors.ink)),
+              ),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text('-${fmtThousands(sumReturns)}',
+                    style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15)),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(
+                color: Colors.grey.withAlpha(60), height: 1),
+          ),
+          Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.orange.withAlpha(80),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet_rounded,
+                    color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                      s.isArabic ? 'صافي المشتريات' : 'Net purchases',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14)),
+                ),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(fmtThousands(net),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18)),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
