@@ -287,6 +287,14 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
+  /// ✅ هل توجد عملية لم تصل للسيرفر بعد؟ (حذف/حالة معلّقة محلياً)
+  static Future<bool> hasPendingSync() async {
+    final ov = await _loadOverrides();
+    if (ov.isNotEmpty) return true;
+    final tombs = await _loadTombs();
+    return tombs.isNotEmpty;
+  }
+
   static Future<List<Map<String, dynamic>>> loadReturns() async {
     final d = await _fetchJson('assets/data/returns.json');
     if (d is List) {
