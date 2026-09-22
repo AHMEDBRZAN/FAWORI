@@ -151,9 +151,7 @@ class _OrdersScreenState extends State<OrdersScreen>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final s = context.read<AppSettings>();
-      final isAdmin = s.isAdmin || s.isImageAdmin;
-      _tabCtrl = TabController(length: isAdmin ? 5 : 4, vsync: this);
+      _tabCtrl = TabController(length: 5, vsync: this);
       _tabCtrl!.addListener(() {
         if (!_tabCtrl!.indexIsChanging) {
           setState(() => _tabIndex = _tabCtrl!.index);
@@ -222,20 +220,13 @@ class _OrdersScreenState extends State<OrdersScreen>
                     dark ? Colors.grey.shade400 : Colors.grey.shade600,
                 labelStyle:
                     const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-                tabs: isAdmin
-                    ? [
-                        Tab(text: s.isArabic ? 'معلقة' : 'Pending'),
-                        Tab(text: s.isArabic ? 'الكل' : 'All'),
-                        Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
-                        Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
-                        Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
-                      ]
-                    : [
-                        Tab(text: s.isArabic ? 'الكل' : 'All'),
-                        Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
-                        Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
-                        Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
-                      ],
+                tabs: [
+                  Tab(text: s.isArabic ? 'معلقة' : 'Pending'),
+                  Tab(text: s.isArabic ? 'الكل' : 'All'),
+                  Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
+                  Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
+                  Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
+                ],
               ),
       ),
       body: RefreshIndicator(
@@ -280,15 +271,19 @@ class _OrdersScreenState extends State<OrdersScreen>
             } else {
               orders = orders.where((o) => o.userId == s.user?.id).toList();
               switch (_tabIndex) {
-                case 1:
+                case 0:
                   orders =
-                      orders.where((o) => o.status == 'accepted').toList();
+                      orders.where((o) => o.status == 'pending').toList();
                   break;
                 case 2:
                   orders =
-                      orders.where((o) => o.status == 'rejected').toList();
+                      orders.where((o) => o.status == 'accepted').toList();
                   break;
                 case 3:
+                  orders =
+                      orders.where((o) => o.status == 'rejected').toList();
+                  break;
+                case 4:
                   orders =
                       orders.where((o) => o.status == 'returned').toList();
                   break;
