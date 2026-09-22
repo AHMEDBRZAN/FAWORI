@@ -45,6 +45,7 @@ class _WalletScreenState extends State<WalletScreen> {
   List<Map<String, dynamic>> _returns = [];
   int _lastVersion = -1;
   String _wFilter = 'all';
+  bool _netOpen = false;
 
   @override
   void didChangeDependencies() {
@@ -353,6 +354,7 @@ class _WalletScreenState extends State<WalletScreen> {
       ),
       child: Column(
         children: [
+          if (_netOpen) ...[
           Row(
             children: [
               Container(
@@ -423,6 +425,7 @@ class _WalletScreenState extends State<WalletScreen> {
             child: Divider(
                 color: Colors.grey.withAlpha(60), height: 1),
           ),
+          ],
           Container(
             width: double.infinity,
             padding:
@@ -442,28 +445,40 @@ class _WalletScreenState extends State<WalletScreen> {
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.account_balance_wallet_rounded,
-                    color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                      s.isArabic ? 'صافي المشتريات' : 'Net purchases',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14)),
-                ),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(fmtThousands(net),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18)),
-                ),
-              ],
+            child: InkWell(
+              onTap: () => setState(() => _netOpen = !_netOpen),
+              borderRadius: BorderRadius.circular(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_balance_wallet_rounded,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                        s.isArabic ? 'صافي المشتريات' : 'Net purchases',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14)),
+                  ),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(fmtThousands(net),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18)),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    _netOpen
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
