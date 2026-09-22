@@ -22,16 +22,31 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(s.isArabic ? 'تسجيل الخروج' : 'Logout'),
-        content: Text(s.isArabic
-            ? 'هل تريد الخروج من الحساب؟'
-            : 'Sign out of this account?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                  s.isArabic ? 'تسجيل الخروج' : 'Logout',
+                  style: const TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+        content: Text(
+            s.isArabic
+                ? 'هل تريد تسجيل الخروج من حساب ${s.user?.name ?? ''}؟'
+                : 'Do you want to logout from ${s.user?.name ?? ''}?',
+            style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(ctx);
               s.logout();
