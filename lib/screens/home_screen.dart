@@ -11,6 +11,7 @@ import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
+import 'about_screen.dart';
 import 'orders_screen.dart';
 import 'products_screen.dart';
 
@@ -406,6 +407,48 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const Icon(Icons.chevron_left_rounded,
                                 color: AppColors.orange),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // ✅ حول التطبيق
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AboutScreen()));
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color:
+                              dark ? const Color(0xFF26262E) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: AppColors.teal.withAlpha(70)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded,
+                                color: AppColors.teal),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                  s.isArabic ? 'حول التطبيق' : 'About',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                            ),
+                            const Icon(Icons.chevron_left_rounded,
+                                color: AppColors.teal),
                           ],
                         ),
                       ),
