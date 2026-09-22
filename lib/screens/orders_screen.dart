@@ -109,8 +109,8 @@ class _SyncBannerState extends State<_SyncBanner> {
             child: Text(
               waiting
                   ? (s.isArabic
-                      ? 'يرجى الانتظار — جارٍ النشر على السيرفر...'
-                      : 'Please wait — syncing...')
+                      ? 'تم اتخاذ إجراء بطلبك — يرجى الانتظار...'
+                      : 'Action taken on your order — please wait...')
                   : (s.isArabic ? 'اكتملت العملية بنجاح' : 'Completed'),
               style: TextStyle(
                 color: waiting ? AppColors.orange : AppColors.teal,
@@ -120,6 +120,57 @@ class _SyncBannerState extends State<_SyncBanner> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// ✅ معرف آخر طلب تم اتخاذ إجراء به (للوميض عند دخول صنفه أول مرة)
+String? _glowOrderId;
+
+/// ✨ وميض ناعم للطلب الذي تم اتخاذ إجراء به
+class _Flash extends StatefulWidget {
+  final Widget child;
+  const _Flash({required this.child});
+  @override
+  State<_Flash> createState() => _FlashState();
+}
+
+class _FlashState extends State<_Flash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    _c.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      child: widget.child,
+      builder: (context, child) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.orange.withAlpha(
+                  (70 + 150 * _c.value).toInt().clamp(0, 255)),
+              blurRadius: 18 + 14 * _c.value,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: child,
       ),
     );
   }
@@ -138,6 +189,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   int _tabIndex = 0;
   int _lastVersion = -1;
   Timer? _autoTimer;
+  Timer? _glowTimer;
 
   Future<List<Order>> _loadAndMark() async {
     final os = await OrdersService.loadOrders();
@@ -174,6 +226,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   @override
   void dispose() {
     _autoTimer?.cancel();
+    _glowTimer?.cancel();
     _tabCtrl?.dispose();
     super.dispose();
   }
@@ -319,9 +372,20 @@ class _OrdersScreenState extends State<OrdersScreen>
               itemCount: orders.length + 1,
               itemBuilder: (context, i) {
                 if (i == 0) return const _SyncBanner();
+                final o = orders[i - 1];
+                final glow = _glowOrderId == o.id;
+                if (glow && _glowTimer == null) {
+                  _glowTimer = Timer(const Duration(seconds: 6), () {
+                    _glowOrderId = null;
+                    _glowTimer = null;
+                    if (mounted) setState(() {});
+                  });
+                }
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _card(orders[i - 1], isAdmin, s, dark),
+                  child: glow
+                      ? _Flash(child: _card(o, isAdmin, s, dark))
+                      : _card(o, isAdmin, s, dark),
                 );
               },
             );
@@ -474,6 +538,7 @@ class _OrderDetailState extends State<_OrderDetail> {
       try {
         await context.read<AppSettings>().refreshUser();
       } catch (_) {}
+      _glowOrderId = widget.order.id;
       if (mounted) {
         setState(() => _busy = false);
         Navigator.pop(context);
@@ -491,6 +556,7 @@ class _OrderDetailState extends State<_OrderDetail> {
     setState(() => _busy = true);
     try {
       await OrdersService.rejectOrder(widget.order);
+      _glowOrderId = widget.order.id;
       if (mounted) {
         setState(() => _busy = false);
         Navigator.pop(context);
@@ -774,6 +840,7 @@ class _OrderDetailState extends State<_OrderDetail> {
       try {
         await context.read<AppSettings>().refreshUser();
       } catch (_) {}
+      _glowOrderId = widget.order.id;
       if (mounted) {
         setState(() => _busy = false);
         _loadReturns();
