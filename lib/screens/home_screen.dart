@@ -366,6 +366,92 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: InkWell(
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.surface,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                        title: Row(
+                          children: [
+                            const Icon(Icons.logout_rounded,
+                                color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text(
+                                s.isArabic
+                                    ? 'تسجيل الخروج'
+                                    : 'Logout',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w900)),
+                          ],
+                        ),
+                        content: Text(
+                            s.isArabic
+                                ? 'هل تريد تسجيل الخروج من الحساب؟'
+                                : 'Do you want to logout?',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700)),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: Text(s.isArabic ? 'إلغاء' : 'Cancel',
+                                style: const TextStyle(
+                                    color: AppColors.orange)),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12))),
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: Text(
+                                s.isArabic ? 'خروج' : 'Logout'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (ok == true && mounted) {
+                      s.logout();
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: dark ? const Color(0xFF26262E) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.red.withAlpha(70)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.logout_rounded, color: Colors.red),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                              s.isArabic ? 'تسجيل الخروج' : 'Logout',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: dark
+                                      ? Colors.white
+                                      : AppColors.ink)),
+                        ),
+                        const Icon(Icons.chevron_left_rounded,
+                            color: Colors.red),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 18),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
