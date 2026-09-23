@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
 import '../core/theme.dart';
@@ -190,13 +191,60 @@ class _OrdersScreenState extends State<OrdersScreen>
   int _lastVersion = -1;
   Timer? _autoTimer;
   Timer? _glowTimer;
+  Set<String> _hidden = {};
 
   Future<List<Order>> _loadAndMark() async {
+    await _loadHidden();
     final os = await OrdersService.loadOrders();
     if (mounted) {
       await context.read<AppSettings>().markAllSeen();
     }
     return os;
+  }
+
+  // ====================================================
+  // 🧹 تنظيف الإشعارات محلياً (ليس حذفاً من المستودع)
+  // ====================================================
+  Future<void> _loadHidden() async {
+    final s = context.read<AppSettings>();
+    final p = await SharedPreferences.getInstance();
+    _hidden =
+        (p.getStringList('hidden_orders_${s.user?.id ?? ''}') ?? []).toSet();
+  }
+
+  Future<void> _saveHidden() async {
+    final s = context.read<AppSettings>();
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(
+        'hidden_orders_${s.user?.id ?? ''}', _hidden.toList());
+  }
+
+  Future<void> _hideOrder(String id) async {
+    setState(() => _hidden.add(id));
+    await _saveHidden();
+  }
+
+  Future<void> _hideAll(List<Order> visible) async {
+    setState(() {
+      for (final o in visible) {
+        _hidden.add(o.id);
+      }
+    });
+    await _saveHidden();
+  }
+
+  Widget _dismissBg(bool end) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.red.withAlpha(40),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.red.withAlpha(90)),
+      ),
+      alignment: end ? Alignment.centerLeft : Alignment.centerRight,
+      child: const Icon(Icons.delete_sweep_rounded, color: Colors.red),
+    );
   }
 
   @override
@@ -311,6 +359,7 @@ class _OrdersScreenState extends State<OrdersScreen>
             var orders = List<Order>.from(snap.data ?? [])
               ..sort((a, b) => (int.tryParse(b.id) ?? 0)
                   .compareTo(int.tryParse(a.id) ?? 0));
+            orders = orders.where((o) => !_hidden.contains(o.id)).toList();
             if (isAdmin) {
               switch (_tabIndex) {
                 case 0:
@@ -369,10 +418,29 @@ class _OrdersScreenState extends State<OrdersScreen>
             }
             return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: orders.length + 1,
+              itemCount: orders.length + 2,
               itemBuilder: (context, i) {
                 if (i == 0) return const _SyncBanner();
-                final o = orders[i - 1];
+                if (i == 1) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton.icon(
+                        onPressed: () => _hideAll(orders),
+                        icon: const Icon(Icons.delete_sweep_rounded,
+                            size: 18, color: Colors.red),
+                        label: Text(
+                            s.isArabic ? 'مسح الكل' : 'Clear all',
+                            style: const TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12)),
+                      ),
+                    ),
+                  );
+                }
+                final o = orders[i - 2];
                 final glow = _glowOrderId == o.id;
                 if (glow && _glowTimer == null) {
                   _glowTimer = Timer(const Duration(seconds: 6), () {
@@ -381,11 +449,18 @@ class _OrdersScreenState extends State<OrdersScreen>
                     if (mounted) setState(() {});
                   });
                 }
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: glow
-                      ? _Flash(child: _card(o, isAdmin, s, dark))
-                      : _card(o, isAdmin, s, dark),
+                return Dismissible(
+                  key: ValueKey('dismiss_${o.id}'),
+                  direction: DismissDirection.horizontal,
+                  background: _dismissBg(false),
+                  secondaryBackground: _dismissBg(true),
+                  onDismissed: (_) => _hideOrder(o.id),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: glow
+                        ? _Flash(child: _card(o, isAdmin, s, dark))
+                        : _card(o, isAdmin, s, dark),
+                  ),
                 );
               },
             );
