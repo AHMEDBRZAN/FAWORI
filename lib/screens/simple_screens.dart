@@ -68,8 +68,8 @@ class _WalletScreenState extends State<WalletScreen> {
     try {
       await s.refreshUser();
     } catch (_) {}
-    final invs = await StoreService.loadInvoices();
-    final rets = await OrdersService.loadReturns();
+    final invs = await OrdersService.loadInvoicesFiltered();
+    final rets = await OrdersService.loadReturnsFiltered();
     if (mounted) {
       setState(() {
         _invoices = invs;
@@ -1204,8 +1204,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     setState(() => _loading = true);
     try {
       final u = await StoreService.loadUsers();
-      final i = await StoreService.loadInvoices();
-      final r = await OrdersService.loadReturns();
+      final i = await OrdersService.loadInvoicesFiltered();
+      final r = await OrdersService.loadReturnsFiltered();
       if (mounted) {
         setState(() {
           _users = u.where((x) => x.role != 'guest').toList();
@@ -1576,8 +1576,9 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
     if (ok != true) return;
     try {
-      await OrdersService.deleteInvoice(i.id);
+      await OrdersService.markInvoiceDeleted(i.id); // ✅ إخفاء فوري
       await _load();
+      await OrdersService.deleteInvoice(i.id); // 🗑 حذف من المستودع بالخلفية
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(s.isArabic
@@ -1632,11 +1633,14 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     if (ok != true) return;
     try {
       if (r['legacy'] == true) {
+        await OrdersService.markInvoiceDeleted('${r['id']}');
+        await _load();
         await OrdersService.deleteInvoice('${r['id']}');
       } else {
+        await OrdersService.markReturnDeleted('${r['id']}');
+        await _load();
         await OrdersService.deleteReturn('${r['id']}');
       }
-      await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(
