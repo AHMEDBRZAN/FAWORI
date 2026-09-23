@@ -11,8 +11,7 @@ import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
-import 'about_screen.dart';
-import 'orders_screen.dart';
+import 'login_screen.dart';
 import 'products_screen.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
@@ -279,6 +278,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               s.logout();
+              // ✅ انتقال صريح لشاشة الدخول (مدير + مستخدم)
+              Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (r) => false);
             },
             child: Text(s.isArabic ? 'خروج' : 'Logout'),
           ),
