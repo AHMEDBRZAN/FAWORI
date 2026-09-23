@@ -1325,7 +1325,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   onPressed: () => setState(() {
                         _sel = null;
                         _filter = 'all';
-                        _q = '';
                       }),
                 ),
               )
