@@ -1325,6 +1325,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   onPressed: () => setState(() {
                         _sel = null;
                         _filter = 'all';
+                        _q = '';
                       }),
                 ),
               )
@@ -2145,6 +2146,22 @@ class _AdminPointsViewState extends State<AdminPointsView> {
               Padding(
                 padding: const EdgeInsetsDirectional.only(start: 4),
                 child: InkWell(
+                  onTap: () => _showReturnForInvoice(i, s),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9B59B6).withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.assignment_return_rounded,
+                        color: Color(0xFF9B59B6), size: 16),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 4),
+                child: InkWell(
                   onTap: () => _confirmDeleteInvoice(i, s),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
@@ -2301,6 +2318,248 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
+  /// 🔁 نافذة مرتجع لفاتورة شراء (من صفحة النقاط)
+  Future<void> _showReturnForInvoice(Invoice inv, AppSettings s) async {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final List<Map<String, Object>> items = inv.items
+        .map((it) => <String, Object>{
+              'name': it.name,
+              'max': it.qty,
+              'qty': it.qty,
+            })
+        .toList();
+    final totalCtrl = TextEditingController();
+    final invCtrl = TextEditingController();
+
+    String fmtMoney(String raw) {
+      final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.isEmpty) return '';
+      return fmtThousands(int.parse(digits));
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            s.isArabic ? 'تحويل إلى مرتجع' : 'Mark as returned',
+            style: const TextStyle(
+                color: Color(0xFF9B59B6), fontWeight: FontWeight.w900),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    s.isArabic
+                        ? 'حدّد المواد المرتجعة وكمياتها:'
+                        : 'Select returned items:',
+                    style: TextStyle(
+                        color: dark
+                            ? Colors.grey.shade300
+                            : Colors.grey.shade700,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
+                  ...List.generate(items.length, (i) {
+                    final name = items[i]['name'] as String;
+                    final qty = items[i]['qty'] as int;
+                    final max = items[i]['max'] as int;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: qty > 0
+                            ? const Color(0xFF9B59B6).withAlpha(20)
+                            : (dark
+                                ? const Color(0xFF26262E)
+                                : const Color(0xFFF5F5F5)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: qty > 0
+                                ? const Color(0xFF9B59B6).withAlpha(80)
+                                : Colors.grey.withAlpha(40)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(name,
+                                style: TextStyle(
+                                    color: dark
+                                        ? Colors.white
+                                        : AppColors.ink,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13)),
+                          ),
+                          InkWell(
+                            onTap: qty > 0
+                                ? () =>
+                                    setSt(() => items[i]['qty'] = qty - 1)
+                                : null,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              child: Icon(Icons.remove_circle_outline,
+                                  color: qty > 0
+                                      ? const Color(0xFF9B59B6)
+                                      : Colors.grey),
+                            ),
+                          ),
+                          Text('$qty / $max',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color:
+                                      dark ? Colors.white : AppColors.ink)),
+                          InkWell(
+                            onTap: qty < max
+                                ? () =>
+                                    setSt(() => items[i]['qty'] = qty + 1)
+                                : null,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              child: Icon(Icons.add_circle_outline,
+                                  color: qty < max
+                                      ? const Color(0xFF9B59B6)
+                                      : Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: totalCtrl,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) {
+                      final f = fmtMoney(totalCtrl.text);
+                      totalCtrl.value = TextEditingValue(
+                        text: f,
+                        selection:
+                            TextSelection.collapsed(offset: f.length),
+                      );
+                      setSt(() {});
+                    },
+                    style:
+                        TextStyle(color: dark ? Colors.white : AppColors.ink),
+                    decoration: InputDecoration(
+                      hintText:
+                          s.isArabic ? 'سعر المرتجع' : 'Return price',
+                      prefixIcon: const Icon(Icons.payments_outlined,
+                          color: AppColors.orange),
+                      filled: true,
+                      fillColor: dark
+                          ? const Color(0xFF26262E)
+                          : const Color(0xFFFFFDF9),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: invCtrl,
+                    keyboardType: TextInputType.number,
+                    style:
+                        TextStyle(color: dark ? Colors.white : AppColors.ink),
+                    decoration: InputDecoration(
+                      hintText: s.isArabic
+                          ? 'رقم فاتورة المرتجع'
+                          : 'Return invoice No',
+                      prefixIcon: const Icon(Icons.receipt_long_outlined,
+                          color: AppColors.teal),
+                      filled: true,
+                      fillColor: dark
+                          ? const Color(0xFF26262E)
+                          : const Color(0xFFFFFDF9),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(s.isArabic ? 'إلغاء' : 'Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF9B59B6),
+                  foregroundColor: Colors.white),
+              onPressed: () {
+                if (!items.any((it) => (it['qty'] as int) > 0)) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(s.isArabic
+                          ? 'اختر مادة واحدة على الأقل'
+                          : 'Select at least one item')));
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
+              child: Text(s.isArabic ? 'تحويل مرتجع' : 'Return'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true) return;
+    final customTotal =
+        double.tryParse(totalCtrl.text.replaceAll(',', '')) ?? 0;
+    if (customTotal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text(s.isArabic ? 'أدخل سعر المرتجع' : 'Enter return price'),
+          backgroundColor: Colors.red));
+      return;
+    }
+    try {
+      final pseudo = Order(
+        id: inv.id,
+        userId: inv.userId,
+        userName: '',
+        userRole: '',
+        date: inv.date,
+        items: inv.items
+            .map((it) => OrderItem(name: it.name, qty: it.qty))
+            .toList(),
+        status: 'accepted',
+        total: inv.total,
+        invoiceNo: inv.no,
+      );
+      await OrdersService.markReturned(
+        pseudo,
+        returnedItems: items
+            .where((it) => (it['qty'] as int) > 0)
+            .map((it) => OrderItem(
+                name: it['name'] as String, qty: it['qty'] as int))
+            .toList(),
+        customTotal: customTotal,
+        customInvoiceNo: invCtrl.text.trim(),
+      );
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content:
+                Text(s.isArabic ? '✅ تم تسجيل المرتجع' : 'Return saved')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+      }
+    }
+  }
+
   void _openSaleDetails(Invoice inv, AppSettings s, bool dark) {
     showModalBottomSheet(
       context: context,
@@ -2372,6 +2631,33 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   inv.points >= 0 ? AppColors.teal : Colors.red, dark),
               _sheetRow(s.isArabic ? 'رصيد مخزن منها' : 'Stored',
                   fmtThousands(inv.stored), AppColors.teal, dark),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: <Color>[
+                      Color(0xFF9B59B6),
+                      Color(0xFF7D3C98)
+                    ]),
+                    borderRadius: BorderRadius.circular(14)),
+                child: SizedBox(
+                  height: 48,
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showReturnForInvoice(inv, s);
+                    },
+                    icon: const Icon(Icons.assignment_return_rounded),
+                    label: Text(s.isArabic
+                        ? 'تحويل إلى مرتجع'
+                        : 'Mark as returned'),
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
             ],
           ),
