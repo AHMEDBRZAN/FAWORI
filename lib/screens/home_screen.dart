@@ -11,7 +11,9 @@ import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
 import '../widgets/gifts_view.dart';
 import '../widgets/pressable.dart';
+import 'about_screen.dart';
 import 'login_screen.dart';
+import 'orders_screen.dart';
 import 'products_screen.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
