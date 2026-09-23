@@ -62,7 +62,7 @@ class _WalletScreenState extends State<WalletScreen> {
     try {
       final uid = s.user?.id ?? '';
       if (uid.isNotEmpty && !s.isGuest) {
-        await OrdersService.convertStoredToPoints(uid);
+        await OrdersService.recalcUserTotals(uid);
       }
     } catch (_) {}
     try {
@@ -139,7 +139,22 @@ class _WalletScreenState extends State<WalletScreen> {
 
     filtered.sort((a, b) => _tsOfRow(b).compareTo(_tsOfRow(a)));
 
-    final int storedMod = s.stored % kPointUnit;
+    int sumSales = 0;
+    int sumRets = 0;
+    for (final r in rows) {
+      if (r['kind'] == 'sale') {
+        sumSales += (r['inv'] as Invoice).total.toInt();
+      } else {
+        final iv = r['inv'] as Invoice?;
+        final rt = r['ret'] as Map<String, dynamic>?;
+        sumRets += iv != null
+            ? iv.total.toInt().abs()
+            : ((rt?['total'] as num?)?.toInt() ?? 0).abs();
+      }
+    }
+    final int net = sumSales - sumRets;
+    final int pointsNet = net ~/ kPointUnit;
+    final int storedMod = net % kPointUnit;
     final int remaining = kPointUnit - storedMod;
     final double progress = storedMod / kPointUnit;
 
@@ -215,7 +230,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(fmtThousands(s.points),
+                        Text(fmtThousands(pointsNet),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 40,
@@ -258,7 +273,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                       fontWeight: FontWeight.w700)),
                               Directionality(
                                 textDirection: TextDirection.ltr,
-                                child: Text(fmtThousands(s.stored),
+                                child: Text(fmtThousands(storedMod),
                                     style: TextStyle(
                                         color: Colors.white.withAlpha(230),
                                         fontSize: 12,
@@ -1243,25 +1258,22 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     return list;
   }
 
-  int _pointsOf(User u) {
-    int p = _invoices
-        .where((i) => i.userId == u.id)
-        .fold(0, (s, i) => s + i.points);
-    p -= _returns
+  int _netOf(User u) {
+    int sales = _invoices
+        .where((i) => i.userId == u.id && i.type == 'sale')
+        .fold(0, (s, i) => s + i.total.toInt());
+    int rets = _returns
         .where((r) => r['userId'] == u.id)
-        .fold(0, (s, r) => s + ((r['points'] as num?)?.toInt() ?? 0));
-    return p;
+        .fold(0, (s, r) => s + ((r['total'] as num?)?.toInt() ?? 0).abs());
+    rets += _invoices
+        .where((i) => i.userId == u.id && i.type == 'return')
+        .fold(0, (s, i) => s + i.total.toInt().abs());
+    return sales - rets;
   }
 
-  int _storedOf(User u) {
-    int s2 = _invoices
-        .where((i) => i.userId == u.id)
-        .fold(0, (s, i) => s + i.stored);
-    s2 -= _returns
-        .where((r) => r['userId'] == u.id)
-        .fold(0, (s, r) => s + ((r['stored'] as num?)?.toInt() ?? 0));
-    return s2;
-  }
+  int _pointsOf(User u) => _netOf(u) ~/ kPointUnit;
+
+  int _storedOf(User u) => _netOf(u) % kPointUnit;
 
   bool _exactUser(User u, String q) =>
       u.name.trim().toLowerCase() == q || u.phone.trim() == q;
