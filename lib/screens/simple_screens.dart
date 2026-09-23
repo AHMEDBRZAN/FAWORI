@@ -1378,7 +1378,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   if (_sel == null)
                     ..._usersSection(s, dark, q)
                   else
-                    ..._userInvoicesSection(s, dark),
+                    ..._userInvoicesSection(s, dark, q),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -1856,10 +1856,27 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  List<Widget> _userInvoicesSection(AppSettings s, bool dark) {
+  List<Widget> _userInvoicesSection(AppSettings s, bool dark, String q) {
     final u = _sel!;
-    final sales = _salesOf(u);
-    final rets = _returnsOf(u);
+    var sales = _salesOf(u);
+    var rets = _returnsOf(u);
+    // ✅ داخل المستخدم: البحث يشمل فواتيره هو فقط
+    if (q.isNotEmpty) {
+      sales = sales
+          .where((i) =>
+              i.no.toLowerCase().contains(q) ||
+              fmtThousands(i.total).contains(q) ||
+              i.date.contains(q))
+          .toList();
+      rets = rets
+          .where((r) =>
+              '${r['no'] ?? ''}'.toLowerCase().contains(q) ||
+              '${r['purchaseNo'] ?? ''}'.toLowerCase().contains(q) ||
+              fmtThousands(((r['total'] as num?)?.toInt() ?? 0).abs())
+                  .contains(q) ||
+              '${r['date'] ?? ''}'.contains(q))
+          .toList();
+    }
     return [
       Container(
         padding: const EdgeInsets.all(18),
