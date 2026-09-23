@@ -1169,6 +1169,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   List<Map<String, dynamic>> _returns = [];
   bool _loading = true;
   String _q = '';
+  final _qCtrl = TextEditingController();
   User? _sel;
   String _filter = 'all';
 
@@ -1176,6 +1177,12 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _qCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -1414,6 +1421,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
         ],
       ),
       child: TextField(
+        controller: _qCtrl,
         onChanged: (v) => setState(() => _q = v),
         style: TextStyle(
             color: dark ? Colors.white : AppColors.ink, fontSize: 15),
@@ -1449,7 +1457,10 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                     child: const Icon(Icons.clear_rounded,
                         color: Colors.red, size: 18),
                   ),
-                  onPressed: () => setState(() => _q = ''),
+                  onPressed: () {
+                    _qCtrl.clear();
+                    setState(() => _q = '');
+                  },
                 )
               : null,
           border: InputBorder.none,
