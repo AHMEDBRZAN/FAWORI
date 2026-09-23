@@ -421,11 +421,11 @@ class _OrdersScreenState extends State<OrdersScreen>
               itemCount: orders.length + 2,
               itemBuilder: (context, i) {
                 if (i == 0) return const _SyncBanner();
-                if (i == 1) {
+                if (i == orders.length + 1) {
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.only(top: 4),
                     child: Align(
-                      alignment: AlignmentDirectional.centerStart,
+                      alignment: AlignmentDirectional.centerEnd,
                       child: TextButton.icon(
                         onPressed: () => _hideAll(orders),
                         icon: const Icon(Icons.delete_sweep_rounded,
@@ -440,7 +440,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                     ),
                   );
                 }
-                final o = orders[i - 2];
+                final o = orders[i - 1];
                 final glow = _glowOrderId == o.id;
                 if (glow && _glowTimer == null) {
                   _glowTimer = Timer(const Duration(seconds: 6), () {
