@@ -2544,7 +2544,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
             .map((it) => OrderItem(name: it.name, qty: it.qty))
             .toList(),
         status: 'accepted',
-        total: inv.total,
+        total: inv.total.toDouble(),
         invoiceNo: inv.no,
       );
       await OrdersService.markReturned(
