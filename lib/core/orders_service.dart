@@ -295,6 +295,44 @@ class OrdersService {
     return tombs.isNotEmpty;
   }
 
+  /// ✅ إعادة احتساب نقاط/رصيد مستخدم من صافي المشتريات (شراء − مرتجع)
+  static Future<void> recalcUserTotals(String userId) async {
+    final invs = await _fetchJson('assets/data/invoices.json');
+    if (invs is! List) return;
+    int sales = 0;
+    int rets = 0;
+    for (final i in invs) {
+      if (i is Map && i['userId'] == userId) {
+        if (i['type'] == 'sale') {
+          sales += ((i['total'] as num?)?.toInt() ?? 0);
+        } else if (i['type'] == 'return') {
+          rets += ((i['total'] as num?)?.toInt() ?? 0).abs();
+        }
+      }
+    }
+    final retList = await loadReturns();
+    for (final r in retList) {
+      if (r['userId'] == userId) {
+        rets += ((r['total'] as num?)?.toInt() ?? 0).abs();
+      }
+    }
+    final net = sales - rets;
+    final pts = net ~/ kPointUnit;
+    final st = net % kPointUnit;
+    final users = await _fetchJson('assets/data/users.json');
+    if (users is List) {
+      bool ch = false;
+      for (final u in users) {
+        if (u is Map && u['id'] == userId) {
+          u['points'] = pts;
+          u['stored'] = st;
+          ch = true;
+        }
+      }
+      if (ch) await _putJson('assets/data/users.json', users);
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> loadReturns() async {
     final d = await _fetchJson('assets/data/returns.json');
     if (d is List) {
@@ -305,7 +343,14 @@ class OrdersService {
 
   static Future<void> deleteInvoice(String id) async {
     final invs = await _fetchJson('assets/data/invoices.json');
+    String uid = '';
     if (invs is List) {
+      for (final i in invs) {
+        if (i is Map && i['id'] == id) {
+          uid = '${i['userId'] ?? ''}';
+          break;
+        }
+      }
       invs.removeWhere((i) => i is Map && i['id'] == id);
       await _putJson('assets/data/invoices.json', invs);
     }
@@ -314,12 +359,21 @@ class OrdersService {
       rets.removeWhere((r) => r['orderId'] == id);
       await _putJson('assets/data/returns.json', rets);
     }
+    if (uid.isNotEmpty) await recalcUserTotals(uid);
   }
 
   static Future<void> deleteReturn(String id) async {
     final rets = await loadReturns();
+    String uid = '';
+    for (final r in rets) {
+      if (r['id'] == id) {
+        uid = '${r['userId'] ?? ''}';
+        break;
+      }
+    }
     rets.removeWhere((r) => r['id'] == id);
     await _putJson('assets/data/returns.json', rets);
+    if (uid.isNotEmpty) await recalcUserTotals(uid);
   }
 
   static Future<void> deleteUserAll(String userId) async {
@@ -408,7 +462,7 @@ class OrdersService {
       if (matched) await _putJson('assets/data/users.json', users);
     }
 
-    await convertStoredToPoints(o.userId);
+    await recalcUserTotals(o.userId);
   }
 
   static Future<void> rejectOrder(Order o) async {
@@ -475,6 +529,7 @@ class OrdersService {
           .toList(),
     });
     await _putJson('assets/data/returns.json', rets);
+    await recalcUserTotals(o.userId);
   }
 
   static Future<bool> convertStoredToPoints(String userId) async {
