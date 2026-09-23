@@ -2568,6 +2568,12 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   }
 
   void _openSaleDetails(Invoice inv, AppSettings s, bool dark) {
+    // ✅ المرتجعات المرتبطة بهذه الفاتورة (بالرقم الداخلي أو رقم الفاتورة)
+    final relReturns = _returns
+        .where((r) =>
+            r['orderId'] == inv.id ||
+            (inv.no.isNotEmpty && '${r['purchaseNo'] ?? ''}' == inv.no))
+        .toList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2638,6 +2644,49 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   inv.points >= 0 ? AppColors.teal : Colors.red, dark),
               _sheetRow(s.isArabic ? 'رصيد مخزن منها' : 'Stored',
                   fmtThousands(inv.stored), AppColors.teal, dark),
+              if (relReturns.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openReturnDetails(relReturns.first, s, dark);
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9B59B6)
+                          .withAlpha(dark ? 40 : 25),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: const Color(0xFF9B59B6).withAlpha(90)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.assignment_return_rounded,
+                            color: Color(0xFF9B59B6), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                              s.isArabic
+                                  ? 'ملاحظة: يوجد مرتجع على هذه الفاتورة${relReturns.length > 1 ? ' (${relReturns.length} مرتجعات)' : ''}'
+                                  : 'Note: this invoice has a return',
+                              style: TextStyle(
+                                  color: dark
+                                      ? Colors.grey.shade100
+                                      : AppColors.ink,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13)),
+                        ),
+                        const Icon(Icons.chevron_left_rounded,
+                            color: Color(0xFF9B59B6)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
