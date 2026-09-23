@@ -27,14 +27,22 @@ class ProductsScreen extends StatefulWidget {
 class _ProductsScreenState extends State<ProductsScreen> {
   int _cartCount = 0;
   String _q = '';
+  final _qCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     if (widget.initialBrand != null) {
       _q = _brandAr[widget.initialBrand] ?? widget.initialBrand!;
+      _qCtrl.text = _q;
     }
     _refreshCount();
+  }
+
+  @override
+  void dispose() {
+    _qCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _refreshCount() async {
@@ -162,6 +170,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   Border.all(color: AppColors.orange.withAlpha(60), width: 1.2),
             ),
             child: TextField(
+              controller: _qCtrl,
               onChanged: (v) => setState(() => _q = v),
               style: TextStyle(
                   color: dark ? Colors.white : AppColors.ink, fontSize: 15),
@@ -176,7 +185,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ? IconButton(
                         icon: const Icon(Icons.clear_rounded,
                             color: Colors.red, size: 18),
-                        onPressed: () => setState(() => _q = ''),
+                        onPressed: () {
+                          _qCtrl.clear();
+                          setState(() => _q = '');
+                        },
                       )
                     : null,
                 border: InputBorder.none,
