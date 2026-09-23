@@ -287,6 +287,58 @@ class OrdersService {
     await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
   }
 
+  // ====================================================
+  // 🗑 Tombstones للفواتير/المرتجعات: إخفاء فوري + حذف بالخلفية
+  // ====================================================
+  static const String _kInvTombKey = 'inv_tombstones';
+  static const String _kRetTombKey = 'ret_tombstones';
+
+  static Future<Set<String>> _loadSet(String key) async {
+    final p = await SharedPreferences.getInstance();
+    return (p.getStringList(key) ?? []).toSet();
+  }
+
+  static Future<void> _saveSet(String key, Set<String> v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(key, v.toList());
+  }
+
+  static Future<void> markInvoiceDeleted(String id) async {
+    final s = await _loadSet(_kInvTombKey);
+    s.add(id);
+    await _saveSet(_kInvTombKey, s);
+  }
+
+  static Future<void> markReturnDeleted(String id) async {
+    final s = await _loadSet(_kRetTombKey);
+    s.add(id);
+    await _saveSet(_kRetTombKey, s);
+  }
+
+  static Future<List<Invoice>> loadInvoicesFiltered() async {
+    final list = await StoreService.loadInvoices();
+    final tombs = await _loadSet(_kInvTombKey);
+    if (tombs.isNotEmpty) {
+      final ids = list.map((e) => e.id).toSet();
+      tombs.removeWhere((id) => !ids.contains(id));
+      await _saveSet(_kInvTombKey, tombs);
+      list.removeWhere((e) => tombs.contains(e.id));
+    }
+    return list;
+  }
+
+  static Future<List<Map<String, dynamic>>> loadReturnsFiltered() async {
+    final list = await loadReturns();
+    final tombs = await _loadSet(_kRetTombKey);
+    if (tombs.isNotEmpty) {
+      final ids = list.map((e) => '${e['id']}').toSet();
+      tombs.removeWhere((id) => !ids.contains(id));
+      await _saveSet(_kRetTombKey, tombs);
+      list.removeWhere((e) => tombs.contains('${e['id']}'));
+    }
+    return list;
+  }
+
   /// ✅ هل توجد عملية لم تصل للسيرفر بعد؟ (حذف/حالة معلّقة محلياً)
   static Future<bool> hasPendingSync() async {
     final ov = await _loadOverrides();
