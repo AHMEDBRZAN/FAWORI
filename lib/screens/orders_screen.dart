@@ -640,6 +640,7 @@ class _OrderDetail extends StatefulWidget {
 
 class _OrderDetailState extends State<_OrderDetail> {
   final _total = TextEditingController();
+  final _invNo = TextEditingController();
   bool _busy = false;
   List<Map<String, dynamic>> _returns = [];
 
@@ -647,6 +648,13 @@ class _OrderDetailState extends State<_OrderDetail> {
   void initState() {
     super.initState();
     _loadReturns();
+  }
+
+  @override
+  void dispose() {
+    _total.dispose();
+    _invNo.dispose();
+    super.dispose();
   }
 
   Future<void> _loadReturns() async {
@@ -691,9 +699,19 @@ class _OrderDetailState extends State<_OrderDetail> {
   }
 
   Future<void> _accept() async {
+    if (_invNo.text.trim().isEmpty) {
+      final st = context.read<AppSettings>();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(st.isArabic
+              ? 'أدخل رقم الفاتورة أولاً'
+              : 'Enter invoice number first'),
+          backgroundColor: Colors.red));
+      return;
+    }
     setState(() => _busy = true);
     try {
       widget.order.total = _totalNum;
+      widget.order.invoiceNo = _invNo.text.trim();
       await OrdersService.acceptOrder(widget.order);
       try {
         await context.read<AppSettings>().refreshUser();
@@ -1283,6 +1301,32 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
+  Widget _invField(AppSettings s, bool dark) {
+    return TextField(
+      controller: _invNo,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: (_) => setState(() {}),
+      style:
+          TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 16),
+      decoration: InputDecoration(
+        hintText: s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+        hintStyle: TextStyle(
+            color: dark ? Colors.grey.shade500 : Colors.grey.shade400,
+            fontSize: 15),
+        prefixIcon: const Icon(Icons.receipt_long_outlined,
+            color: AppColors.teal, size: 22),
+        filled: true,
+        fillColor: dark ? const Color(0xFF26262E) : const Color(0xFFFFFDF9),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+    );
+  }
+
   Widget _moneyField(String hint, TextEditingController c) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     return TextField(
@@ -1411,6 +1455,8 @@ class _OrderDetailState extends State<_OrderDetail> {
           ),
           const SizedBox(height: 18),
           if (widget.isAdmin && o.status == 'pending') ...[
+            _invField(s, dark),
+            const SizedBox(height: 12),
             _moneyField(s.isArabic ? 'السعر الإجمالي' : 'Total', _total),
             const SizedBox(height: 16),
             Container(
@@ -1422,8 +1468,11 @@ class _OrderDetailState extends State<_OrderDetail> {
               ),
               child: Column(
                 children: [
-                  _sumRow(s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
-                      o.invoiceNo.isEmpty ? '—' : o.invoiceNo,
+                  _sumRow(
+                      s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                      _invNo.text.isEmpty
+                          ? (o.invoiceNo.isEmpty ? '—' : o.invoiceNo)
+                          : _invNo.text,
                       AppColors.orange),
                   _sumRow(s.isArabic ? 'السعر الإجمالي' : 'Total',
                       fmtThousands(_totalNum), AppColors.orange,
