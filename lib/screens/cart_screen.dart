@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/orders_service.dart';
@@ -15,7 +14,6 @@ class _CartScreenState extends State<CartScreen> {
   List<CartItem> _items = [];
   bool _loading = true;
   bool _busy = false;
-  final _invNo = TextEditingController();
 
   /// ✅ سلسلة كتابة متسلسلة: لا عملية حفظ تكتمل بعد التفريغ
   Future<void> _writeChain = Future<void>.value();
@@ -28,7 +26,6 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   void dispose() {
-    _invNo.dispose();
     super.dispose();
   }
 
@@ -71,22 +68,11 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _checkout() async {
     final s = context.read<AppSettings>();
-    final inv = _invNo.text.trim();
-    if (inv.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              s.isArabic ? 'أدخل رقم الفاتورة أولاً' : 'Enter invoice number first'),
-          backgroundColor: Colors.red));
-      return;
-    }
-    if (_items.isEmpty) return; // ✅ بدون أي إشعار إذا كانت فارغة
+    if (_items.isEmpty) return;
     setState(() => _busy = true);
     try {
-      // ✅ انتظر أي عمليات حفظ معلّقة
       await _writeChain;
       final captured = List<CartItem>.from(_items);
-
-      // ✅ تفريغ فوري (ذاكرة + تخزين) قبل الإرسال
       setState(() {
         _items = [];
       });
@@ -103,7 +89,7 @@ class _CartScreenState extends State<CartScreen> {
         items: captured
             .map((e) => OrderItem(name: e.name, qty: e.qty))
             .toList(),
-        invoiceNo: inv,
+        invoiceNo: '',
       );
       await OrdersService.submitOrder(order);
       if (mounted) {
@@ -192,36 +178,6 @@ class _CartScreenState extends State<CartScreen> {
                           ],
                         ),
                       ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _invNo,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
-                      style: TextStyle(
-                          color: dark ? Colors.white : AppColors.ink,
-                          fontSize: 16),
-                      decoration: InputDecoration(
-                        hintText:
-                            s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
-                        hintStyle: TextStyle(
-                            color: dark
-                                ? Colors.grey.shade500
-                                : Colors.grey.shade400),
-                        prefixIcon: const Icon(Icons.receipt_long_outlined,
-                            color: AppColors.teal, size: 22),
-                        filled: true,
-                        fillColor: dark
-                            ? const Color(0xFF26262E)
-                            : const Color(0xFFFFFDF9),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
-                      ),
-                    ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(16),
