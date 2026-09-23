@@ -192,6 +192,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   Timer? _autoTimer;
   Timer? _glowTimer;
   Set<String> _hidden = {};
+  Set<String> _locked = {};
 
   Future<List<Order>> _loadAndMark() async {
     await _loadHidden();
@@ -208,8 +209,9 @@ class _OrdersScreenState extends State<OrdersScreen>
   Future<void> _loadHidden() async {
     final s = context.read<AppSettings>();
     final p = await SharedPreferences.getInstance();
-    _hidden =
-        (p.getStringList('hidden_orders_${s.user?.id ?? ''}') ?? []).toSet();
+    final uid = s.user?.id ?? '';
+    _hidden = (p.getStringList('hidden_orders_$uid') ?? []).toSet();
+    _locked = (p.getStringList('locked_orders_$uid') ?? []).toSet();
   }
 
   Future<void> _saveHidden() async {
@@ -217,6 +219,42 @@ class _OrdersScreenState extends State<OrdersScreen>
     final p = await SharedPreferences.getInstance();
     await p.setStringList(
         'hidden_orders_${s.user?.id ?? ''}', _hidden.toList());
+  }
+
+  Future<void> _saveLocked() async {
+    final s = context.read<AppSettings>();
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(
+        'locked_orders_${s.user?.id ?? ''}', _locked.toList());
+  }
+
+  Future<void> _lockOrder(String id) async {
+    setState(() => _locked.add(id));
+    await _saveLocked();
+  }
+
+  Future<void> _unlockOrder(String id) async {
+    setState(() => _locked.remove(id));
+    await _saveLocked();
+  }
+
+  Widget _lockBg() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.teal.withAlpha(40),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.teal.withAlpha(90)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.lock_rounded, color: AppColors.teal),
+          Spacer(),
+          Icon(Icons.lock_rounded, color: AppColors.teal),
+        ],
+      ),
+    );
   }
 
   Future<void> _hideOrder(String id) async {
@@ -227,7 +265,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   Future<void> _hideAll(List<Order> visible) async {
     setState(() {
       for (final o in visible) {
-        _hidden.add(o.id);
+        if (!_locked.contains(o.id)) _hidden.add(o.id);
       }
     });
     await _saveHidden();
@@ -449,12 +487,59 @@ class _OrdersScreenState extends State<OrdersScreen>
                     if (mounted) setState(() {});
                   });
                 }
+                // 🔒 المقفول: ثابت بلا سحب ولا يتأثر بمسح الكل
+                if (_locked.contains(o.id)) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.teal, width: 2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Stack(
+                      children: [
+                        glow
+                            ? _Flash(child: _card(o, isAdmin, s, dark))
+                            : _card(o, isAdmin, s, dark),
+                        PositionedDirectional(
+                          top: 6,
+                          end: 6,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _unlockOrder(o.id),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                    color: AppColors.teal,
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: const Icon(Icons.lock_rounded,
+                                    color: Colors.white, size: 14),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final rtl =
+                    Directionality.of(context) == TextDirection.rtl;
                 return Dismissible(
                   key: ValueKey('dismiss_${o.id}'),
                   direction: DismissDirection.horizontal,
-                  background: _dismissBg(false),
-                  secondaryBackground: _dismissBg(true),
-                  onDismissed: (_) => _hideOrder(o.id),
+                  background: rtl ? _dismissBg(false) : _lockBg(),
+                  secondaryBackground: rtl ? _lockBg() : _dismissBg(false),
+                  onDismissed: (dir) {
+                    final swipedRight = rtl
+                        ? dir == DismissDirection.endToStart
+                        : dir == DismissDirection.startToEnd;
+                    if (swipedRight) {
+                      _lockOrder(o.id);
+                    } else {
+                      _hideOrder(o.id);
+                    }
+                  },
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: glow
