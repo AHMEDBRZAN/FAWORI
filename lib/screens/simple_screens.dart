@@ -2157,22 +2157,6 @@ class _AdminPointsViewState extends State<AdminPointsView> {
               Padding(
                 padding: const EdgeInsetsDirectional.only(start: 4),
                 child: InkWell(
-                  onTap: () => _showReturnForInvoice(i, s),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF9B59B6).withAlpha(20),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.assignment_return_rounded,
-                        color: Color(0xFF9B59B6), size: 16),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsetsDirectional.only(start: 4),
-                child: InkWell(
                   onTap: () => _confirmDeleteInvoice(i, s),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
