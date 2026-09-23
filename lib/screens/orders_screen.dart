@@ -41,6 +41,10 @@ class _SyncBannerState extends State<_SyncBanner> {
   bool? _state;
   Timer? _timer;
   Timer? _hideTimer;
+  Timer? _chgTimer;
+  Map<String, String> _prev = {};
+  String _lastName = '';
+  bool _changed = false;
 
   @override
   void initState() {
@@ -53,15 +57,33 @@ class _SyncBannerState extends State<_SyncBanner> {
   void dispose() {
     _timer?.cancel();
     _hideTimer?.cancel();
+    _chgTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _check() async {
     try {
-      await OrdersService.loadOrders(); // ينظّف السجلات عند لحاق السيرفر
+      final orders = await OrdersService.loadOrders();
+      // ✅ رصد تغيّر حالة أي طلب = إجراء جديد من المسؤول
+      if (_prev.isNotEmpty) {
+        for (final o in orders) {
+          final p = _prev[o.id];
+          if (p != null && p != o.status) {
+            _changed = true;
+            _lastName = o.userName;
+            _chgTimer?.cancel();
+            _chgTimer = Timer(const Duration(seconds: 8), () {
+              _changed = false;
+              if (mounted) setState(() {});
+            });
+            break;
+          }
+        }
+      }
+      _prev = {for (final o in orders) o.id: o.status};
       final pending = await OrdersService.hasPendingSync();
       if (!mounted) return;
-      if (pending) {
+      if (pending || _changed) {
         if (_state != true) setState(() => _state = true);
       } else {
         if (_state == true) {
@@ -109,10 +131,14 @@ class _SyncBannerState extends State<_SyncBanner> {
           Expanded(
             child: Text(
               waiting
-                  ? (s.isArabic
-                      ? 'تم اتخاذ إجراء بطلبك — يرجى الانتظار...'
-                      : 'Action taken on your order — please wait...')
-                  : (s.isArabic ? 'اكتملت العملية بنجاح' : 'Completed'),
+                  ? ((s.isAdmin || s.isImageAdmin)
+                      ? (s.isArabic
+                          ? 'تم اتخاذ إجراء بطلب ${_lastName.isEmpty ? 'مستخدم' : _lastName} — يرجى الانتظار...'
+                          : 'Action taken on ${_lastName.isEmpty ? 'a user' : _lastName}\'s order — please wait...')
+                      : (s.isArabic
+                          ? 'تم اتخاذ إجراء بطلبك من قبل المسؤول'
+                          : 'Action taken on your order by the admin'))
+                  : (s.isArabic ? 'تم قبول الفاتورة ' : 'Completed'),
               style: TextStyle(
                 color: waiting ? AppColors.orange : AppColors.teal,
                 fontWeight: FontWeight.w800,
