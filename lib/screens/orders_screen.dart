@@ -203,6 +203,14 @@ class _FlashState extends State<_Flash>
   }
 }
 
+class _TabCfg {
+  final String ar, en;
+  final IconData icon;
+  final Color color;
+  final String status;
+  const _TabCfg(this.ar, this.en, this.icon, this.color, this.status);
+}
+
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
   @override
@@ -219,6 +227,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   Timer? _glowTimer;
   Set<String> _hidden = {};
   Set<String> _locked = {};
+  final PageController _pageCtrl = PageController();
 
   Future<List<Order>> _loadAndMark() async {
     await _loadHidden();
@@ -340,6 +349,7 @@ class _OrdersScreenState extends State<OrdersScreen>
     _autoTimer?.cancel();
     _glowTimer?.cancel();
     _tabCtrl?.dispose();
+    _pageCtrl.dispose();
     super.dispose();
   }
 
@@ -383,25 +393,28 @@ class _OrdersScreenState extends State<OrdersScreen>
         title: Text(isAdmin
             ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
             : (s.isArabic ? 'طلباتي' : 'My orders')),
-        bottom: _tabCtrl == null
-            ? null
-            : TabBar(
-                controller: _tabCtrl,
-                isScrollable: true,
-                indicatorColor: AppColors.orange,
-                labelColor: AppColors.orange,
-                unselectedLabelColor:
-                    dark ? Colors.grey.shade400 : Colors.grey.shade600,
-                labelStyle:
-                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-                tabs: [
-                  Tab(text: s.isArabic ? 'معلقة' : 'Pending'),
-                  Tab(text: s.isArabic ? 'الكل' : 'All'),
-                  Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
-                  Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
-                  Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
-                ],
-              ),
+        bottom: isAdmin
+            ? (_tabCtrl == null
+                ? null
+                : TabBar(
+                    controller: _tabCtrl,
+                    isScrollable: true,
+                    indicatorColor: AppColors.orange,
+                    labelColor: AppColors.orange,
+                    unselectedLabelColor: dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
+                    labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w900, fontSize: 13),
+                    tabs: [
+                      Tab(text: s.isArabic ? 'معلقة' : 'Pending'),
+                      Tab(text: s.isArabic ? 'الكل' : 'All'),
+                      Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
+                      Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
+                      Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
+                    ],
+                  ))
+            : null,
       ),
       body: RefreshIndicator(
         color: AppColors.orange,
@@ -445,6 +458,9 @@ class _OrdersScreenState extends State<OrdersScreen>
               }
             } else {
               orders = orders.where((o) => o.userId == s.user?.id).toList();
+              if (!isAdmin) {
+                return _userNotifications(s, dark, orders);
+              }
               switch (_tabIndex) {
                 case 0:
                   orders =
@@ -580,6 +596,11 @@ class _OrdersScreenState extends State<OrdersScreen>
       ),
     );
   }
+
+  // ====================================================
+  // 🎨 واجهة المستخدم: Selector متدرج + PageView سحب + جدول احترافي
+  // ====================================================
+  ...(الصق هنا الدوال الثلاث _userNotifications + _userTable + _userTableRow من رسالتي السابقة كاملة)...
 
   Widget _card(Order o, bool isAdmin, AppSettings s, bool dark) {
     final c = _statusColor(o.status);
