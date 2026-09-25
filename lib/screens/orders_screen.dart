@@ -612,29 +612,30 @@ class _OrdersScreenState extends State<OrdersScreen>
       AppSettings s, bool dark, List<Order> allOrders) {
     return Column(
       children: [
-        // ===== Selector احترافي (نقر + سحب عبر PageView) =====
+        // ===== Selector احترافي: أيقونة + اسم + badge في صف واحد =====
         Container(
-          height: 88,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          height: 78,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: dark
-                  ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
-                  : <Color>[const Color(0xFFF8F8FA), Colors.white],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: dark ? const Color(0xFF1E1E28) : Colors.white,
             border: Border(
               bottom: BorderSide(
                   color: dark
-                      ? Colors.white.withAlpha(20)
-                      : Colors.black.withAlpha(15)),
+                      ? Colors.white.withAlpha(18)
+                      : Colors.black.withAlpha(12)),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(dark ? 40 : 8),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: ListView.builder(
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: _tabs.length,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (ctx, i) {
               final t = _tabs[i];
               final active = _tabIndex == i;
@@ -653,16 +654,14 @@ class _OrdersScreenState extends State<OrdersScreen>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 280),
                   curve: Curves.easeOutCubic,
-                  width: 96,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: active
                         ? LinearGradient(
                             colors: <Color>[
                               t.color,
-                              t.color.withAlpha(220),
+                              t.color.withAlpha(230),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -671,62 +670,76 @@ class _OrdersScreenState extends State<OrdersScreen>
                     color: active
                         ? null
                         : (dark
-                            ? Colors.white.withAlpha(8)
-                            : Colors.white),
-                    borderRadius: BorderRadius.circular(16),
+                            ? const Color(0xFF2A2A35)
+                            : const Color(0xFFF5F5F7)),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                        color: active
-                            ? t.color
-                            : (dark
-                                ? Colors.white.withAlpha(20)
-                                : Colors.black.withAlpha(10)),
-                        width: active ? 1.5 : 1),
+                      color: active
+                          ? t.color
+                          : (dark
+                              ? Colors.white.withAlpha(25)
+                              : Colors.black.withAlpha(10)),
+                      width: active ? 1.5 : 1,
+                    ),
                     boxShadow: active
                         ? [
                             BoxShadow(
-                              color: t.color.withAlpha(70),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                              color: t.color.withAlpha(90),
+                              blurRadius: 14,
+                              offset: const Offset(0, 5),
                             ),
                           ]
                         : [],
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(t.icon,
+                      Icon(
+                        t.icon,
+                        color: active
+                            ? Colors.white
+                            : t.color.withAlpha(220),
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        s.isArabic ? t.ar : t.en,
+                        style: TextStyle(
                           color: active
                               ? Colors.white
-                              : t.color.withAlpha(200),
-                          size: 22),
-                      const SizedBox(height: 4),
-                      Text(
-                          s.isArabic ? t.ar : t.en,
-                          style: TextStyle(
-                              color: active
-                                  ? Colors.white
-                                  : (dark
-                                      ? Colors.grey.shade200
-                                      : AppColors.ink),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 11)),
-                      const SizedBox(height: 2),
+                              : (dark ? Colors.white : AppColors.ink),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       Container(
+                        constraints:
+                            const BoxConstraints(minWidth: 26, minHeight: 26),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: active
-                              ? Colors.white.withAlpha(40)
+                              ? Colors.white
                               : t.color.withAlpha(25),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(13),
+                          border: Border.all(
+                            color: active
+                                ? Colors.white
+                                : t.color.withAlpha(80),
+                            width: 1,
+                          ),
                         ),
-                        child: Text('$count',
-                            style: TextStyle(
-                                color: active
-                                    ? Colors.white
-                                    : t.color,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 11)),
+                        child: Text(
+                          '$count',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: active ? t.color : t.color,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ],
                   ),
