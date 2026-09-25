@@ -22,12 +22,15 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
     final bool isAdmin = s.isAdmin || s.isImageAdmin;
+    final bool isController = s.user?.id == 'ctrl';
 
     final screens = <Widget>[
       HomeScreen(onOpenProducts: () => setState(() => _idx = 1)),
       const ProductsScreen(),
       const WalletScreen(),
-      isAdmin ? const CreateAccountPage() : const FavoritesScreen(),
+      isController
+          ? const AdminCodeView()
+          : (isAdmin ? const CreateAccountPage() : const FavoritesScreen()),
       isAdmin ? const OrdersScreen() : const ProfileScreen(),
     ];
 
@@ -57,12 +60,18 @@ class _MainScreenState extends State<MainScreen> {
                   ? (isAdmin ? 'النقاط والرصيد' : 'المحفظة')
                   : (isAdmin ? 'Points' : 'Wallet')),
           BottomNavigationBarItem(
-              icon: Icon(isAdmin
-                  ? Icons.person_add_alt_1_rounded
-                  : Icons.favorite_rounded),
+              icon: Icon(isController
+                  ? Icons.code_rounded
+                  : (isAdmin
+                      ? Icons.person_add_alt_1_rounded
+                      : Icons.favorite_rounded)),
               label: s.isArabic
-                  ? (isAdmin ? 'إنشاء حساب' : 'المفضلة')
-                  : (isAdmin ? 'Create' : 'Favorites')),
+                  ? (isController
+                      ? 'الإدارة'
+                      : (isAdmin ? 'إنشاء حساب' : 'المفضلة'))
+                  : (isController
+                      ? 'Admin'
+                      : (isAdmin ? 'Create' : 'Favorites'))),
           BottomNavigationBarItem(
               icon: Icon(isAdmin
                   ? Icons.receipt_long_rounded
