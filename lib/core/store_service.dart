@@ -20,7 +20,7 @@ class User {
     required this.id,
     required this.name,
     this.phone = '',
-    required this.password,
+    this.password = '',
     required this.role,
     this.points = 0,
     this.stored = 0,
