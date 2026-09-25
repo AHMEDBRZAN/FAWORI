@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/theme.dart';
+import 'admin_users.dart';
 import 'home_screen.dart';
 import 'orders_screen.dart';
 import 'products_screen.dart';
@@ -26,7 +27,7 @@ class _MainScreenState extends State<MainScreen> {
       HomeScreen(onOpenProducts: () => setState(() => _idx = 1)),
       const ProductsScreen(),
       const WalletScreen(),
-      const FavoritesScreen(),
+      isAdmin ? const CreateAccountPage() : const FavoritesScreen(),
       isAdmin ? const OrdersScreen() : const ProfileScreen(),
     ];
 
@@ -53,13 +54,15 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
               icon: const Icon(Icons.account_balance_wallet_rounded),
               label: s.isArabic
-                  ? (isAdmin ? 'إنشاء حساب' : 'المحفظة')
-                  : (isAdmin ? 'Create' : 'Wallet')),
+                  ? (isAdmin ? 'النقاط والرصيد' : 'المحفظة')
+                  : (isAdmin ? 'Points' : 'Wallet')),
           BottomNavigationBarItem(
-              icon: Icon(isAdmin ? Icons.code_rounded : Icons.favorite_rounded),
+              icon: Icon(isAdmin
+                  ? Icons.person_add_alt_1_rounded
+                  : Icons.favorite_rounded),
               label: s.isArabic
-                  ? (isAdmin ? 'الإدارة' : 'المفضلة')
-                  : (isAdmin ? 'Admin' : 'Favorites')),
+                  ? (isAdmin ? 'إنشاء حساب' : 'المفضلة')
+                  : (isAdmin ? 'Create' : 'Favorites')),
           BottomNavigationBarItem(
               icon: Icon(isAdmin
                   ? Icons.receipt_long_rounded
