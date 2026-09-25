@@ -4,22 +4,33 @@ import 'sample_data.dart';
 // 📦 كتالوج المنتجات الكامل (688 مادة)
 // ====================================================
 
+String _n(num v) =>
+    v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
 List<Product> buildCatalog() {
+  final seen = <String>{};
   final all = <Product>[];
-  for (final r in _fawori) all.add(_p('faw', r));
-  for (final r in _faworiRest) all.add(_p('faw', r));
-  for (final r in _isomat) all.add(_p('iso', r));
-  for (final r in _cadence) all.add(_p('cad', r));
-  for (final r in _sibax) all.add(_p('sib', r));
+  void add(List<List<dynamic>> list, String b) {
+    for (final r in list) {
+      final p = _p(b, r);
+      if (seen.add(p.id)) all.add(p);
+    }
+  }
+
+  add(_fawori, 'faw');
+  add(_faworiRest, 'faw');
+  add(_isomat, 'iso');
+  add(_cadence, 'cad');
+  add(_sibax, 'sib');
   return all;
 }
 
 Product _p(String brand, List<dynamic> r) {
-  final id = r[0] as String;
-  final name = r[1] as String;
-  final unit = r[2] as String;
-  final price = r[3] as int;
-  final agent = r[4] as int;
+  final id = '${r[0]}';
+  final name = '${r[1]}';
+  final unit = '${r[2]}';
+  final price = (r[3] as num).toDouble();
+  final agent = (r[4] as num).toDouble();
   return Product(
     id: '${brand}_$id',
     name: name,
@@ -30,7 +41,8 @@ Product _p(String brand, List<dynamic> r) {
             : brand == 'cad'
                 ? 'cadence'
                 : 'sibax',
-    description: 'رمز: $id | وحدة: $unit | وكيل: $agent',
+    description:
+        'رمز: $id | وحدة: $unit | مبيع: ${_n(price)} | وكيل: ${_n(agent)}',
     category: unit,
   );
 }
