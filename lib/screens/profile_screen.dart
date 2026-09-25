@@ -6,8 +6,33 @@ import '../core/theme.dart';
 import 'about_screen.dart';
 import 'login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _synced = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+  }
+
+  /// ✅ مزامنة النقاط/الرصيد مع طريقة بطاقة المحفظة (صافي المشتريات)
+  Future<void> _sync() async {
+    if (_synced) return;
+    _synced = true;
+    final s = context.read<AppSettings>();
+    final uid = s.user?.id ?? '';
+    if (uid.isEmpty || s.isGuest) return;
+    try {
+      await OrdersService.recalcUserTotals(uid);
+      await s.refreshUser();
+    } catch (_) {}
+  }
 
   String _roleAr(String r) {
     if (r == 'agent') return 'وكيل';
