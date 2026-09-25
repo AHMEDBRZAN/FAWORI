@@ -15,6 +15,7 @@ import 'about_screen.dart';
 import 'login_screen.dart';
 import 'orders_screen.dart';
 import 'products_screen.dart';
+import 'profile_screen.dart';
 
 const String _base = 'https://ahmedbrzan.github.io/FAWORI';
 const int _kPages = 10000;
@@ -458,6 +459,50 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    // ✅ الملف الشخصي (للمدير/المتحكم فقط)
+                    if (s.isAdmin || s.isImageAdmin)
+                      InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const ProfileScreen()));
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: dark
+                                ? const Color(0xFF26262E)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: AppColors.orange.withAlpha(70)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person_rounded,
+                                  color: AppColors.orange),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                    s.isArabic ? 'الملف الشخصي' : 'Profile',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        color: dark
+                                            ? Colors.white
+                                            : AppColors.ink)),
+                              ),
+                              const Icon(Icons.chevron_left_rounded,
+                                  color: AppColors.orange),
+                            ],
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 10),
                     // ✅ زر تسجيل الخروج
                     if (!s.isGuest)
