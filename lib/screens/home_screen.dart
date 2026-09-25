@@ -380,86 +380,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _openSettings(context);
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color:
-                              dark ? const Color(0xFF26262E) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: AppColors.orange.withAlpha(70)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.settings_rounded,
-                                color: AppColors.orange),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                  s.isArabic ? 'الإعدادات' : 'Settings',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: dark
-                                          ? Colors.white
-                                          : AppColors.ink)),
-                            ),
-                            const Icon(Icons.chevron_left_rounded,
-                                color: AppColors.orange),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // ✅ حول التطبيق
-                    InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const AboutScreen()));
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color:
-                              dark ? const Color(0xFF26262E) : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: AppColors.teal.withAlpha(70)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.info_outline_rounded,
-                                color: AppColors.teal),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                  s.isArabic ? 'حول التطبيق' : 'About',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: dark
-                                          ? Colors.white
-                                          : AppColors.ink)),
-                            ),
-                            const Icon(Icons.chevron_left_rounded,
-                                color: AppColors.teal),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     // ✅ الملف الشخصي (للمدير/المتحكم فقط)
                     if (s.isAdmin || s.isImageAdmin)
                       InkWell(
@@ -503,6 +423,86 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
+                    const SizedBox(height: 10),
+                    // ✅ فكرة التطبيق
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AboutScreen()));
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color:
+                              dark ? const Color(0xFF26262E) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: AppColors.teal.withAlpha(70)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.lightbulb_outline_rounded,
+                                color: AppColors.teal),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                  s.isArabic ? 'فكرة التطبيق' : 'App idea',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                            ),
+                            const Icon(Icons.chevron_left_rounded,
+                                color: AppColors.teal),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _openSettings(context);
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color:
+                              dark ? const Color(0xFF26262E) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: AppColors.orange.withAlpha(70)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.settings_rounded,
+                                color: AppColors.orange),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                  s.isArabic ? 'الإعدادات' : 'Settings',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: dark
+                                          ? Colors.white
+                                          : AppColors.ink)),
+                            ),
+                            const Icon(Icons.chevron_left_rounded,
+                                color: AppColors.orange),
+                          ],
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     // ✅ زر تسجيل الخروج
                     if (!s.isGuest)
