@@ -1855,29 +1855,31 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                 ],
               ),
               const SizedBox(width: 4),
-              IconButton(
-                tooltip: s.isArabic ? 'تعديل' : 'Edit',
-                icon: const Icon(Icons.edit_rounded,
-                    color: AppColors.teal, size: 20),
-                onPressed: () async {
-                  final done = await EditUserDialog.show(context, u);
-                  if (done == true) {
-                    await _load();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text(s.isArabic
-                              ? '✅ تم تحديث بيانات المستخدم'
-                              : 'User updated')));
+              if (s.user?.id == 'ctrl') ...[
+                IconButton(
+                  tooltip: s.isArabic ? 'تعديل' : 'Edit',
+                  icon: const Icon(Icons.edit_rounded,
+                      color: AppColors.teal, size: 20),
+                  onPressed: () async {
+                    final done = await EditUserDialog.show(context, u);
+                    if (done == true) {
+                      await _load();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(s.isArabic
+                                ? '✅ تم تحديث بيانات المستخدم'
+                                : 'User updated')));
+                      }
                     }
-                  }
-                },
-              ),
-              IconButton(
-                tooltip: s.isArabic ? 'حذف' : 'Delete',
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.red, size: 20),
-                onPressed: () => _confirmDelete(u, s),
-              ),
+                  },
+                ),
+                IconButton(
+                  tooltip: s.isArabic ? 'حذف' : 'Delete',
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.red, size: 20),
+                  onPressed: () => _confirmDelete(u, s),
+                ),
+              ],
             ],
           ),
         ),
