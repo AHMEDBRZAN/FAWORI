@@ -1989,6 +1989,48 @@ class _AdminPointsViewState extends State<AdminPointsView> {
           ],
         ),
       ),
+      const SizedBox(height: 10),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.orange.withAlpha(70),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.shopping_bag_rounded,
+                color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                  s.isArabic ? 'صافي المشتريات' : 'Net purchases',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14)),
+            ),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Text(fmtThousands(_netOf(u)),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18)),
+            ),
+          ],
+        ),
+      ),
       const SizedBox(height: 14),
       Row(
         children: [
