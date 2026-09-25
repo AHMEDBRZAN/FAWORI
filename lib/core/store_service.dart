@@ -19,7 +19,7 @@ class User {
   User({
     required this.id,
     required this.name,
-    required this.phone,
+    this.phone = '',
     required this.password,
     required this.role,
     this.points = 0,
@@ -188,6 +188,21 @@ class StoreService {
     }
   }
 
+  static Future<void> upsertUser(User u) async {
+    final users = await _fetchJson('assets/data/users.json');
+    final list = users is List
+        ? List<Map<String, dynamic>>.from(users)
+        : <Map<String, dynamic>>[];
+    final i = list.indexWhere((x) => x['id'] == u.id);
+    final map = u.toJson();
+    if (i >= 0) {
+      list[i] = map;
+    } else {
+      list.add(map);
+    }
+    await _putJson('assets/data/users.json', list);
+  }
+
   static Future<void> _putJson(String path, dynamic data) async {
     final r = await http.post(
       Uri.parse(kWriteProxy),
@@ -206,11 +221,11 @@ class StoreService {
 class ImagesService {
   static const String _tokenKey = 'gh_token';
 
-  static Future<String?> resolveToken() async {
+  static Future<String> resolveToken() async {
     final p = await SharedPreferences.getInstance();
     final t = p.getString(_tokenKey);
     if (t != null && t.isNotEmpty) return t;
-    return null;
+    return '';
   }
 
   static Future<void> saveToken(String t) async {
