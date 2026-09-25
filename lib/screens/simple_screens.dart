@@ -1187,6 +1187,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   final _qCtrl = TextEditingController();
   User? _sel;
   String _filter = 'all';
+  bool _netOpen = false;
 
   @override
   void initState() {
@@ -1888,6 +1889,9 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final u = _sel!;
     var sales = _salesOf(u);
     var rets = _returnsOf(u);
+    final int sumSales = sales.fold(0, (s2, i) => s2 + i.total.toInt());
+    final int sumRets = rets.fold(
+        0, (s2, r) => s2 + ((r['total'] as num?)?.toInt() ?? 0).abs());
     // ✅ داخل المستخدم: البحث يشمل فواتيره هو فقط
     if (q.isNotEmpty) {
       sales = sales
@@ -1990,45 +1994,110 @@ class _AdminPointsViewState extends State<AdminPointsView> {
         ),
       ),
       const SizedBox(height: 10),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      InkWell(
+        onTap: () => setState(() => _netOpen = !_netOpen),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.orange.withAlpha(70),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.orange.withAlpha(70),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.shopping_bag_rounded,
-                color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                  s.isArabic ? 'صافي المشتريات' : 'Net purchases',
-                  style: const TextStyle(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.shopping_bag_rounded,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                        s.isArabic ? 'صافي المشتريات' : 'Net purchases',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14)),
+                  ),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(fmtThousands(_netOf(u)),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18)),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                      _netOpen
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
                       color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14)),
-            ),
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: Text(fmtThousands(_netOf(u)),
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18)),
-            ),
-          ],
+                      size: 22),
+                ],
+              ),
+              if (_netOpen) ...[
+                const Divider(color: Colors.white30, height: 16),
+                Row(
+                  children: [
+                    const Icon(Icons.shopping_cart_checkout_rounded,
+                        color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                          s.isArabic ? 'مجموع الشراء' : 'Total purchases',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12)),
+                    ),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(fmtThousands(sumSales),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.assignment_return_rounded,
+                        color: Colors.white, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                          s.isArabic ? 'مجموع المرتجع' : 'Total returns',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12)),
+                    ),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('-${fmtThousands(sumRets)}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14)),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
       const SizedBox(height: 14),
