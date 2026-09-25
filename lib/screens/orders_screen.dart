@@ -229,6 +229,14 @@ class _OrdersScreenState extends State<OrdersScreen>
   Set<String> _locked = {};
   final PageController _pageCtrl = PageController();
 
+  static const List<_TabCfg> _tabs = [
+    _TabCfg('معلقة', 'Pending', Icons.pending_actions_rounded, AppColors.orange, 'pending'),
+    _TabCfg('الكل', 'All', Icons.all_inbox_rounded, Colors.blueGrey, ''),
+    _TabCfg('مقبولة', 'Accepted', Icons.check_circle_rounded, AppColors.teal, 'accepted'),
+    _TabCfg('مرفوضة', 'Rejected', Icons.cancel_rounded, Colors.red, 'rejected'),
+    _TabCfg('مرتجعة', 'Returned', Icons.assignment_return_rounded, Color(0xFF9B59B6), 'returned'),
+  ];
+
   Future<List<Order>> _loadAndMark() async {
     await _loadHidden();
     final os = await OrdersService.loadOrders();
@@ -600,7 +608,430 @@ class _OrdersScreenState extends State<OrdersScreen>
   // ====================================================
   // 🎨 واجهة المستخدم: Selector متدرج + PageView سحب + جدول احترافي
   // ====================================================
-  ...(الصق هنا الدوال الثلاث _userNotifications + _userTable + _userTableRow من رسالتي السابقة كاملة)...
+  Widget _userNotifications(
+      AppSettings s, bool dark, List<Order> allOrders) {
+    return Column(
+      children: [
+        // ===== Selector احترافي (نقر + سحب عبر PageView) =====
+        Container(
+          height: 88,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: dark
+                  ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+                  : <Color>[const Color(0xFFF8F8FA), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border(
+              bottom: BorderSide(
+                  color: dark
+                      ? Colors.white.withAlpha(20)
+                      : Colors.black.withAlpha(15)),
+            ),
+          ),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _tabs.length,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            itemBuilder: (ctx, i) {
+              final t = _tabs[i];
+              final active = _tabIndex == i;
+              final count = i == 1
+                  ? allOrders.length
+                  : allOrders.where((o) => o.status == t.status).length;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _tabIndex = i);
+                  if (_pageCtrl.hasClients) {
+                    _pageCtrl.animateToPage(i,
+                        duration: const Duration(milliseconds: 320),
+                        curve: Curves.easeOutCubic);
+                  }
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  width: 96,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: active
+                        ? LinearGradient(
+                            colors: <Color>[
+                              t.color,
+                              t.color.withAlpha(220),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: active
+                        ? null
+                        : (dark
+                            ? Colors.white.withAlpha(8)
+                            : Colors.white),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: active
+                            ? t.color
+                            : (dark
+                                ? Colors.white.withAlpha(20)
+                                : Colors.black.withAlpha(10)),
+                        width: active ? 1.5 : 1),
+                    boxShadow: active
+                        ? [
+                            BoxShadow(
+                              color: t.color.withAlpha(70),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(t.icon,
+                          color: active
+                              ? Colors.white
+                              : t.color.withAlpha(200),
+                          size: 22),
+                      const SizedBox(height: 4),
+                      Text(
+                          s.isArabic ? t.ar : t.en,
+                          style: TextStyle(
+                              color: active
+                                  ? Colors.white
+                                  : (dark
+                                      ? Colors.grey.shade200
+                                      : AppColors.ink),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11)),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? Colors.white.withAlpha(40)
+                              : t.color.withAlpha(25),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('$count',
+                            style: TextStyle(
+                                color: active
+                                    ? Colors.white
+                                    : t.color,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11)),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // ===== PageView للسحب بين الصفحات =====
+        Expanded(
+          child: PageView.builder(
+            controller: _pageCtrl,
+            onPageChanged: (i) => setState(() => _tabIndex = i),
+            itemCount: _tabs.length,
+            itemBuilder: (ctx, i) {
+              final t = _tabs[i];
+              final items = i == 1
+                  ? allOrders
+                  : allOrders
+                      .where((o) => o.status == t.status)
+                      .toList();
+              return RefreshIndicator(
+                color: AppColors.orange,
+                backgroundColor:
+                    dark ? const Color(0xFF1E1E28) : Colors.white,
+                onRefresh: () async {
+                  setState(() => _future = _loadAndMark());
+                },
+                child: ListView(
+                  padding: const EdgeInsets.all(14),
+                  children: [
+                    const _SyncBanner(),
+                    if (items.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 60),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(t.icon,
+                                  color: t.color.withAlpha(60),
+                                  size: 72),
+                              const SizedBox(height: 12),
+                              Text(
+                                  s.isArabic
+                                      ? 'لا توجد طلبات ${t.ar}'
+                                      : 'No ${t.en.toLowerCase()} orders',
+                                  style: TextStyle(
+                                      color: dark
+                                          ? Colors.grey.shade400
+                                          : Colors.grey.shade600,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else ...[
+                      _userTable(s, dark, items, t, i == 1),
+                      const SizedBox(height: 12),
+                      if (items.isNotEmpty)
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton.icon(
+                            onPressed: () => _hideAll(items),
+                            icon: const Icon(Icons.delete_sweep_rounded,
+                                size: 16, color: Colors.red),
+                            label: Text(
+                                s.isArabic ? 'مسح الكل' : 'Clear all',
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12)),
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 📋 جدول احترافي للطلبات (حواف ناعمة + ألوان متدرجة + صفوف متناوبة)
+  Widget _userTable(AppSettings s, bool dark, List<Order> items,
+      _TabCfg t, bool isAll) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: t.color.withAlpha(60)),
+        boxShadow: [
+          BoxShadow(
+            color: t.color.withAlpha(30),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // ===== الرأس المتدرج =====
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: <Color>[t.color, t.color.withAlpha(220)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(t.icon, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                      s.isArabic ? 'طلبات ${t.ar}' : '${t.en} orders',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15)),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(40),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('${items.length}',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+          // ===== الصفوف =====
+          for (int idx = 0; idx < items.length; idx++)
+            _userTableRow(items[idx], s, dark, t, idx),
+        ],
+      ),
+    );
+  }
+
+  Widget _userTableRow(
+      Order o, AppSettings s, bool dark, _TabCfg t, int idx) {
+    final glow = _glowOrderId == o.id;
+    if (glow && _glowTimer == null) {
+      _glowTimer = Timer(const Duration(seconds: 6), () {
+        _glowOrderId = null;
+        _glowTimer = null;
+        if (mounted) setState(() {});
+      });
+    }
+    final isLocked = _locked.contains(o.id);
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final row = Container(
+      decoration: BoxDecoration(
+        color: idx.isOdd
+            ? (dark
+                ? Colors.white.withAlpha(8)
+                : t.color.withAlpha(15))
+            : (dark
+                ? Colors.white.withAlpha(3)
+                : Colors.white),
+        border: Border(
+          bottom: BorderSide(
+              color: dark
+                  ? Colors.white.withAlpha(12)
+                  : Colors.black.withAlpha(8)),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: InkWell(
+        onTap: () async {
+          await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      _OrderDetail(order: o, isAdmin: false)));
+          if (mounted) setState(() => _future = _loadAndMark());
+        },
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: <Color>[t.color, t.color.withAlpha(200)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(t.icon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (isLocked) ...[
+                        const Icon(Icons.lock_rounded,
+                            color: AppColors.teal, size: 12),
+                        const SizedBox(width: 4),
+                      ],
+                      Expanded(
+                        child: Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(dmy(o.date),
+                              style: TextStyle(
+                                  color: dark
+                                      ? Colors.white
+                                      : AppColors.ink,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13)),
+                        ),
+                      ),
+                      Text(time12(o.id),
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
+                              fontSize: 11)),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                        '${o.items.length} ${s.isArabic ? 'مواد' : 'items'} • ${o.invoiceNo.isEmpty ? '—' : '#${o.invoiceNo}'}',
+                        style: TextStyle(
+                            color: dark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                            fontSize: 11)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_left_rounded,
+                color: t.color.withAlpha(180), size: 22),
+          ],
+        ),
+      ),
+    );
+    final wrapped = glow ? _Flash(child: row) : row;
+    if (isLocked) {
+      return Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.teal, width: 1.5),
+        ),
+        child: Stack(
+          children: [
+            wrapped,
+            PositionedDirectional(
+              top: 6,
+              end: 6,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _unlockOrder(o.id),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                        color: AppColors.teal,
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.lock_rounded,
+                        color: Colors.white, size: 12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Dismissible(
+      key: ValueKey('u_dismiss_${o.id}'),
+      direction: DismissDirection.horizontal,
+      background: rtl ? _dismissBg(false) : _lockBg(),
+      secondaryBackground: rtl ? _lockBg() : _dismissBg(false),
+      onDismissed: (dir) {
+        final swipedRight = rtl
+            ? dir == DismissDirection.endToStart
+            : dir == DismissDirection.startToEnd;
+        if (swipedRight) {
+          _lockOrder(o.id);
+        } else {
+          _hideOrder(o.id);
+        }
+      },
+      child: wrapped,
+    );
+  }
 
   Widget _card(Order o, bool isAdmin, AppSettings s, bool dark) {
     final c = _statusColor(o.status);
