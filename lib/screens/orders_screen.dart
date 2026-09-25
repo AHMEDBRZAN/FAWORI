@@ -228,6 +228,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   Set<String> _hidden = {};
   Set<String> _locked = {};
   final PageController _pageCtrl = PageController();
+  final ScrollController _selScroll = ScrollController();
 
   static const List<_TabCfg> _tabs = [
     _TabCfg('معلقة', 'Pending', Icons.pending_actions_rounded, AppColors.orange, 'pending'),
@@ -358,6 +359,7 @@ class _OrdersScreenState extends State<OrdersScreen>
     _glowTimer?.cancel();
     _tabCtrl?.dispose();
     _pageCtrl.dispose();
+    _selScroll.dispose();
     super.dispose();
   }
 
@@ -633,6 +635,7 @@ class _OrdersScreenState extends State<OrdersScreen>
             ],
           ),
           child: ListView.separated(
+            controller: _selScroll,
             scrollDirection: Axis.horizontal,
             itemCount: _tabs.length,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
@@ -654,8 +657,10 @@ class _OrdersScreenState extends State<OrdersScreen>
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 280),
                   curve: Curves.easeOutCubic,
+                  width: 118,
+                  alignment: Alignment.center,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: active
                         ? LinearGradient(
@@ -826,6 +831,17 @@ class _OrdersScreenState extends State<OrdersScreen>
   }
 
   /// 📋 جدول احترافي للطلبات (حواف ناعمة + ألوان متدرجة + صفوف متناوبة)
+  /// ✅ تحريك شريط الاختيار ليُظهر التبويب النشط في المنتصف
+  void _scrollSelTo(int i) {
+    if (!_selScroll.hasClients) return;
+    const double chipW = 118 + 8;
+    final double viewport = _selScroll.position.viewportDimension;
+    double target = i * chipW - (viewport / 2 - chipW / 2);
+    target = target.clamp(0.0, _selScroll.position.maxScrollExtent);
+    _selScroll.animateTo(target,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+  }
+
   Widget _userTable(AppSettings s, bool dark, List<Order> items,
       _TabCfg t, bool isAll) {
     return Container(
