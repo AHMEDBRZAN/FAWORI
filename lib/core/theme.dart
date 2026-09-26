@@ -1,5 +1,52 @@
 import 'package:flutter/material.dart';
 
+/// ✅ ملاحظة متدرجة موحّدة لكل النظام (تظهر أسفل عائمه ومنسقة)
+void showAppSnack(BuildContext context, String msg,
+    {Color color = const Color(0xFF0D9668),
+    IconData icon = Icons.check_circle_rounded}) {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      margin: const EdgeInsets.all(12),
+      padding: EdgeInsets.zero,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: <Color>[color, color.withAlpha(200)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: color.withAlpha(80),
+                blurRadius: 12,
+                offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(msg,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class AppColors {
   static const Color orange = Color(0xFFE8A33D);
   static const Color teal = Color(0xFF3EC6C0);
