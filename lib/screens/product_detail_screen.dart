@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +10,17 @@ import '../core/app_settings.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
+
+/// ✅ تنسيق الأرقام بفواصل الآلاف
+String fmtThousands(num v) {
+  final s = v.toInt().toString();
+  final buf = StringBuffer();
+  for (int i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+    buf.write(s[i]);
+  }
+  return buf.toString();
+}
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -140,7 +152,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         if (picked != null)
                           ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: Image.memory(picked!,
+                            child: Image.memory(Uint8List.fromList(picked!),
                                 fit: BoxFit.cover),
                           )
                         else if (_imgPath.isNotEmpty)
