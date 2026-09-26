@@ -66,6 +66,292 @@ class _CartScreenState extends State<CartScreen> {
     await _save();
   }
 
+  /// ✅ نافذة تأكيد الشراء الاحترافية المتدرجة
+  Future<void> _confirmCheckout() async {
+    final s = context.read<AppSettings>();
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    if (_items.isEmpty) return;
+
+    final totalQty = _items.fold<int>(0, (p, c) => p + c.qty);
+    final totalItems = _items.length;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: dark ? const Color(0xFF1E1E28) : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(dark ? 120 : 80),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ===== رأس متدرج برتقالي =====
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 22),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[Color(0xFFFF8C00), Color(0xFFF26B0F)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(40),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                          Icons.shopping_cart_checkout_rounded,
+                          color: Colors.white,
+                          size: 32),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      s.isArabic ? 'تأكيد الشراء' : 'Confirm purchase',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ===== المحتوى =====
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text(
+                      s.isArabic
+                          ? 'هل تريد إرسال طلبك إلى الإدارة للمراجعة؟'
+                          : 'Do you want to send your order to admin for review?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: dark ? Colors.white : AppColors.ink,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ===== بطاقة الملخص المتدرجة =====
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: <Color>[
+                            AppColors.orange
+                                .withAlpha(dark ? 40 : 25),
+                            AppColors.orange
+                                .withAlpha(dark ? 15 : 10),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: AppColors.orange.withAlpha(80)),
+                      ),
+                      child: Column(
+                        children: [
+                          _summaryRow(
+                              Icons.inventory_2_rounded,
+                              s.isArabic ? 'عدد المواد' : 'Items',
+                              '$totalItems',
+                              AppColors.orange,
+                              dark),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 10),
+                            child: Divider(
+                                height: 1,
+                                color: AppColors.orange
+                                    .withAlpha(dark ? 60 : 80)),
+                          ),
+                          _summaryRow(
+                              Icons.format_list_numbered_rounded,
+                              s.isArabic ? 'الكميات الكلية' : 'Total qty',
+                              '$totalQty',
+                              AppColors.teal,
+                              dark),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 10),
+                            child: Divider(
+                                height: 1,
+                                color: AppColors.orange
+                                    .withAlpha(dark ? 60 : 80)),
+                          ),
+                          _summaryRow(
+                              Icons.payments_outlined,
+                              s.isArabic ? 'السعر' : 'Price',
+                              s.isArabic
+                                  ? 'يُحدد بالإدارة'
+                                  : 'Set by admin',
+                              AppColors.orange,
+                              dark),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ===== الأزرار =====
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(
+                              color: dark
+                                  ? Colors.grey.shade600
+                                  : Colors.grey.shade400),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(12)),
+                        ),
+                        child: Text(
+                          s.isArabic ? 'إلغاء' : 'Cancel',
+                          style: TextStyle(
+                            color: dark
+                                ? Colors.grey.shade300
+                                : Colors.grey.shade700,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: <Color>[
+                              Color(0xFF0D9668),
+                              Color(0xFF0AA87A)
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0AA87A)
+                                  .withAlpha(90),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(12)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.check_circle_rounded,
+                                  size: 20),
+                              const SizedBox(width: 6),
+                              Text(
+                                s.isArabic ? 'تأكيد الشراء' : 'Confirm',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      await _checkout();
+    }
+  }
+
+  /// ✅ صف الملخص داخل نافذة التأكيد
+  Widget _summaryRow(
+      IconData icon, String label, String value, Color color, bool dark) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withAlpha(25),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 16),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+              color: dark ? Colors.white : AppColors.ink,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _checkout() async {
     final s = context.read<AppSettings>();
     if (_items.isEmpty) return;
@@ -279,7 +565,7 @@ class _CartScreenState extends State<CartScreen> {
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
                               foregroundColor: Colors.white),
-                          onPressed: _busy ? null : _checkout,
+                          onPressed: _busy ? null : _confirmCheckout,
                           child: _busy
                               ? const SizedBox(
                                   width: 20,
