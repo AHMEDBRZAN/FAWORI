@@ -16,6 +16,7 @@ class Product {
     this.description = '',
     this.image = '',
     this.category = '',
+    this.price = 0,
   });
 
   String get desc => description;
