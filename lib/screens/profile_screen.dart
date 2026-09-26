@@ -115,27 +115,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _stat(String label, int value, Color c) {
+  /// ✅ بطاقة محفظة متدرجة (نفس تصميم المحفظة بالضبط)
+  Widget _stat(String label, int value, Color c, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-            colors: <Color>[c, c.withAlpha(200)],
+            colors: <Color>[c, c.withAlpha(210)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: c.withAlpha(80),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // ===== الأيقونة داخل دائرة بيضاء شفافة =====
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(40),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+          const SizedBox(height: 10),
+          // ===== الرقم =====
           Text(fmtThousands(value),
               style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900)),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.3)),
           const SizedBox(height: 4),
+          // ===== النص =====
           Text(label,
               style: TextStyle(
-                  color: Colors.white.withAlpha(230),
+                  color: Colors.white.withAlpha(220),
                   fontSize: 12,
                   fontWeight: FontWeight.w700)),
         ],
@@ -212,11 +234,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Expanded(
                   child: _stat(
-                      s.isArabic ? 'نقطة' : 'points', s.points, AppColors.orange)),
+                      s.isArabic ? 'نقطة' : 'points',
+                      s.points,
+                      AppColors.orange,
+                      Icons.emoji_events_rounded)),
               const SizedBox(width: 12),
               Expanded(
-                  child: _stat(s.isArabic ? 'رصيد مخزن' : 'stored', s.stored,
-                      AppColors.teal)),
+                  child: _stat(
+                      s.isArabic ? 'رصيد مخزن' : 'stored',
+                      s.stored,
+                      AppColors.teal,
+                      Icons.account_balance_wallet_rounded)),
             ],
           ),
           const SizedBox(height: 20),
