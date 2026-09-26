@@ -41,9 +41,9 @@ Product _p(String brand, List<dynamic> r) {
             : brand == 'cad'
                 ? 'cadence'
                 : 'sibax',
-    description:
-        'رمز: $id | وحدة: $unit | مبيع: ${_n(price)} | وكيل: ${_n(agent)}',
+    description: '',
     category: unit,
+    price: price.toInt(),
   );
 }
 
