@@ -7,24 +7,10 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
+import '../core/orders_service.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
-
-import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
-import '../core/app_settings.dart';
-import '../core/store_service.dart';
-import '../core/theme.dart';  // ✅ يحتوي fmtThousands الأصلية
-import '../data/sample_data.dart';
-
-class ProductDetailScreen extends StatefulWidget {
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -112,7 +98,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSt) => AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
               const Icon(Icons.edit_rounded, color: AppColors.orange),
@@ -128,7 +115,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ===== صورة المنتج =====
                 InkWell(
                   onTap: () async {
                     final f = await ImagePicker().pickImage(
@@ -147,8 +133,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       color: AppColors.orange.withAlpha(20),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: AppColors.orange.withAlpha(80),
-                          style: BorderStyle.solid),
+                          color: AppColors.orange.withAlpha(80)),
                     ),
                     child: Stack(
                       fit: StackFit.expand,
@@ -156,7 +141,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         if (picked != null)
                           ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: Image.memory(Uint8List.fromList(picked!),
+                            child: Image.memory(
+                                Uint8List.fromList(picked!),
                                 fit: BoxFit.cover),
                           )
                         else if (_imgPath.isNotEmpty)
@@ -191,11 +177,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                // ===== الوصف =====
                 Text(
                     s.isArabic
                         ? (_desc.isEmpty ? 'إضافة وصف' : 'تغيير الوصف')
-                        : (_desc.isEmpty ? 'Add description' : 'Change description'),
+                        : (_desc.isEmpty
+                            ? 'Add description'
+                            : 'Change description'),
                     style: const TextStyle(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 TextField(
@@ -252,10 +239,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (bytes != null) {
         final path = 'assets/images/prod_${widget.product.id}.webp';
         await ImagesService.putBytes(path, bytes, tk, 'product image');
-        await ImagesService.setMapping('products', widget.product.id, path, tk);
+        await ImagesService.setMapping(
+            'products', widget.product.id, path, tk);
       }
       final cur = await _fetchJson('assets/data/products_extra.json');
-      final map = cur is Map ? Map<String, dynamic>.from(cur) : <String, dynamic>{};
+      final map =
+          cur is Map ? Map<String, dynamic>.from(cur) : <String, dynamic>{};
       map[widget.product.id] = {'desc': desc};
       await ImagesService.putBytes(
           'assets/data/products_extra.json',
@@ -320,7 +309,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ===== صورة المنتج =====
           Container(
             height: 260,
             decoration: BoxDecoration(
@@ -347,8 +335,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   fontWeight: FontWeight.w900,
                   color: dark ? Colors.white : AppColors.ink)),
           const SizedBox(height: 10),
-
-          // ===== بطاقة سعر الشراء (مرتبة ومتناسقة) =====
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
@@ -387,8 +373,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
           ),
-
-          // ===== الوصف (إن وجد) =====
           if (_desc.isNotEmpty) ...[
             const SizedBox(height: 10),
             Container(
@@ -408,8 +392,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ],
           const SizedBox(height: 10),
-
-          // ===== شارة القسم =====
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -423,8 +405,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     fontSize: 12)),
           ),
           const SizedBox(height: 18),
-
-          // ===== الكمية =====
           if (widget.canBuy)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -432,7 +412,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline,
                       color: AppColors.orange, size: 30),
-                  onPressed: () => setState(() => _qty = (_qty + 1).clamp(1, 99)),
+                  onPressed: () =>
+                      setState(() => _qty = (_qty + 1).clamp(1, 99)),
                 ),
                 const SizedBox(width: 16),
                 Text('$_qty',
@@ -443,15 +424,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   icon: Icon(Icons.remove_circle_outline,
                       color: _qty > 1 ? AppColors.orange : Colors.grey,
                       size: 30),
-                  onPressed: _qty > 1
-                      ? () => setState(() => _qty--)
-                      : null,
+                  onPressed:
+                      _qty > 1 ? () => setState(() => _qty--) : null,
                 ),
               ],
             ),
           const SizedBox(height: 14),
-
-          // ===== زر الإضافة =====
           Container(
             decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: <Color>[
