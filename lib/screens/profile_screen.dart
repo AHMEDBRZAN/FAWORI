@@ -14,6 +14,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _synced = false;
+  int _pts = 0;
+  int _st = 0;
 
   @override
   void initState() {
@@ -31,6 +33,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await OrdersService.recalcUserTotals(uid);
       await s.refreshUser();
+    } catch (_) {}
+    // ✅ قراءة مباشرة من الفواتير (صحيحة دائماً حتى لو تأخرت الكتابة)
+    try {
+      final invs = await OrdersService.loadInvoicesFiltered();
+      final rets = await OrdersService.loadReturnsFiltered();
+      int sales = 0;
+      int ret = 0;
+      for (final i in invs) {
+        if (i.userId == uid) {
+          if (i.type == 'sale') {
+            sales += i.total.toInt();
+          } else if (i.type == 'return') {
+            ret += i.total.toInt().abs();
+          }
+        }
+      }
+      for (final r in rets) {
+        if (r['userId'] == uid) {
+          ret += ((r['total'] as num?)?.toInt() ?? 0).abs();
+        }
+      }
+      final net = (sales - ret).clamp(0, 999999999);
+      if (mounted) {
+        setState(() {
+          _pts = net ~/ kPointUnit;
+          _st = net % kPointUnit;
+        });
+      }
     } catch (_) {}
   }
 
@@ -235,14 +265,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                   child: _stat(
                       s.isArabic ? 'نقطة' : 'points',
-                      s.points,
+                      _pts,
                       AppColors.orange,
                       Icons.emoji_events_rounded)),
               const SizedBox(width: 12),
               Expanded(
                   child: _stat(
                       s.isArabic ? 'رصيد مخزن' : 'stored',
-                      s.stored,
+                      _st,
                       AppColors.teal,
                       Icons.account_balance_wallet_rounded)),
             ],
