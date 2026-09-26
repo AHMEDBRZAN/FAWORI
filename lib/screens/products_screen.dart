@@ -29,6 +29,52 @@ const List<_BrandCfg> _brands = [
       Icons.build_rounded),
 ];
 
+/// ✅ ملاحظة متدرجة عائمة أسفل (محلية ومستقلة)
+void _gradSnack(
+    BuildContext context, String msg, Color color, IconData icon) {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      margin: const EdgeInsets.all(12),
+      padding: EdgeInsets.zero,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: <Color>[color, color.withAlpha(200)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: color.withAlpha(80),
+                blurRadius: 12,
+                offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(msg,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class ProductsScreen extends StatefulWidget {
   /// ✅ اختياري: فتح الشاشة على قسم معين (تستخدمه الرئيسية)
   final String? initialBrand;
@@ -82,20 +128,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final uid = s.user?.id ?? '';
     if (uid.isEmpty || s.isGuest) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(s.isArabic
-                ? 'سجّل الدخول أولاً للشراء'
-                : 'Login first to buy')));
+        _gradSnack(context,
+            s.isArabic ? 'سجّل الدخول أولاً للشراء' : 'Login first to buy',
+            Colors.red, Icons.lock_rounded);
       }
       return;
     }
     await OrdersService.addToCart(uid, p.id, p.name, '', p.brand, qty);
     await _refreshCount();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(s.isArabic
-              ? '✅ أُضيف إلى السلة: ${p.name}'
-              : 'Added: ${p.name}')));
+      _gradSnack(context,
+          s.isArabic ? 'أُضيف إلى السلة: ${p.name}' : 'Added: ${p.name}',
+          const Color(0xFF0D9668), Icons.add_shopping_cart_rounded);
     }
   }
 
