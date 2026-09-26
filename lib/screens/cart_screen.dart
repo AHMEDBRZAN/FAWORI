@@ -189,6 +189,7 @@ class _CartScreenState extends State<CartScreen> {
                                 Expanded(
                                   child: Text(
                                       s.isArabic ? 'اسم المادة' : 'Item name',
+                                      textAlign: TextAlign.center,
                                       style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w900,
@@ -244,6 +245,7 @@ class _CartScreenState extends State<CartScreen> {
                                                 maxLines: 1,
                                                 overflow:
                                                     TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
                                                 style: TextStyle(
                                                     color: dark
                                                         ? Colors.white
