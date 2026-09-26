@@ -26,7 +26,7 @@ const List<_BrandCfg> _brands = [
   _BrandCfg('cadence', 'كادينز', 'Cadence', Color(0xFF9C27B0),
       Icons.palette_rounded),
   _BrandCfg('sibax', 'سيباكس', 'Sibax', Color(0xFF4CAF50),
-      Icons.spray_bottle_rounded),
+      Icons.build_rounded),
 ];
 
 class ProductsScreen extends StatefulWidget {
