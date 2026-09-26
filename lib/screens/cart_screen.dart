@@ -15,7 +15,6 @@ class _CartScreenState extends State<CartScreen> {
   bool _loading = true;
   bool _busy = false;
 
-  /// ✅ سلسلة كتابة متسلسلة: لا عملية حفظ تكتمل بعد التفريغ
   Future<void> _writeChain = Future<void>.value();
 
   @override
@@ -29,7 +28,6 @@ class _CartScreenState extends State<CartScreen> {
     super.dispose();
   }
 
-  /// ✅ تحميل لحظي من التخزين عند كل فتح
   Future<void> _load() async {
     final s = context.read<AppSettings>();
     try {
@@ -45,7 +43,6 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  /// ✅ حفظ عبر السلسلة المتسلسلة
   Future<void> _save() async {
     final s = context.read<AppSettings>();
     final snapshot = List<CartItem>.from(_items);
@@ -154,222 +151,183 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ===== بطاقة الملخص المتدرجة =====
+                    // ===== جدول مواد السلة (ت | اسم المادة | العدد) =====
                     Container(
-                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: <Color>[
-                            AppColors.orange
-                                .withAlpha(dark ? 40 : 25),
-                            AppColors.orange
-                                .withAlpha(dark ? 15 : 10),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: AppColors.orange.withAlpha(80)),
+                            color: AppColors.orange.withAlpha(70)),
                       ),
+                      clipBehavior: Clip.antiAlias,
                       child: Column(
                         children: [
-                          // ===== جدول مواد السلة (ت | اسم المادة | العدد) =====
                           Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: AppColors.orange.withAlpha(70)),
+                              gradient: LinearGradient(
+                                colors: <Color>[
+                                  AppColors.orange,
+                                  AppColors.orange.withAlpha(200),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                             ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(
+                            child: Row(
                               children: [
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: <Color>[
-                                        AppColors.orange,
-                                        AppColors.orange.withAlpha(200),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(
-                                          width: 26,
-                                          child: Text(
-                                              s.isArabic ? 'ت' : '#',
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight:
-                                                      FontWeight.w900,
-                                                  fontSize: 11))),
-                                      Expanded(
-                                        child: Text(
-                                            s.isArabic
-                                                ? 'اسم المادة'
-                                                : 'Item name',
-                                            style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight:
-                                                    FontWeight.w900,
-                                                fontSize: 11)),
-                                      ),
-                                      SizedBox(
-                                          width: 40,
-                                          child: Text(
-                                              s.isArabic ? 'العدد' : 'Qty',
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight:
-                                                      FontWeight.w900,
-                                                  fontSize: 11))),
-                                    ],
-                                  ),
+                                SizedBox(
+                                    width: 26,
+                                    child: Text(
+                                        s.isArabic ? 'ت' : '#',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 11))),
+                                Expanded(
+                                  child: Text(
+                                      s.isArabic ? 'اسم المادة' : 'Item name',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 11)),
                                 ),
-                                ConstrainedBox(
-                                  constraints:
-                                      const BoxConstraints(maxHeight: 300),
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      children: [
-                                        for (int i = 0;
-                                            i < _items.length;
-                                            i++)
-                                          Container(
-                                            width: double.infinity,
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 8),
-                                            color: i.isOdd
-                                                ? AppColors.orange
-                                                    .withAlpha(
-                                                        dark ? 18 : 14)
-                                                : Colors.transparent,
-                                            child: Row(
-                                              children: [
-                                                SizedBox(
-                                                    width: 26,
-                                                    child: Text('${i + 1}',
-                                                        textAlign: TextAlign
-                                                            .center,
-                                                        style: TextStyle(
-                                                            color: dark
-                                                                ? Colors.grey
-                                                                    .shade300
-                                                                : Colors.grey
-                                                                    .shade700,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w800,
-                                                            fontSize: 11))),
-                                                Expanded(
-                                                  child: Text(
-                                                      _items[i].name,
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow
-                                                          .ellipsis,
-                                                      style: TextStyle(
-                                                          color: dark
-                                                              ? Colors.white
-                                                              : AppColors
-                                                                  .ink,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          fontSize: 11)),
-                                                ),
-                                                SizedBox(
-                                                    width: 40,
-                                                    child: Text(
-                                                        '${_items[i].qty}',
-                                                        textAlign: TextAlign
-                                                            .center,
-                                                        style: const TextStyle(
-                                                            color: AppColors
-                                                                .orange,
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .w900,
-                                                            fontSize: 12))),
-                                              ],
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                                SizedBox(
+                                    width: 40,
+                                    child: Text(
+                                        s.isArabic ? 'العدد' : 'Qty',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 11))),
                               ],
                             ),
-                            // ===== صف المجموع (داخل الجدول) =====
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 9),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: <Color>[
-                                    AppColors.orange
-                                        .withAlpha(dark ? 70 : 40),
-                                    AppColors.orange
-                                        .withAlpha(dark ? 35 : 20),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                              ),
-                              child: Row(
+                          ),
+                          ConstrainedBox(
+                            constraints:
+                                const BoxConstraints(maxHeight: 300),
+                            child: SingleChildScrollView(
+                              child: Column(
                                 children: [
-                                  const SizedBox(width: 26),
-                                  Expanded(
-                                    child: Text(
-                                        s.isArabic ? 'مجموع' : 'Total',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            color: dark
-                                                ? Colors.white
-                                                : AppColors.ink,
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 12)),
-                                  ),
-                                  SizedBox(
-                                      width: 40,
-                                      child: Text('$totalQty',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                              color: AppColors.orange,
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 13))),
+                                  for (int i = 0; i < _items.length; i++)
+                                    Container(
+                                      width: double.infinity,
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 8),
+                                      color: i.isOdd
+                                          ? AppColors.orange
+                                              .withAlpha(dark ? 18 : 14)
+                                          : Colors.transparent,
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                              width: 26,
+                                              child: Text('${i + 1}',
+                                                  textAlign:
+                                                      TextAlign.center,
+                                                  style: TextStyle(
+                                                      color: dark
+                                                          ? Colors.grey
+                                                              .shade300
+                                                          : Colors.grey
+                                                              .shade700,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      fontSize: 11))),
+                                          Expanded(
+                                            child: Text(_items[i].name,
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    color: dark
+                                                        ? Colors.white
+                                                        : AppColors.ink,
+                                                    fontWeight:
+                                                        FontWeight.w700,
+                                                    fontSize: 11)),
+                                          ),
+                                          SizedBox(
+                                              width: 40,
+                                              child: Text(
+                                                  '${_items[i].qty}',
+                                                  textAlign:
+                                                      TextAlign.center,
+                                                  style: const TextStyle(
+                                                      color: AppColors
+                                                          .orange,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      fontSize: 12))),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
                           ),
-                          Padding(
+                          // ===== صف المجموع (داخل الجدول) =====
+                          Container(
+                            width: double.infinity,
                             padding: const EdgeInsets.symmetric(
-                                vertical: 10),
-                            child: Divider(
-                                height: 1,
-                                color: AppColors.orange
-                                    .withAlpha(dark ? 60 : 80)),
+                                horizontal: 10, vertical: 9),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: <Color>[
+                                  AppColors.orange
+                                      .withAlpha(dark ? 70 : 40),
+                                  AppColors.orange
+                                      .withAlpha(dark ? 35 : 20),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 26),
+                                Expanded(
+                                  child: Text(
+                                      s.isArabic ? 'مجموع' : 'Total',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: dark
+                                              ? Colors.white
+                                              : AppColors.ink,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 12)),
+                                ),
+                                SizedBox(
+                                    width: 40,
+                                    child: Text('$totalQty',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: AppColors.orange,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 13))),
+                              ],
+                            ),
                           ),
-                          _summaryRow(
-                              Icons.payments_outlined,
-                              s.isArabic ? 'السعر' : 'Price',
-                              s.isArabic
-                                  ? 'يُحدد بالإدارة'
-                                  : 'Set by admin',
-                              AppColors.orange,
-                              dark),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Divider(
+                        height: 1,
+                        color: AppColors.orange
+                            .withAlpha(dark ? 60 : 80)),
+                    const SizedBox(height: 16),
+                    _summaryRow(
+                        Icons.payments_outlined,
+                        s.isArabic ? 'السعر' : 'Price',
+                        s.isArabic ? 'يُحدد بالإدارة' : 'Set by admin',
+                        AppColors.orange,
+                        dark),
                   ],
                 ),
               ),
@@ -390,8 +348,7 @@ class _CartScreenState extends State<CartScreen> {
                                   ? Colors.grey.shade600
                                   : Colors.grey.shade400),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                         child: Text(
                           s.isArabic ? 'إلغاء' : 'Cancel',
@@ -437,8 +394,7 @@ class _CartScreenState extends State<CartScreen> {
                             padding:
                                 const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(12)),
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -472,7 +428,6 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  /// ✅ صف الملخص داخل نافذة التأكيد
   Widget _summaryRow(
       IconData icon, String label, String value, Color color, bool dark) {
     return Row(
