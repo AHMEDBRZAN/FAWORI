@@ -7,6 +7,7 @@ class Product {
   final String description;
   final String image;
   final String category;
+  final int price;
 
   const Product({
     required this.id,
