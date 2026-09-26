@@ -368,7 +368,7 @@ class OrdersService {
         rets += ((r['total'] as num?)?.toInt() ?? 0).abs();
       }
     }
-    final net = sales - rets;
+    final net = (sales - rets).clamp(0, 999999999);
     final pts = net ~/ kPointUnit;
     final st = net % kPointUnit;
     final users = await _fetchJson('assets/data/users.json');
