@@ -25,7 +25,7 @@ const List<_BrandCfg> _brands = [
       Icons.water_drop_rounded),
   _BrandCfg('cadence', 'كادينز', 'Cadence', Color(0xFF9C27B0),
       Icons.palette_rounded),
-  _BrandCfg('sibax', 'سيباكس', 'Sibax', Color(0xFF4CAF50),
+  _BrandCfg('sibax', 'سيباكس', 'Sibax', Color(0xFFC8961E),
       Icons.build_rounded),
 ];
 
