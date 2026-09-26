@@ -11,16 +11,20 @@ import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
 
-/// ✅ تنسيق الأرقام بفواصل الآلاف
-String fmtThousands(num v) {
-  final s = v.toInt().toString();
-  final buf = StringBuffer();
-  for (int i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
-    buf.write(s[i]);
-  }
-  return buf.toString();
-}
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../core/app_settings.dart';
+import '../core/store_service.dart';
+import '../core/theme.dart';  // ✅ يحتوي fmtThousands الأصلية
+import '../data/sample_data.dart';
+
+class ProductDetailScreen extends StatefulWidget {
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
