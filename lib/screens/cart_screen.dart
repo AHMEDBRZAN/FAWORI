@@ -493,17 +493,16 @@ class _CartScreenState extends State<CartScreen> {
       await OrdersService.submitOrder(order);
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(s.isArabic
-                ? '✅ تم إرسال الطلب إلى الإدارة'
-                : 'Order sent to admin')));
+        showAppSnack(context,
+            s.isArabic ? 'تم إرسال الطلب إلى الإدارة' : 'Order sent to admin',
+            color: const Color(0xFF0D9668), icon: Icons.send_rounded);
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+        showAppSnack(context, 'فشل: $e',
+            color: Colors.red, icon: Icons.error_outline_rounded);
       }
     }
   }
