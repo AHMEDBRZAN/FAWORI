@@ -236,7 +236,7 @@ class _CartScreenState extends State<CartScreen> {
                                 ),
                                 ConstrainedBox(
                                   constraints:
-                                      const BoxConstraints(maxHeight: 200),
+                                      const BoxConstraints(maxHeight: 300),
                                   child: SingleChildScrollView(
                                     child: Column(
                                       children: [
@@ -308,21 +308,49 @@ class _CartScreenState extends State<CartScreen> {
                                 ),
                               ],
                             ),
+                            // ===== صف المجموع (داخل الجدول) =====
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 9),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: <Color>[
+                                    AppColors.orange
+                                        .withAlpha(dark ? 70 : 40),
+                                    AppColors.orange
+                                        .withAlpha(dark ? 35 : 20),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const SizedBox(width: 26),
+                                  Expanded(
+                                    child: Text(
+                                        s.isArabic ? 'مجموع' : 'Total',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: dark
+                                                ? Colors.white
+                                                : AppColors.ink,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 12)),
+                                  ),
+                                  SizedBox(
+                                      width: 40,
+                                      child: Text('$totalQty',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                              color: AppColors.orange,
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 13))),
+                                ],
+                              ),
+                            ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 10),
-                            child: Divider(
-                                height: 1,
-                                color: AppColors.orange
-                                    .withAlpha(dark ? 60 : 80)),
-                          ),
-                          _summaryRow(
-                              Icons.format_list_numbered_rounded,
-                              s.isArabic ? 'الكميات الكلية' : 'Total qty',
-                              '$totalQty',
-                              AppColors.teal,
-                              dark),
                           Padding(
                             padding: const EdgeInsets.symmetric(
                                 vertical: 10),
