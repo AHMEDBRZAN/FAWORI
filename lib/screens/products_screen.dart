@@ -32,7 +32,7 @@ const List<_BrandCfg> _brands = [
 /// ✅ ملاحظة متدرجة عائمة أسفل (محلية ومستقلة)
 void _gradSnack(
     BuildContext context, String msg, Color color, IconData icon) {
-  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       backgroundColor: Colors.transparent,
@@ -138,7 +138,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
     await _refreshCount();
     if (mounted) {
       _gradSnack(context,
-          s.isArabic ? 'أُضيف إلى السلة: ${p.name}' : 'Added: ${p.name}',
+          s.isArabic
+              ? 'أُضيف إلى السلة $qty : ${p.name}'
+              : 'Added $qty : ${p.name}',
           const Color(0xFF0D9668), Icons.add_shopping_cart_rounded);
     }
   }
