@@ -139,8 +139,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
     if (mounted) {
       _gradSnack(context,
           s.isArabic
-              ? 'أُضيف إلى السلة $qty : ${p.name}'
-              : 'Added $qty : ${p.name}',
+              ? 'أُضيف إلى السلة : $qty ${p.name}'
+              : 'Added : $qty ${p.name}',
           const Color(0xFF0D9668), Icons.add_shopping_cart_rounded);
     }
   }
