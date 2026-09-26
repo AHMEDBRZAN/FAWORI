@@ -30,7 +30,7 @@ const List<_BrandCfg> _brands = [
 ];
 
 class ProductsScreen extends StatefulWidget {
-  /// ✅ اختياري: فتح الشاشة والنزول لقسم معين
+  /// ✅ اختياري: فتح الشاشة على قسم معين (تستخدمه الرئيسية)
   final String? initialBrand;
   const ProductsScreen({super.key, this.initialBrand});
   @override
@@ -40,38 +40,24 @@ class ProductsScreen extends StatefulWidget {
 class _ProductsScreenState extends State<ProductsScreen> {
   int _cartCount = 0;
   String _q = '';
+  String? _focusBrand;
   final _qCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
-  final Map<String, GlobalKey> _sectionKeys = {};
 
   @override
   void initState() {
     super.initState();
-    for (final b in _brands) {
-      _sectionKeys[b.key] = GlobalKey();
-    }
     _refreshCount();
-    // ✅ النزول التلقائي للقسم المطلوب (بدون لمس البحث)
+    // ✅ فتح القسم المطلوب مباشرة (يجلب ما في قائمته من الكتالوج)
     if (widget.initialBrand != null &&
-        _sectionKeys.containsKey(widget.initialBrand)) {
+        _brands.any((b) => b.key == widget.initialBrand)) {
+      _focusBrand = widget.initialBrand;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBrand(widget.initialBrand!);
+        if (mounted && _scrollCtrl.hasClients) {
+          _scrollCtrl.jumpTo(0);
+        }
       });
     }
-  }
-
-  void _scrollToBrand(String key) {
-    final k = _sectionKeys[key];
-    if (k == null || k.currentContext == null) return;
-    if (!_scrollCtrl.hasClients) return;
-    final box = k.currentContext!.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final offset = box.localToGlobal(Offset.zero).dy +
-        _scrollCtrl.offset -
-        100; // 100 لتعويض AppBar والبحث
-    _scrollCtrl.animateTo(offset.clamp(0.0, _scrollCtrl.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutCubic);
   }
 
   @override
@@ -132,7 +118,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
     await _refreshCount();
   }
 
-  /// ✅ فلترة منتجات قسم معين
+  _BrandCfg _brandCfg(String key) =>
+      _brands.firstWhere((b) => b.key == key);
+
+  /// ✅ فلترة منتجات قسم معين (البحث يعمل داخل القسم فقط)
   List<Product> _filterBrand(String brandKey) {
     final base = sampleData.where((p) => p.brand == brandKey);
     if (_q.trim().isEmpty) return base.toList();
@@ -241,15 +230,89 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           const SizedBox(height: 18),
 
-          // ===== الأقسام الأربعة =====
-          for (final b in _brands)
+          // ===== شريط القسم المركّز (عند الفتح من الرئيسية) =====
+          if (_focusBrand != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      _brandCfg(_focusBrand!).color,
+                      _brandCfg(_focusBrand!).color.withAlpha(220),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _brandCfg(_focusBrand!).color.withAlpha(80),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(_brandCfg(_focusBrand!).icon,
+                        color: Colors.white, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        s.isArabic
+                            ? '${_brandCfg(_focusBrand!).ar} — ${_filterBrand(_focusBrand!).length} مادة'
+                            : '${_brandCfg(_focusBrand!).en} — ${_filterBrand(_focusBrand!).length} items',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 15,
+                            color: Colors.white),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => setState(() => _focusBrand = null),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(40),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.apps_rounded,
+                                size: 16, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                                s.isArabic ? 'كل الأقسام' : 'All',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ===== الأقسام (المركّز عليها أو الكل) =====
+          for (final b in (_focusBrand == null
+              ? _brands
+              : _brands.where((x) => x.key == _focusBrand).toList()))
             _buildSection(b, dark, s),
         ],
       ),
     );
   }
 
-  /// ✅ بناء قسم واحد (رأس + شبكة منتجات)
+  /// ✅ بناء قسم واحد (رأس متدرج + شبكة منتجات)
   Widget _buildSection(_BrandCfg b, bool dark, AppSettings s) {
     final items = _filterBrand(b.key);
     // ✅ إخفاء القسم الفارغ عند البحث
@@ -257,7 +320,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
       return const SizedBox.shrink();
     }
     return Padding(
-      key: _sectionKeys[b.key],
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,9 +380,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 30),
               decoration: BoxDecoration(
-                color: dark
-                    ? const Color(0xFF1E1E28)
-                    : Colors.white,
+                color: dark ? const Color(0xFF1E1E28) : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: b.color.withAlpha(40)),
               ),
@@ -330,9 +390,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     Icon(b.icon, color: b.color.withAlpha(80), size: 48),
                     const SizedBox(height: 8),
                     Text(
-                        s.isArabic
-                            ? 'لا توجد منتجات'
-                            : 'No products',
+                        s.isArabic ? 'لا توجد منتجات' : 'No products',
                         style: TextStyle(
                             color: dark
                                 ? Colors.grey.shade400
@@ -393,8 +451,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           children: [
                             Expanded(
                               child: Center(
-                                child: Icon(b.icon,
-                                    size: 46, color: b.color),
+                                child:
+                                    Icon(b.icon, size: 46, color: b.color),
                               ),
                             ),
                             Text(p.name,
@@ -414,8 +472,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 color: b.color.withAlpha(25),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text(
-                                  s.isArabic ? b.ar : b.en,
+                              child: Text(s.isArabic ? b.ar : b.en,
                                   style: TextStyle(
                                       color: b.color,
                                       fontSize: 10,
