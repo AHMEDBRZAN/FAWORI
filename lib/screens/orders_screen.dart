@@ -1177,58 +1177,65 @@ class _OrdersScreenState extends State<OrdersScreen>
       ),
     );
     final wrapped = glow ? _Flash(child: card) : card;
-    final node = Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final node = Stack(
       children: [
-        SizedBox(
-          width: 26,
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: t.color,
-                  border: Border.all(
-                      color: dark
-                          ? const Color(0xFF141419)
-                          : const Color(0xFFFFF8F1),
-                      width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                        color: t.color.withAlpha(90),
-                        blurRadius: 6,
-                        spreadRadius: 1),
+        // ===== الخط العمودي المتدرج في الممر الجانبي =====
+        if (!last)
+          PositionedDirectional(
+            start: 12,
+            top: 34,
+            bottom: 6,
+            child: Container(
+              width: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: <Color>[
+                    t.color.withAlpha(130),
+                    t.color.withAlpha(35),
                   ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+        // ===== النقطة + البطاقة =====
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 26,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: t.color,
+                      border: Border.all(
+                          color: dark
+                              ? const Color(0xFF141419)
+                              : const Color(0xFFFFF8F1),
+                          width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                            color: t.color.withAlpha(90),
+                            blurRadius: 6,
+                            spreadRadius: 1),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              Expanded(
-                child: last
-                    ? const SizedBox(width: 2)
-                    : Container(
-                        width: 2,
-                        margin:
-                            const EdgeInsets.symmetric(vertical: 3),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: <Color>[
-                              t.color.withAlpha(130),
-                              t.color.withAlpha(35),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(child: wrapped),
+          ],
         ),
-        const SizedBox(width: 4),
-        Expanded(child: wrapped),
       ],
     );
     if (isLocked) {
