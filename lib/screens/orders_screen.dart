@@ -1008,7 +1008,7 @@ class _OrdersScreenState extends State<OrdersScreen>
         padding: const EdgeInsets.all(14),
         children: [
           const _SyncBanner(),
-          const SizedBox(height: 40),
+          const SizedBox(height: 60),
           Center(
             child: Column(
               children: [
@@ -1034,39 +1034,6 @@ class _OrdersScreenState extends State<OrdersScreen>
                             : Colors.grey.shade600,
                         fontWeight: FontWeight.w800,
                         fontSize: 14)),
-                const SizedBox(height: 8),
-                Text(
-                    s.isArabic
-                        ? 'قد تكون مخفية — اضغط لإظهار الكل'
-                        : 'May be hidden — tap to show all',
-                    style: TextStyle(
-                        color: dark
-                            ? Colors.grey.shade500
-                            : Colors.grey.shade500,
-                        fontSize: 11)),
-                const SizedBox(height: 16),
-                // ✅ زر إظهار الكل
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final p = await SharedPreferences.getInstance();
-                    final uid = s.user?.id ?? '';
-                    await p.remove('hidden_orders_$uid');
-                    setState(() {
-                      _hidden.clear();
-                      _future = _loadAndMark();
-                    });
-                  },
-                  icon: const Icon(Icons.visibility_rounded, size: 18),
-                  label: Text(s.isArabic ? 'إظهار الكل' : 'Show all'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.teal,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
               ],
             ),
           ),
