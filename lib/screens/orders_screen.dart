@@ -616,21 +616,23 @@ class _OrdersScreenState extends State<OrdersScreen>
       children: [
         // ===== Selector احترافي: أيقونة + اسم + badge في صف واحد =====
         Container(
-          height: 78,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          height: 84,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: dark ? const Color(0xFF1E1E28) : Colors.white,
-            border: Border(
-              bottom: BorderSide(
-                  color: dark
-                      ? Colors.white.withAlpha(18)
-                      : Colors.black.withAlpha(12)),
+            gradient: LinearGradient(
+              colors: dark
+                  ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+                  : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(24)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(dark ? 40 : 8),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: Colors.black.withAlpha(dark ? 40 : 10),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -665,33 +667,40 @@ class _OrdersScreenState extends State<OrdersScreen>
                     gradient: active
                         ? LinearGradient(
                             colors: <Color>[
-                              t.color,
-                              t.color.withAlpha(230),
+                              t.color.withAlpha(235),
+                              t.color.withAlpha(170),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           )
-                        : null,
-                    color: active
-                        ? null
-                        : (dark
-                            ? const Color(0xFF2A2A35)
-                            : const Color(0xFFF5F5F7)),
-                    borderRadius: BorderRadius.circular(18),
+                        : LinearGradient(
+                            colors: dark
+                                ? <Color>[
+                                    Colors.white.withAlpha(14),
+                                    Colors.white.withAlpha(6),
+                                  ]
+                                : <Color>[
+                                    Colors.white,
+                                    const Color(0xFFFFF8F1),
+                                  ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: active
-                          ? t.color
+                          ? t.color.withAlpha(140)
                           : (dark
-                              ? Colors.white.withAlpha(25)
-                              : Colors.black.withAlpha(10)),
-                      width: active ? 1.5 : 1,
+                              ? Colors.white.withAlpha(18)
+                              : t.color.withAlpha(35)),
+                      width: 1.2,
                     ),
                     boxShadow: active
                         ? [
                             BoxShadow(
-                              color: t.color.withAlpha(90),
-                              blurRadius: 14,
-                              offset: const Offset(0, 5),
+                              color: t.color.withAlpha(60),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
                           ]
                         : [],
@@ -846,12 +855,19 @@ class _OrdersScreenState extends State<OrdersScreen>
       _TabCfg t, bool isAll) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: t.color.withAlpha(60)),
+        gradient: LinearGradient(
+          colors: dark
+              ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+              : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: t.color.withAlpha(45)),
         boxShadow: [
           BoxShadow(
-            color: t.color.withAlpha(30),
-            blurRadius: 14,
+            color: t.color.withAlpha(25),
+            blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
@@ -862,10 +878,13 @@ class _OrdersScreenState extends State<OrdersScreen>
           // ===== الرأس المتدرج =====
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 12),
+                horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: <Color>[t.color, t.color.withAlpha(220)],
+                colors: <Color>[
+                  t.color.withAlpha(225),
+                  t.color.withAlpha(160),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -920,21 +939,24 @@ class _OrdersScreenState extends State<OrdersScreen>
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final row = Container(
       decoration: BoxDecoration(
-        color: idx.isOdd
-            ? (dark
-                ? Colors.white.withAlpha(8)
-                : t.color.withAlpha(15))
-            : (dark
-                ? Colors.white.withAlpha(3)
-                : Colors.white),
+        gradient: idx.isOdd
+            ? LinearGradient(
+                colors: <Color>[
+                  t.color.withAlpha(dark ? 16 : 14),
+                  t.color.withAlpha(dark ? 6 : 6),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
         border: Border(
           bottom: BorderSide(
               color: dark
-                  ? Colors.white.withAlpha(12)
-                  : Colors.black.withAlpha(8)),
+                  ? Colors.white.withAlpha(10)
+                  : t.color.withAlpha(18)),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: InkWell(
         onTap: () async {
           await Navigator.push(
@@ -947,14 +969,23 @@ class _OrdersScreenState extends State<OrdersScreen>
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                    colors: <Color>[t.color, t.color.withAlpha(200)],
+                    colors: <Color>[
+                      t.color.withAlpha(225),
+                      t.color.withAlpha(160),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                      color: t.color.withAlpha(50),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3)),
+                ],
               ),
               child: Icon(t.icon, color: Colors.white, size: 20),
             ),
