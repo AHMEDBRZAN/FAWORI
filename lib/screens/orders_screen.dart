@@ -614,155 +614,33 @@ class _OrdersScreenState extends State<OrdersScreen>
       AppSettings s, bool dark, List<Order> allOrders) {
     return Column(
       children: [
-        // ===== Selector احترافي: أيقونة + اسم + badge في صف واحد =====
+        // ===== حلقات ستوري دائرية (تصميم جديد كلياَ) =====
         Container(
-          height: 84,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: dark
-                  ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+                  ? <Color>[const Color(0xFF1A1A21), const Color(0xFF23232B)]
                   : <Color>[Colors.white, const Color(0xFFFFF8F1)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius:
-                const BorderRadius.vertical(bottom: Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(dark ? 40 : 10),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
+            border: Border(
+              bottom: BorderSide(
+                  color: dark
+                      ? Colors.white.withAlpha(15)
+                      : Colors.black.withAlpha(10)),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (int i = 0; i < _tabs.length; i++)
+                _storyRing(s, dark, allOrders, i),
             ],
           ),
-          child: ListView.separated(
-            controller: _selScroll,
-            scrollDirection: Axis.horizontal,
-            itemCount: _tabs.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (ctx, i) {
-              final t = _tabs[i];
-              final active = _tabIndex == i;
-              final count = i == 1
-                  ? allOrders.length
-                  : allOrders.where((o) => o.status == t.status).length;
-              return GestureDetector(
-                onTap: () {
-                  setState(() => _tabIndex = i);
-                  if (_pageCtrl.hasClients) {
-                    _pageCtrl.animateToPage(i,
-                        duration: const Duration(milliseconds: 320),
-                        curve: Curves.easeOutCubic);
-                  }
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutCubic,
-                  width: 118,
-                  alignment: Alignment.center,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: active
-                        ? LinearGradient(
-                            colors: <Color>[
-                              t.color.withAlpha(235),
-                              t.color.withAlpha(170),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : LinearGradient(
-                            colors: dark
-                                ? <Color>[
-                                    Colors.white.withAlpha(14),
-                                    Colors.white.withAlpha(6),
-                                  ]
-                                : <Color>[
-                                    Colors.white,
-                                    const Color(0xFFFFF8F1),
-                                  ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: active
-                          ? t.color.withAlpha(140)
-                          : (dark
-                              ? Colors.white.withAlpha(18)
-                              : t.color.withAlpha(35)),
-                      width: 1.2,
-                    ),
-                    boxShadow: active
-                        ? [
-                            BoxShadow(
-                              color: t.color.withAlpha(60),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : [],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        t.icon,
-                        color: active
-                            ? Colors.white
-                            : t.color.withAlpha(220),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        s.isArabic ? t.ar : t.en,
-                        style: TextStyle(
-                          color: active
-                              ? Colors.white
-                              : (dark ? Colors.white : AppColors.ink),
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        constraints:
-                            const BoxConstraints(minWidth: 26, minHeight: 26),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: active
-                              ? Colors.white
-                              : t.color.withAlpha(25),
-                          borderRadius: BorderRadius.circular(13),
-                          border: Border.all(
-                            color: active
-                                ? Colors.white
-                                : t.color.withAlpha(80),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          '$count',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: active ? t.color : t.color,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
         ),
-        // ===== PageView للسحب بين الصفحات =====
+        // ===== الصفحات القابلة للسحب (خط زمني) =====
         Expanded(
           child: PageView.builder(
             controller: _pageCtrl,
@@ -782,55 +660,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                 onRefresh: () async {
                   setState(() => _future = _loadAndMark());
                 },
-                child: ListView(
-                  padding: const EdgeInsets.all(14),
-                  children: [
-                    const _SyncBanner(),
-                    if (items.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 60),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(t.icon,
-                                  color: t.color.withAlpha(60),
-                                  size: 72),
-                              const SizedBox(height: 12),
-                              Text(
-                                  s.isArabic
-                                      ? 'لا توجد طلبات ${t.ar}'
-                                      : 'No ${t.en.toLowerCase()} orders',
-                                  style: TextStyle(
-                                      color: dark
-                                          ? Colors.grey.shade400
-                                          : Colors.grey.shade600,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 15)),
-                            ],
-                          ),
-                        ),
-                      )
-                    else ...[
-                      _userTable(s, dark, items, t, i == 1),
-                      const SizedBox(height: 12),
-                      if (items.isNotEmpty)
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: TextButton.icon(
-                            onPressed: () => _hideAll(items),
-                            icon: const Icon(Icons.delete_sweep_rounded,
-                                size: 16, color: Colors.red),
-                            label: Text(
-                                s.isArabic ? 'مسح الكل' : 'Clear all',
-                                style: const TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12)),
-                          ),
-                        ),
-                    ],
-                  ],
-                ),
+                child: _timeline(s, dark, items, t),
               );
             },
           ),
@@ -839,18 +669,95 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  /// 📋 جدول احترافي للطلبات (حواف ناعمة + ألوان متدرجة + صفوف متناوبة)
-  /// ✅ تحريك شريط الاختيار ليُظهر التبويب النشط في المنتصف
-  void _scrollSelTo(int i) {
-    if (!_selScroll.hasClients) return;
-    const double chipW = 118 + 8;
-    final double viewport = _selScroll.position.viewportDimension;
-    double target = i * chipW - (viewport / 2 - chipW / 2);
-    target = target.clamp(0.0, _selScroll.position.maxScrollExtent);
-    _selScroll.animateTo(target,
-        duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+  /// ⭕ حلقة ستوري دائرية لكل حالة
+  Widget _storyRing(
+      AppSettings s, bool dark, List<Order> all, int i) {
+    final t = _tabs[i];
+    final active = _tabIndex == i;
+    final count = i == 1
+        ? all.length
+        : all.where((o) => o.status == t.status).length;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _tabIndex = i);
+        if (_pageCtrl.hasClients) {
+          _pageCtrl.animateToPage(i,
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic);
+        }
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: active
+                  ? LinearGradient(colors: <Color>[
+                      t.color,
+                      t.color.withAlpha(150),
+                    ])
+                  : null,
+              border: Border.all(
+                  color: active ? t.color : t.color.withAlpha(80),
+                  width: active ? 2 : 1.2),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                          color: t.color.withAlpha(90),
+                          blurRadius: 12,
+                          spreadRadius: 1),
+                    ]
+                  : [],
+            ),
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: active
+                    ? t.color
+                    : (dark ? const Color(0xFF1E1E28) : Colors.white),
+              ),
+              child: Icon(t.icon,
+                  color: active ? Colors.white : t.color.withAlpha(200),
+                  size: 21),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(s.isArabic ? t.ar : t.en,
+              style: TextStyle(
+                  color: active
+                      ? (dark ? Colors.white : AppColors.ink)
+                      : (dark
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade600),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 10)),
+          const SizedBox(height: 3),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+            decoration: BoxDecoration(
+              color: active
+                  ? t.color
+                  : t.color.withAlpha(dark ? 30 : 22),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text('$count',
+                style: TextStyle(
+                    color: active ? Colors.white : t.color,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 9)),
+          ),
+        ],
+      ),
+    );
   }
 
+  /// 📋 جدول احترافي للطلبات (حواف ناعمة + ألوان متدرجة + صفوف متناوبة)
   Widget _userTable(AppSettings s, bool dark, List<Order> items,
       _TabCfg t, bool isAll) {
     return Container(
