@@ -1000,6 +1000,288 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
+  /// 📍 قائمة الخط الزمني (نقطة + خط + بطاقة عائمة)
+  Widget _timeline(
+      AppSettings s, bool dark, List<Order> items, _TabCfg t) {
+    if (items.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(14),
+        children: [
+          const _SyncBanner(),
+          const SizedBox(height: 60),
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: t.color.withAlpha(dark ? 25 : 18),
+                    border: Border.all(
+                        color: t.color.withAlpha(70), width: 1.5),
+                  ),
+                  child: Icon(t.icon,
+                      color: t.color.withAlpha(140), size: 46),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                    s.isArabic
+                        ? 'لا توجد طلبات ${t.ar}'
+                        : 'No ${t.en.toLowerCase()} orders',
+                    style: TextStyle(
+                        color: dark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+      itemCount: items.length + 2,
+      itemBuilder: (ctx, i) {
+        if (i == 0) return const _SyncBanner();
+        if (i == items.length + 1) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 8),
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                onPressed: () => _hideAll(items),
+                icon: const Icon(Icons.delete_sweep_rounded,
+                    size: 16, color: Colors.red),
+                label: Text(s.isArabic ? 'مسح الكل' : 'Clear all',
+                    style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12)),
+              ),
+            ),
+          );
+        }
+        final idx = i - 1;
+        return _timelineNode(
+            s, dark, items[idx], t, idx == items.length - 1);
+      },
+    );
+  }
+
+  /// 🧷 عقدة الخط الزمني: نقطة ملونة + خط متدرج + بطاقة
+  Widget _timelineNode(
+      AppSettings s, bool dark, Order o, _TabCfg t, bool last) {
+    final glow = _glowOrderId == o.id;
+    if (glow && _glowTimer == null) {
+      _glowTimer = Timer(const Duration(seconds: 6), () {
+        _glowOrderId = null;
+        _glowTimer = null;
+        if (mounted) setState(() {});
+      });
+    }
+    final isLocked = _locked.contains(o.id);
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final card = Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: dark
+              ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+              : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: t.color.withAlpha(50)),
+        boxShadow: [
+          BoxShadow(
+              color: t.color.withAlpha(20),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
+        ],
+      ),
+      child: InkWell(
+        onTap: () async {
+          await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      _OrderDetail(order: o, isAdmin: false)));
+          if (mounted) setState(() => _future = _loadAndMark());
+        },
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: <Color>[
+                    t.color,
+                    t.color.withAlpha(190),
+                  ]),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                    s.isArabic ? _statusAr(o.status) : o.status,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 10)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(dmy(o.date),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                              color: dark
+                                  ? Colors.white
+                                  : AppColors.ink)),
+                    ),
+                    const SizedBox(height: 3),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                          '${o.items.length} ${s.isArabic ? 'مواد' : 'items'} • ${o.invoiceNo.isEmpty ? '—' : '#${o.invoiceNo}'} • ${time12(o.id)}',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: dark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600)),
+                    ),
+                  ],
+                ),
+              ),
+              if (isLocked)
+                const Padding(
+                  padding: EdgeInsetsDirectional.only(end: 4),
+                  child: Icon(Icons.lock_rounded,
+                      color: AppColors.teal, size: 14),
+                ),
+              Icon(Icons.chevron_left_rounded,
+                  color: t.color.withAlpha(160), size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+    final wrapped = glow ? _Flash(child: card) : card;
+    final node = Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          width: 26,
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: t.color,
+                  border: Border.all(
+                      color: dark
+                          ? const Color(0xFF141419)
+                          : const Color(0xFFFFF8F1),
+                      width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                        color: t.color.withAlpha(90),
+                        blurRadius: 6,
+                        spreadRadius: 1),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: last
+                    ? const SizedBox(width: 2)
+                    : Container(
+                        width: 2,
+                        margin:
+                            const EdgeInsets.symmetric(vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: <Color>[
+                              t.color.withAlpha(130),
+                              t.color.withAlpha(35),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(child: wrapped),
+      ],
+    );
+    if (isLocked) {
+      return Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.teal, width: 1.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Stack(
+          children: [
+            node,
+            PositionedDirectional(
+              top: 6,
+              end: 6,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _unlockOrder(o.id),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                        color: AppColors.teal,
+                        borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.lock_rounded,
+                        color: Colors.white, size: 12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Dismissible(
+      key: ValueKey('u_dismiss_${o.id}'),
+      direction: DismissDirection.horizontal,
+      background: rtl ? _dismissBg(false) : _lockBg(),
+      secondaryBackground: rtl ? _lockBg() : _dismissBg(false),
+      onDismissed: (dir) {
+        final swipedRight = rtl
+            ? dir == DismissDirection.endToStart
+            : dir == DismissDirection.startToEnd;
+        if (swipedRight) {
+          _lockOrder(o.id);
+        } else {
+          _hideOrder(o.id);
+        }
+      },
+      child: node,
+    );
+  }
+
   Widget _card(Order o, bool isAdmin, AppSettings s, bool dark) {
     final c = _statusColor(o.status);
     return Pressable(
