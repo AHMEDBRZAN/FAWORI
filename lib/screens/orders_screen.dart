@@ -228,6 +228,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   Timer? _glowTimer;
   Set<String> _hidden = {};
   Set<String> _locked = {};
+  List<Order> _cache = [];
   final PageController _pageCtrl = PageController();
   final ScrollController _selScroll = ScrollController();
   Timer? _notifTimer;
@@ -244,6 +245,13 @@ class _OrdersScreenState extends State<OrdersScreen>
   Future<List<Order>> _loadAndMark() async {
     await _loadHidden();
     final os = await OrdersService.loadOrders();
+    // ✅ حماية: أي طلب اختفى فجأة (تأخير CDN) يُبقى عليه من النسخة السابقة
+    //    ← "قيد المراجعة" لا يختفي إلا بتغيّر حالته فعلياً (قبول/رفض)
+    final ids = os.map((o) => o.id).toSet();
+    for (final c in _cache) {
+      if (!ids.contains(c.id)) os.add(c);
+    }
+    _cache = List<Order>.from(os);
     if (mounted) {
       await context.read<AppSettings>().markAllSeen();
     }
@@ -756,8 +764,9 @@ class _OrdersScreenState extends State<OrdersScreen>
                 AppColors.teal,
                 dark),
             const SizedBox(height: 8),
-            for (final o in notifications)
-              _notifCard(s, dark, o),
+            for (int i = 0; i < notifications.length; i++)
+              _notifNode(
+                  s, dark, notifications[i], i == notifications.length - 1),
             const SizedBox(height: 16),
           ],
           // ===== قسم قيد المراجعة =====
@@ -1075,8 +1084,9 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  /// 🔔 بطاقة إشعار (مقبولة/مرفوضة/مرتجعة) + شريط تقدم 60 ثانية
-  Widget _notifCard(AppSettings s, bool dark, Order o) {
+  /// 🔔 بطاقة إشعار بنفس شكل "قيد المراجعة" (نقطة + خط + بطاقة)
+  Widget _notifNode(
+      AppSettings s, bool dark, Order o, bool last) {
     final seen = _seenAt.containsKey(o.id);
     final seenAt = _seenAt[o.id];
     final remaining = seenAt == null
@@ -1087,39 +1097,34 @@ class _OrdersScreenState extends State<OrdersScreen>
     final progress = remaining / _notifTTL.inSeconds;
 
     Color c;
-    IconData ic;
     String label;
     if (o.status == 'accepted') {
       c = AppColors.teal;
-      ic = Icons.check_circle_rounded;
       label = s.isArabic ? 'مقبولة' : 'Accepted';
     } else if (o.status == 'rejected') {
       c = Colors.red;
-      ic = Icons.cancel_rounded;
       label = s.isArabic ? 'مرفوضة' : 'Rejected';
     } else {
       c = const Color(0xFF9B59B6);
-      ic = Icons.assignment_return_rounded;
       label = s.isArabic ? 'مرتجعة' : 'Returned';
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+    final card = Container(
+      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: <Color>[
-            c.withAlpha(dark ? 40 : 22),
-            c.withAlpha(dark ? 15 : 10),
-          ],
+          colors: dark
+              ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+              : <Color>[Colors.white, const Color(0xFFFFF8F1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.withAlpha(70)),
+        border: Border.all(color: c.withAlpha(50)),
         boxShadow: [
           BoxShadow(
-              color: c.withAlpha(25),
-              blurRadius: 10,
+              color: c.withAlpha(18),
+              blurRadius: 8,
               offset: const Offset(0, 3)),
         ],
       ),
@@ -1137,64 +1142,66 @@ class _OrdersScreenState extends State<OrdersScreen>
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 12),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(colors: <Color>[
                         c,
-                        c.withAlpha(200),
+                        c.withAlpha(190),
                       ]),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                            color: c.withAlpha(60),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2)),
-                      ],
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(ic, color: Colors.white, size: 20),
+                    child: Text(label,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(label,
-                            style: TextStyle(
-                                color: c,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13)),
-                        const SizedBox(height: 2),
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(dmy(o.date),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                  color: dark
+                                      ? Colors.white
+                                      : AppColors.ink)),
+                        ),
+                        const SizedBox(height: 3),
                         Directionality(
                           textDirection: TextDirection.ltr,
                           child: Text(
-                              '${dmy(o.date)} • ${o.items.length} ${s.isArabic ? 'مواد' : 'items'}',
+                              '${o.items.length} ${s.isArabic ? 'مواد' : 'items'} • ${time12(o.id)}',
                               style: TextStyle(
+                                  fontSize: 10,
                                   color: dark
-                                      ? Colors.grey.shade300
-                                      : Colors.grey.shade700,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700)),
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600)),
                         ),
                       ],
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                          seen
-                              ? '${remaining}s'
-                              : (s.isArabic ? 'جديد' : 'New'),
-                          style: TextStyle(
-                              color: c,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 11)),
-                    ],
-                  ),
+                  Text(
+                      seen
+                          ? '${remaining}s'
+                          : (s.isArabic ? 'جديد' : 'New'),
+                      style: TextStyle(
+                          color: c,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11)),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_left_rounded,
+                      color: c.withAlpha(160), size: 20),
                 ],
               ),
             ),
@@ -1202,13 +1209,64 @@ class _OrdersScreenState extends State<OrdersScreen>
               LinearProgressIndicator(
                 value: progress,
                 backgroundColor: c.withAlpha(25),
-                valueColor:
-                    AlwaysStoppedAnimation<Color>(c),
+                valueColor: AlwaysStoppedAnimation<Color>(c),
                 minHeight: 3,
               ),
           ],
         ),
       ),
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 26,
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: c,
+                  border: Border.all(
+                      color: dark
+                          ? const Color(0xFF141419)
+                          : const Color(0xFFFFF8F1),
+                      width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                        color: c.withAlpha(90),
+                        blurRadius: 6,
+                        spreadRadius: 1),
+                  ],
+                ),
+              ),
+              if (!last)
+                Container(
+                  width: 2,
+                  height: 40,
+                  margin: const EdgeInsets.symmetric(vertical: 3),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: <Color>[
+                        c.withAlpha(130),
+                        c.withAlpha(35),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(child: card),
+      ],
     );
   }
 
