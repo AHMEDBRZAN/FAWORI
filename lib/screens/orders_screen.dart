@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -264,6 +265,41 @@ class _OrdersScreenState extends State<OrdersScreen>
     _hidden = (p.getStringList('hidden_orders_$uid') ?? []).toSet();
     _locked = (p.getStringList('locked_orders_$uid') ?? []).toSet();
     _readNotifs = (p.getStringList('read_notifs_$uid') ?? []).toSet();
+    // ✅ طوابع المشاهدة محفوظة — الوقت لا يتوقف حتى خارج الصفحة
+    _seenAt.clear();
+    try {
+      final raw = p.getString('notif_seen_$uid');
+      if (raw != null && raw.isNotEmpty) {
+        final m = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+        final now = DateTime.now();
+        bool changed = false;
+        m.forEach((id, v) {
+          final ts =
+              DateTime.fromMillisecondsSinceEpoch((v as num).toInt());
+          if (now.difference(ts) > _notifTTL) {
+            _readNotifs.add(id);
+            changed = true;
+          } else {
+            _seenAt[id] = ts;
+          }
+        });
+        if (changed) {
+          await p.setStringList(
+              'read_notifs_$uid', _readNotifs.toList());
+          await _saveSeenMap();
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// ✅ حفظ طوابع لحظة المشاهدة في التخزين الدائم
+  Future<void> _saveSeenMap() async {
+    final s = context.read<AppSettings>();
+    final p = await SharedPreferences.getInstance();
+    final map = <String, int>{
+      for (final e in _seenAt.entries) e.key: e.value.millisecondsSinceEpoch,
+    };
+    await p.setString('notif_seen_${s.user?.id ?? ''}', jsonEncode(map));
   }
 
   Future<void> _saveHidden() async {
@@ -300,6 +336,7 @@ class _OrdersScreenState extends State<OrdersScreen>
         _readNotifs.add(id);
       }
       _saveReadNotifs();
+      _saveSeenMap();
       if (mounted) setState(() {});
     }
   }
@@ -307,6 +344,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   /// ✅ بدء العد التنازلي لإخفاء إشعار بعد المشاهدة
   void _startNotifTimer(String id) {
     _seenAt[id] = DateTime.now();
+    _saveSeenMap();
     Future.delayed(_notifTTL, () {
       if (!mounted) return;
       if (_seenAt[id] != null &&
@@ -316,6 +354,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           _readNotifs.add(id);
         });
         _saveReadNotifs();
+        _saveSeenMap();
       }
     });
   }
@@ -1168,248 +1207,6 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  /// 📋 جدول احترافي للطلبات (حواف ناعمة + ألوان متدرجة + صفوف متناوبة)
-  Widget _userTable(AppSettings s, bool dark, List<Order> items,
-      _TabCfg t, bool isAll) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: dark
-              ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
-              : <Color>[Colors.white, const Color(0xFFFFF8F1)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: t.color.withAlpha(45)),
-        boxShadow: [
-          BoxShadow(
-            color: t.color.withAlpha(25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // ===== الرأس المتدرج =====
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: <Color>[
-                  t.color.withAlpha(225),
-                  t.color.withAlpha(160),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(t.icon, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                      s.isArabic ? 'طلبات ${t.ar}' : '${t.en} orders',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15)),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(40),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('${items.length}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13)),
-                ),
-              ],
-            ),
-          ),
-          // ===== الصفوف =====
-          for (int idx = 0; idx < items.length; idx++)
-            _userTableRow(items[idx], s, dark, t, idx),
-        ],
-      ),
-    );
-  }
-
-  Widget _userTableRow(
-      Order o, AppSettings s, bool dark, _TabCfg t, int idx) {
-    final glow = _glowOrderId == o.id;
-    if (glow && _glowTimer == null) {
-      _glowTimer = Timer(const Duration(seconds: 6), () {
-        _glowOrderId = null;
-        _glowTimer = null;
-        if (mounted) setState(() {});
-      });
-    }
-    final isLocked = _locked.contains(o.id);
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final row = Container(
-      decoration: BoxDecoration(
-        gradient: idx.isOdd
-            ? LinearGradient(
-                colors: <Color>[
-                  t.color.withAlpha(dark ? 16 : 14),
-                  t.color.withAlpha(dark ? 6 : 6),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        border: Border(
-          bottom: BorderSide(
-              color: dark
-                  ? Colors.white.withAlpha(10)
-                  : t.color.withAlpha(18)),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: InkWell(
-        onTap: () async {
-          await Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) =>
-                      _OrderDetail(order: o, isAdmin: false)));
-          if (mounted) setState(() => _future = _loadAndMark());
-        },
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: <Color>[
-                      t.color.withAlpha(225),
-                      t.color.withAlpha(160),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                      color: t.color.withAlpha(50),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3)),
-                ],
-              ),
-              child: Icon(t.icon, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (isLocked) ...[
-                        const Icon(Icons.lock_rounded,
-                            color: AppColors.teal, size: 12),
-                        const SizedBox(width: 4),
-                      ],
-                      Expanded(
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Text(dmy(o.date),
-                              style: TextStyle(
-                                  color: dark
-                                      ? Colors.white
-                                      : AppColors.ink,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13)),
-                        ),
-                      ),
-                      Text(time12(o.id),
-                          style: TextStyle(
-                              color: dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                              fontSize: 11)),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: Text(
-                        '${o.items.length} ${s.isArabic ? 'مواد' : 'items'} • ${o.invoiceNo.isEmpty ? '—' : '#${o.invoiceNo}'}',
-                        style: TextStyle(
-                            color: dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                            fontSize: 11)),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_left_rounded,
-                color: t.color.withAlpha(180), size: 22),
-          ],
-        ),
-      ),
-    );
-    final wrapped = glow ? _Flash(child: row) : row;
-    if (isLocked) {
-      return Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.teal, width: 1.5),
-        ),
-        child: Stack(
-          children: [
-            wrapped,
-            PositionedDirectional(
-              top: 6,
-              end: 6,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _unlockOrder(o.id),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                        color: AppColors.teal,
-                        borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.lock_rounded,
-                        color: Colors.white, size: 12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    return Dismissible(
-      key: ValueKey('u_dismiss_${o.id}'),
-      direction: DismissDirection.horizontal,
-      background: rtl ? _dismissBg(false) : _lockBg(),
-      secondaryBackground: rtl ? _lockBg() : _dismissBg(false),
-      onDismissed: (dir) {
-        final swipedRight = rtl
-            ? dir == DismissDirection.endToStart
-            : dir == DismissDirection.startToEnd;
-        if (swipedRight) {
-          _lockOrder(o.id);
-        } else {
-          _hideOrder(o.id);
-        }
-      },
-      child: wrapped,
-    );
-  }
 
 
   Widget _card(Order o, bool isAdmin, AppSettings s, bool dark) {
