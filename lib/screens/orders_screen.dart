@@ -252,8 +252,12 @@ class _OrdersScreenState extends State<OrdersScreen>
       if (!ids.contains(c.id)) os.add(c);
     }
     _cache = List<Order>.from(os);
+    // ✅ تأجيل markAllSeen 3 ثوانٍ: حتى يرى المستخدم السنackbar الجديد
+    //    ثم تُصفّر الشارة تدريجياً بدلاً من الاختفاء الفوري
     if (mounted) {
-      await context.read<AppSettings>().markAllSeen();
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) context.read<AppSettings>().markAllSeen();
+      });
     }
     return os;
   }
