@@ -82,8 +82,9 @@ class AppSettings extends ChangeNotifier {
 
   void startOrderPolling() {
     _pollTimer?.cancel();
+    // ✅ أسرع: كل 5 ثوانٍ (بدلاً من 20) لظهور الشارة والسنackbar فوراً
     _pollTimer =
-        Timer.periodic(const Duration(seconds: 20), (_) => _pollTick());
+        Timer.periodic(const Duration(seconds: 5), (_) => _pollTick());
 
     if (!_listenersAttached) {
       _listenersAttached = true;
