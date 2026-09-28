@@ -46,12 +46,13 @@ class _SyncBannerState extends State<_SyncBanner> {
   Map<String, String> _prev = {};
   String _lastName = '';
   bool _changed = false;
+  int _sinceMs = 0;
 
   @override
   void initState() {
     super.initState();
     _check();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _check());
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _check());
   }
 
   @override
@@ -85,7 +86,12 @@ class _SyncBannerState extends State<_SyncBanner> {
       final pending = await OrdersService.hasPendingSync();
       if (!mounted) return;
       if (pending || _changed) {
-        if (_state != true) setState(() => _state = true);
+        if (_state != true) {
+          _sinceMs = DateTime.now().millisecondsSinceEpoch;
+          setState(() => _state = true);
+        } else {
+          setState(() {});
+        }
       } else {
         if (_state == true) {
           setState(() => _state = false);
@@ -103,48 +109,88 @@ class _SyncBannerState extends State<_SyncBanner> {
     if (_state == null) return const SizedBox.shrink();
     final s = context.watch<AppSettings>();
     final waiting = _state == true;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final elapsed = waiting
+        ? ((DateTime.now().millisecondsSinceEpoch - _sinceMs) ~/ 1000)
+        : 0;
+    final Color c = waiting ? AppColors.orange : AppColors.teal;
+
+    String title;
+    String sub;
+    if (waiting) {
+      title = (s.isAdmin || s.isImageAdmin)
+          ? (s.isArabic
+              ? 'إجراء على طلب ${_lastName.isEmpty ? 'مستخدم' : _lastName}'
+              : 'Action on ${_lastName.isEmpty ? 'user' : _lastName}\'s order')
+          : (s.isArabic
+              ? 'إجراء على طلبك من المسؤول'
+              : 'Action on your order');
+      sub = elapsed > 240
+          ? (s.isArabic
+              ? 'تعذّر النشر — عُولج محلياً'
+              : 'Publish failed — local only')
+          : elapsed > 120
+              ? (s.isArabic ? 'إعادة محاولة النشر...' : 'Retrying...')
+              : (s.isArabic
+                  ? 'جارٍ النشر... ${elapsed}s'
+                  : 'Publishing... ${elapsed}s');
+    } else {
+      title = s.isArabic ? 'تمت المزامنة بنجاح' : 'Synced successfully';
+      sub = s.isArabic
+          ? 'وصلت التغييرات إلى السيرفر'
+          : 'Changes reached the server';
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: waiting
-            ? AppColors.orange.withAlpha(30)
-            : AppColors.teal.withAlpha(30),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: waiting
-                ? AppColors.orange.withAlpha(90)
-                : AppColors.teal.withAlpha(90)),
+        gradient: LinearGradient(
+          colors: <Color>[
+            c.withAlpha(dark ? 45 : 28),
+            c.withAlpha(dark ? 18 : 12),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.withAlpha(90)),
       ),
       child: Row(
         children: [
-          if (waiting)
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: AppColors.orange),
-            )
-          else
-            const Icon(Icons.check_circle_rounded,
-                color: AppColors.teal, size: 18),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: c.withAlpha(30),
+              shape: BoxShape.circle,
+            ),
+            child: waiting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.orange),
+                  )
+                : const Icon(Icons.check_circle_rounded,
+                    color: AppColors.teal, size: 16),
+          ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              waiting
-                  ? ((s.isAdmin || s.isImageAdmin)
-                      ? (s.isArabic
-                          ? 'تم اتخاذ إجراء بطلب ${_lastName.isEmpty ? 'مستخدم' : _lastName} — يرجى الانتظار...'
-                          : 'Action taken on ${_lastName.isEmpty ? 'a user' : _lastName}\'s order — please wait...')
-                      : (s.isArabic
-                          ? 'تم اتخاذ إجراء بطلبك من قبل المسؤول'
-                          : 'Action taken on your order by the admin'))
-                  : (s.isArabic ? 'تم قبول الفاتورة ' : 'Completed'),
-              style: TextStyle(
-                color: waiting ? AppColors.orange : AppColors.teal,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(
+                        color: c,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(sub,
+                    style: TextStyle(
+                        color: c.withAlpha(200),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11)),
+              ],
             ),
           ),
         ],
@@ -532,28 +578,7 @@ class _OrdersScreenState extends State<OrdersScreen>
         title: Text(isAdmin
             ? (s.isArabic ? 'إشعارات الطلبات' : 'Order notifications')
             : (s.isArabic ? 'طلباتي' : 'My orders')),
-        bottom: isAdmin
-            ? (_tabCtrl == null
-                ? null
-                : TabBar(
-                    controller: _tabCtrl,
-                    isScrollable: true,
-                    indicatorColor: AppColors.orange,
-                    labelColor: AppColors.orange,
-                    unselectedLabelColor: dark
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
-                    labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w900, fontSize: 13),
-                    tabs: [
-                      Tab(text: s.isArabic ? 'معلقة' : 'Pending'),
-                      Tab(text: s.isArabic ? 'الكل' : 'All'),
-                      Tab(text: s.isArabic ? 'مقبولة' : 'Accepted'),
-                      Tab(text: s.isArabic ? 'مرفوضة' : 'Rejected'),
-                      Tab(text: s.isArabic ? 'مرتجعة' : 'Returned'),
-                    ],
-                  ))
-            : null,
+        bottom: null,
       ),
       body: RefreshIndicator(
         color: AppColors.orange,
@@ -577,47 +602,11 @@ class _OrdersScreenState extends State<OrdersScreen>
                   .compareTo(int.tryParse(a.id) ?? 0));
             orders = orders.where((o) => !_hidden.contains(o.id)).toList();
             if (isAdmin) {
-              switch (_tabIndex) {
-                case 0:
-                  orders =
-                      orders.where((o) => o.status == 'pending').toList();
-                  break;
-                case 2:
-                  orders =
-                      orders.where((o) => o.status == 'accepted').toList();
-                  break;
-                case 3:
-                  orders =
-                      orders.where((o) => o.status == 'rejected').toList();
-                  break;
-                case 4:
-                  orders =
-                      orders.where((o) => o.status == 'returned').toList();
-                  break;
-              }
+              // ✅ المدير/المتحكم: نفس تصميم المستخدم بقسمين
+              return _adminNotifications(s, dark, orders);
             } else {
               orders = orders.where((o) => o.userId == s.user?.id).toList();
-              if (!isAdmin) {
-                return _userNotifications(s, dark, orders);
-              }
-              switch (_tabIndex) {
-                case 0:
-                  orders =
-                      orders.where((o) => o.status == 'pending').toList();
-                  break;
-                case 2:
-                  orders =
-                      orders.where((o) => o.status == 'accepted').toList();
-                  break;
-                case 3:
-                  orders =
-                      orders.where((o) => o.status == 'rejected').toList();
-                  break;
-                case 4:
-                  orders =
-                      orders.where((o) => o.status == 'returned').toList();
-                  break;
-              }
+              return _userNotifications(s, dark, orders);
             }
             if (orders.isEmpty) {
               return ListView(children: [
@@ -811,6 +800,80 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
+  /// ✅ واجهة المدير/المتحكم: نفس شكل المستخدم بعناوين مختلفة
+  Widget _adminNotifications(
+      AppSettings s, bool dark, List<Order> allOrders) {
+    final pending =
+        allOrders.where((o) => o.status == 'pending').toList();
+    final notifications =
+        pending.where((o) => !_readNotifs.contains(o.id)).toList();
+
+    return RefreshIndicator(
+      color: AppColors.orange,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+      onRefresh: () async {
+        setState(() => _future = _loadAndMark());
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(14),
+        children: [
+          const _SyncBanner(),
+          if (notifications.isNotEmpty) ...[
+            _sectionTitle(
+                s.isArabic
+                    ? 'الإشعارات الحديثة من المستخدمين'
+                    : 'Recent notifications from users',
+                Icons.notifications_active_rounded,
+                AppColors.teal,
+                dark),
+            const SizedBox(height: 8),
+            for (int i = 0; i < notifications.length; i++)
+              _notifNode(s, dark, notifications[i],
+                  i == notifications.length - 1,
+                  adminMode: true),
+            const SizedBox(height: 16),
+          ],
+          _sectionTitle(
+              s.isArabic
+                  ? 'مراجعة طلبات المستخدمين'
+                  : 'Review user orders',
+              Icons.pending_actions_rounded,
+              AppColors.orange,
+              dark),
+          const SizedBox(height: 8),
+          if (pending.isEmpty)
+            _emptyState(
+                s.isArabic
+                    ? 'لا توجد طلبات للمراجعة'
+                    : 'No orders to review',
+                Icons.hourglass_empty_rounded,
+                AppColors.orange,
+                dark)
+          else
+            for (int i = 0; i < pending.length; i++)
+              _pendingCard(s, dark, pending[i],
+                  i == pending.length - 1,
+                  adminMode: true),
+          const SizedBox(height: 16),
+          if (pending.isNotEmpty)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                onPressed: () => _hideAll(pending),
+                icon: const Icon(Icons.delete_sweep_rounded,
+                    size: 16, color: Colors.red),
+                label: Text(s.isArabic ? 'مسح الكل' : 'Clear all',
+                    style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   /// 🎯 عنوان قسم متدرج
   Widget _sectionTitle(
       String title, IconData icon, Color color, bool dark) {
@@ -881,7 +944,8 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   /// ⏳ بطاقة طلب قيد المراجعة (خط زمني مبسط)
   Widget _pendingCard(
-      AppSettings s, bool dark, Order o, bool last) {
+      AppSettings s, bool dark, Order o, bool last,
+      {bool adminMode = false}) {
     final glow = _glowOrderId == o.id;
     if (glow && _glowTimer == null) {
       _glowTimer = Timer(const Duration(seconds: 6), () {
@@ -917,7 +981,7 @@ class _OrdersScreenState extends State<OrdersScreen>
               context,
               MaterialPageRoute(
                   builder: (_) =>
-                      _OrderDetail(order: o, isAdmin: false)));
+                      _OrderDetail(order: o, isAdmin: adminMode)));
           if (mounted) setState(() => _future = _loadAndMark());
         },
         borderRadius: BorderRadius.circular(16),
@@ -1090,7 +1154,8 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   /// 🔔 بطاقة إشعار بنفس شكل "قيد المراجعة" (نقطة + خط + بطاقة)
   Widget _notifNode(
-      AppSettings s, bool dark, Order o, bool last) {
+      AppSettings s, bool dark, Order o, bool last,
+      {bool adminMode = false}) {
     final seen = _seenAt.containsKey(o.id);
     final seenAt = _seenAt[o.id];
     final remaining = seenAt == null
@@ -1102,7 +1167,10 @@ class _OrdersScreenState extends State<OrdersScreen>
 
     Color c;
     String label;
-    if (o.status == 'accepted') {
+    if (adminMode) {
+      c = AppColors.teal;
+      label = o.userName;
+    } else if (o.status == 'accepted') {
       c = AppColors.teal;
       label = s.isArabic ? 'مقبولة' : 'Accepted';
     } else if (o.status == 'rejected') {
@@ -1140,7 +1208,7 @@ class _OrdersScreenState extends State<OrdersScreen>
               context,
               MaterialPageRoute(
                   builder: (_) =>
-                      _OrderDetail(order: o, isAdmin: false)));
+                      _OrderDetail(order: o, isAdmin: adminMode)));
           if (mounted) setState(() => _future = _loadAndMark());
         },
         child: Column(
