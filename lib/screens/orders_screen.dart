@@ -435,10 +435,15 @@ class _OrdersScreenState extends State<OrdersScreen>
       setState(() {
         _future = _loadAndMark();
       });
-      // ✅ تحديث تلقائي كل 3 ثواني (للمدير فقط) لوصول الإشعارات فوراً
+      // ✅ تحديث تلقائي: المدير 3 ثوانٍ / المستخدم 5 ثوانٍ
+      //    (ليظهر الطلب الجديد في "قيد المراجعة" فور إرساله)
       final st = context.read<AppSettings>();
       if (st.isAdmin || st.isImageAdmin) {
         _autoTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+          if (mounted) setState(() => _future = _loadAndMark());
+        });
+      } else {
+        _autoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
           if (mounted) setState(() => _future = _loadAndMark());
         });
       }
