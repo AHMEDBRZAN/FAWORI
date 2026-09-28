@@ -2804,6 +2804,42 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   ),
                 ),
               ],
+              if (relReturns.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: <Color>[
+                        Color(0xFFFF8C00),
+                        Color(0xFFF26B0F)
+                      ]),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppColors.orange.withAlpha(70),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3)),
+                      ]),
+                  child: SizedBox(
+                    height: 48,
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          foregroundColor: Colors.white),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showOriginalInvoiceSheet(
+                            inv, relReturns, s, dark);
+                      },
+                      icon: const Icon(Icons.history_rounded),
+                      label: Text(s.isArabic
+                          ? 'عرض الفاتورة قبل المرتجع'
+                          : 'View invoice before return'),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               Container(
                 decoration: BoxDecoration(
@@ -2831,6 +2867,136 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 📋 نافذة الفاتورة الأصلية (قبل المرتجع)
+  void _showOriginalInvoiceSheet(Invoice inv,
+      List<Map<String, dynamic>> relReturns, AppSettings s, bool dark) {
+    final returnedQty = <String, int>{};
+    int returnedTotal = 0;
+    for (final r in relReturns) {
+      returnedTotal += ((r['total'] as num?)?.toInt() ?? 0).abs();
+      for (final it in (r['items'] as List? ?? [])) {
+        if (it is Map) {
+          final name = '${it['name'] ?? ''}';
+          returnedQty[name] =
+              (returnedQty[name] ?? 0) + ((it['qty'] as num?)?.toInt() ?? 0);
+        }
+      }
+    }
+    final originalItems = inv.items
+        .map((it) => {
+              'name': it.name,
+              'qty': it.qty + (returnedQty[it.name] ?? 0),
+            })
+        .toList();
+    final originalTotal = inv.total.toInt() + returnedTotal;
+    final originalPoints = originalTotal ~/ kPointUnit;
+    final originalStored = originalTotal % kPointUnit;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: <Color>[
+                    Color(0xFFFF8C00),
+                    Color(0xFFF26B0F),
+                  ]),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.history_rounded,
+                        color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                          s.isArabic
+                              ? 'الفاتورة قبل المرتجع'
+                              : 'Invoice before return',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.teal.withAlpha(dark ? 30 : 18),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.teal.withAlpha(60)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 15, color: AppColors.teal),
+                    const SizedBox(width: 6),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy(inv.date),
+                          style: TextStyle(
+                              color:
+                                  dark ? Colors.grey.shade200 : AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13)),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.receipt_long_outlined,
+                        size: 15, color: AppColors.orange),
+                    const SizedBox(width: 6),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(inv.no.isEmpty ? '—' : inv.no,
+                          style: const TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _sheetTable(originalItems, dark, s),
+              const SizedBox(height: 12),
+              _sheetRow(
+                  s.isArabic
+                      ? 'الإجمالي قبل المرتجع'
+                      : 'Total before return',
+                  fmtThousands(originalTotal), AppColors.orange, dark,
+                  big: true),
+              _sheetRow(
+                  s.isArabic
+                      ? 'النقاط قبل المرتجع'
+                      : 'Points before return',
+                  fmtThousands(originalPoints), AppColors.teal, dark),
+              _sheetRow(
+                  s.isArabic
+                      ? 'الرصيد قبل المرتجع'
+                      : 'Stored before return',
+                  fmtThousands(originalStored), AppColors.teal, dark),
               const SizedBox(height: 16),
             ],
           ),
