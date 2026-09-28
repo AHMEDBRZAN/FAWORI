@@ -252,12 +252,18 @@ class _OrdersScreenState extends State<OrdersScreen>
   // ====================================================
   // 🧹 تنظيف الإشعارات محلياً (ليس حذفاً من المستودع)
   // ====================================================
+  /// ✅ الطلبات التي تم اتخاذ إجراء عليها (إشعارات مؤقتة)
+  Set<String> _readNotifs = {};
+  Map<String, DateTime> _seenAt = {};
+  static const Duration _notifTTL = Duration(minutes: 1);
+
   Future<void> _loadHidden() async {
     final s = context.read<AppSettings>();
     final p = await SharedPreferences.getInstance();
     final uid = s.user?.id ?? '';
     _hidden = (p.getStringList('hidden_orders_$uid') ?? []).toSet();
     _locked = (p.getStringList('locked_orders_$uid') ?? []).toSet();
+    _readNotifs = (p.getStringList('read_notifs_$uid') ?? []).toSet();
   }
 
   Future<void> _saveHidden() async {
@@ -272,6 +278,46 @@ class _OrdersScreenState extends State<OrdersScreen>
     final p = await SharedPreferences.getInstance();
     await p.setStringList(
         'locked_orders_${s.user?.id ?? ''}', _locked.toList());
+  }
+
+  Future<void> _saveReadNotifs() async {
+    final s = context.read<AppSettings>();
+    final p = await SharedPreferences.getInstance();
+    await p.setStringList(
+        'read_notifs_${s.user?.id ?? ''}', _readNotifs.toList());
+  }
+
+  /// ✅ تنظيف الإشعارات المنتهية صلاحيتها (بعد دقيقة من المشاهدة)
+  void _pruneExpiredNotifs() {
+    final now = DateTime.now();
+    final expired = _seenAt.entries
+        .where((e) => now.difference(e.value) > _notifTTL)
+        .map((e) => e.key)
+        .toList();
+    if (expired.isNotEmpty) {
+      for (final id in expired) {
+        _seenAt.remove(id);
+        _readNotifs.add(id);
+      }
+      _saveReadNotifs();
+      if (mounted) setState(() {});
+    }
+  }
+
+  /// ✅ بدء العد التنازلي لإخفاء إشعار بعد المشاهدة
+  void _startNotifTimer(String id) {
+    _seenAt[id] = DateTime.now();
+    Future.delayed(_notifTTL, () {
+      if (!mounted) return;
+      if (_seenAt[id] != null &&
+          DateTime.now().difference(_seenAt[id]!) >= _notifTTL) {
+        setState(() {
+          _seenAt.remove(id);
+          _readNotifs.add(id);
+        });
+        _saveReadNotifs();
+      }
+    });
   }
 
   Future<void> _lockOrder(String id) async {
