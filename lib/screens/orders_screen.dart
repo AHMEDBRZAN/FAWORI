@@ -800,13 +800,11 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  /// ✅ واجهة المدير/المتحكم: نفس شكل المستخدم بعناوين مختلفة
+  /// ✅ واجهة المدير/المتحكم: الطلب الجديد يظهر مرة واحدة فقط
   Widget _adminNotifications(
       AppSettings s, bool dark, List<Order> allOrders) {
     final pending =
         allOrders.where((o) => o.status == 'pending').toList();
-    final notifications =
-        pending.where((o) => !_readNotifs.contains(o.id)).toList();
 
     return RefreshIndicator(
       color: AppColors.orange,
@@ -818,21 +816,6 @@ class _OrdersScreenState extends State<OrdersScreen>
         padding: const EdgeInsets.all(14),
         children: [
           const _SyncBanner(),
-          if (notifications.isNotEmpty) ...[
-            _sectionTitle(
-                s.isArabic
-                    ? 'الإشعارات الحديثة من المستخدمين'
-                    : 'Recent notifications from users',
-                Icons.notifications_active_rounded,
-                AppColors.teal,
-                dark),
-            const SizedBox(height: 8),
-            for (int i = 0; i < notifications.length; i++)
-              _notifNode(s, dark, notifications[i],
-                  i == notifications.length - 1,
-                  adminMode: true),
-            const SizedBox(height: 16),
-          ],
           _sectionTitle(
               s.isArabic
                   ? 'مراجعة طلبات المستخدمين'
