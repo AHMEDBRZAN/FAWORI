@@ -104,6 +104,8 @@ class AppSettings extends ChangeNotifier {
     try {
       final created = await OrdersService.convertStoredToPoints(_user!.id);
 
+      // ✅ فك تعليق المزامنة من الخلفية (حتى لو المستخدم خارج صفحة الطلبات)
+      await OrdersService.resolveStaleSync();
       final orders = await OrdersService.loadOrders();
       final pending = orders.where((o) => o.status == 'pending').length;
       pendingCount = pending;
