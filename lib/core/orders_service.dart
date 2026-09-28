@@ -104,16 +104,26 @@ class Order {
 
 class OrdersService {
   static Future<void> _putJson(String path, dynamic data) async {
-    final r = await http.post(
-      Uri.parse(kWriteProxy),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'path': path,
-        'content': base64Encode(utf8.encode(jsonEncode(data))),
-      }),
-    );
-    if (r.statusCode != 200 && r.statusCode != 201) {
-      throw Exception('PUT ${r.statusCode}');
+    final body = jsonEncode({
+      'path': path,
+      'content': base64Encode(utf8.encode(jsonEncode(data))),
+    });
+    // ✅ مهلة 25 ثانية + إعادة محاولة واحدة (يمنع التعليق للأبد)
+    for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        final r = await http
+            .post(
+              Uri.parse(kWriteProxy),
+              headers: {'Content-Type': 'application/json'},
+              body: body,
+            )
+            .timeout(const Duration(seconds: 25));
+        if (r.statusCode == 200 || r.statusCode == 201) return;
+        if (attempt == 1) throw Exception('PUT ${r.statusCode}');
+      } catch (e) {
+        if (attempt == 1) rethrow;
+        await Future.delayed(const Duration(seconds: 2));
+      }
     }
   }
 
@@ -224,10 +234,32 @@ class OrdersService {
     await p.setString(_kStatusKey, jsonEncode(m));
   }
 
+  static const String _kStatusTimesKey = 'orders_status_times';
+
+  static Future<Map<String, int>> _loadStatusTimes() async {
+    final p = await SharedPreferences.getInstance();
+    final s = p.getString(_kStatusTimesKey);
+    if (s == null || s.isEmpty) return {};
+    try {
+      final m = jsonDecode(s) as Map;
+      return m.map((k, v) => MapEntry('$k', (v as num).toInt()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> _saveStatusTimes(Map<String, int> m) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kStatusTimesKey, jsonEncode(m));
+  }
+
   static Future<void> _saveOverride(String id, String status) async {
     final m = await _loadOverrides();
     m[id] = status;
     await _saveOverrides(m);
+    final t = await _loadStatusTimes();
+    t[id] = DateTime.now().millisecondsSinceEpoch;
+    await _saveStatusTimes(t);
   }
 
   static Future<List<Order>> loadOrders() async {
@@ -260,7 +292,12 @@ class OrdersService {
             }
           }
         }
-        if (changed) await _saveOverrides(ov);
+        if (changed) {
+          await _saveOverrides(ov);
+          final t = await _loadStatusTimes();
+          t.removeWhere((id, _) => !ov.containsKey(id));
+          await _saveStatusTimes(t);
+        }
       }
     } catch (_) {}
     return list;
@@ -337,6 +374,32 @@ class OrdersService {
       list.removeWhere((e) => tombs.contains('${e['id']}'));
     }
     return list;
+  }
+
+  /// ✅ فك تعليق المزامنة: إعادة نشر بعد دقيقتين، وتحرير إجباري بعد 4 دقائق
+  static Future<String> resolveStaleSync() async {
+    final ov = await _loadOverrides();
+    if (ov.isEmpty) return 'ok';
+    final t = await _loadStatusTimes();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    int maxAge = 0;
+    for (final id in ov.keys) {
+      final age = now - (t[id] ?? now);
+      if (age > maxAge) maxAge = age;
+    }
+    if (maxAge < 120000) return 'waiting';
+    if (maxAge < 240000) {
+      try {
+        final list = await loadOrders();
+        await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+        return 'retry';
+      } catch (_) {
+        return 'retry_failed';
+      }
+    }
+    await _saveOverrides({});
+    await _saveStatusTimes({});
+    return 'cleared';
   }
 
   /// ✅ هل توجد عملية لم تصل للسيرفر بعد؟ (حذف/حالة معلّقة محلياً)
