@@ -16,6 +16,8 @@ dependencies:
   shared_preferences: ^2.2.0
   image_picker: ^1.1.2
   intl: ^0.19.0
+  # ✅ جديد: مكتبة Supabase للاتصال بقاعدة البيانات السحابية
+  supabase_flutter: ^2.5.9
 
 dev_dependencies:
   flutter_test:
