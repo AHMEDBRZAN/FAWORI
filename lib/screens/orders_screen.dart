@@ -1857,6 +1857,311 @@ class _OrderDetailState extends State<_OrderDetail> {
     );
   }
 
+  /// 📋 نافذة الفاتورة الأصلية (قبل المرتجع)
+  void _showOriginalInvoice(AppSettings s, bool dark) {
+    final o = widget.order;
+
+    // حساب الكميات المرتجعة لكل مادة
+    final returnedQty = <String, int>{};
+    int returnedTotal = 0;
+    for (final r in _returns) {
+      returnedTotal += ((r['total'] as num?)?.toInt() ?? 0).abs();
+      final items = (r['items'] as List? ?? []);
+      for (final it in items) {
+        if (it is Map) {
+          final name = '${it['name'] ?? ''}';
+          final q = (it['qty'] as num?)?.toInt() ?? 0;
+          returnedQty[name] = (returnedQty[name] ?? 0) + q;
+        }
+      }
+    }
+
+    // الكميات الأصلية = الحالية + المرتجعة
+    final originalItems = o.items
+        .map((it) => {
+              'name': it.name,
+              'qty': it.qty + (returnedQty[it.name] ?? 0),
+            })
+        .toList();
+
+    final originalTotal = o.total.toInt() + returnedTotal;
+    final originalPoints = originalTotal ~/ kPointUnit;
+    final originalStored = originalTotal % kPointUnit;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ===== شارة "قبل المرتجع" =====
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: <Color>[
+                      AppColors.orange,
+                      Color(0xFFF26B0F),
+                    ]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.history_rounded,
+                          color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                            s.isArabic
+                                ? 'الفاتورة قبل المرتجع'
+                                : 'Invoice before return',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // ===== رأس الفاتورة =====
+                Row(
+                  children: [
+                    Text(
+                        s.isArabic ? 'رقم الفاتورة' : 'Invoice No',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            color: dark ? Colors.white : AppColors.ink)),
+                    const Spacer(),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(o.invoiceNo.isEmpty ? '—' : o.invoiceNo,
+                          style: TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                      '${s.isArabic ? 'التاريخ' : 'Date'}: ${dmy(o.date)} • ${time12(o.id)}',
+                      style: TextStyle(
+                          color: dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
+                          fontSize: 12)),
+                ),
+                const SizedBox(height: 14),
+                // ===== جدول المواد الأصلية =====
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.orange.withAlpha(60)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        color: AppColors.orange.withAlpha(dark ? 40 : 25),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                                width: 30,
+                                child: Text('#',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: dark
+                                            ? Colors.white
+                                            : AppColors.ink,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 12))),
+                            Expanded(
+                                child: Text(s.isArabic ? 'المادة' : 'Item',
+                                    style: TextStyle(
+                                        color: dark
+                                            ? Colors.white
+                                            : AppColors.ink,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12))),
+                            SizedBox(
+                                width: 50,
+                                child: Text(s.isArabic ? 'الكمية' : 'Qty',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: dark
+                                            ? Colors.white
+                                            : AppColors.ink,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12))),
+                          ],
+                        ),
+                      ),
+                      for (int i = 0; i < originalItems.length; i++)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 10),
+                          color: i.isOdd
+                              ? (dark
+                                  ? Colors.white.withAlpha(8)
+                                  : Colors.black.withAlpha(6))
+                              : Colors.transparent,
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                  width: 30,
+                                  child: Text('${i + 1}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          color: dark
+                                              ? Colors.grey.shade300
+                                              : Colors.grey.shade700,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800))),
+                              Expanded(
+                                  child: Text('${originalItems[i]['name']}',
+                                      style: TextStyle(
+                                          color: dark
+                                              ? Colors.white
+                                              : AppColors.ink,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700))),
+                              SizedBox(
+                                  width: 50,
+                                  child: Center(
+                                    child: Text(
+                                        '${originalItems[i]['qty']}',
+                                        style: const TextStyle(
+                                            color: AppColors.orange,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 12)),
+                                  )),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // ===== الملخص =====
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: <Color>[
+                        AppColors.orange.withAlpha(dark ? 40 : 25),
+                        AppColors.orange.withAlpha(dark ? 15 : 10),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.orange.withAlpha(70)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(s.isArabic ? 'الإجمالي الأصلي' : 'Original total',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13,
+                                  color: dark
+                                      ? Colors.white
+                                      : AppColors.ink)),
+                          const Spacer(),
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Text(fmtThousands(originalTotal),
+                                style: const TextStyle(
+                                    color: AppColors.orange,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 15)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(s.isArabic ? 'النقاط الأصلية' : 'Original points',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  color: dark
+                                      ? Colors.white
+                                      : AppColors.ink)),
+                          const Spacer(),
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Text(fmtThousands(originalPoints),
+                                style: const TextStyle(
+                                    color: AppColors.teal,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(s.isArabic ? 'الرصيد الأصلي' : 'Original stored',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                  color: dark
+                                      ? Colors.white
+                                      : AppColors.ink)),
+                          const Spacer(),
+                          Directionality(
+                            textDirection: TextDirection.ltr,
+                            child: Text(fmtThousands(originalStored),
+                                style: const TextStyle(
+                                    color: AppColors.teal,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.center,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 30, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10))),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(s.isArabic ? 'إغلاق' : 'Close',
+                        style: const TextStyle(fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 🪟 نافذة المرتجعات
   void _showReturnsDialog() {
     final s = context.read<AppSettings>();
@@ -2355,6 +2660,48 @@ class _OrderDetailState extends State<_OrderDetail> {
             if (_returns.isNotEmpty) ...[
               const SizedBox(height: 14),
               _noteCard(s, dark),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: <Color>[
+                    AppColors.orange,
+                    Color(0xFFF26B0F),
+                  ]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.orange.withAlpha(60),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3)),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Pressable(
+                    onTap: () => _showOriginalInvoice(s, dark),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.history_rounded,
+                              color: Colors.white, size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                              s.isArabic
+                                  ? 'عرض الفاتورة قبل المرتجع'
+                                  : 'View invoice before return',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
             const SizedBox(height: 18),
             Container(
@@ -2410,6 +2757,48 @@ class _OrderDetailState extends State<_OrderDetail> {
             if (_returns.isNotEmpty) ...[
               const SizedBox(height: 14),
               _noteCard(s, dark),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: <Color>[
+                    AppColors.orange,
+                    Color(0xFFF26B0F),
+                  ]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.orange.withAlpha(60),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3)),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Pressable(
+                    onTap: () => _showOriginalInvoice(s, dark),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.history_rounded,
+                              color: Colors.white, size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                              s.isArabic
+                                  ? 'عرض الفاتورة قبل المرتجع'
+                                  : 'View invoice before return',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ] else if (o.status == 'returned') ...[
             Container(
