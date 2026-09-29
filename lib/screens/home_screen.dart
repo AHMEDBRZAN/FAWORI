@@ -76,6 +76,187 @@ const Map<String, IconData> _companyIcon = {
   'sibax': Icons.build_rounded,
 };
 
+/// 🚀 شاشة «ترقبوا التحديث القادم»
+class _ComingSoonScreen extends StatelessWidget {
+  const _ComingSoonScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppSettings>();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(s.isArabic ? 'إعلام' : 'Media'),
+      ),
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: dark
+                ? <Color>[const Color(0xFF1A1A21), const Color(0xFF23232B)]
+                : <Color>[const Color(0xFFFFF8F1), const Color(0xFFFDEFDE)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ✅ دائرة متدرجة تحتوي الأيقونة
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: <Color>[
+                          Color(0xFF6A11CB),
+                          Color(0xFF2575FC),
+                          Color(0xFF1E3C72),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6A11CB).withAlpha(100),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.campaign_rounded,
+                        color: Colors.white, size: 70),
+                  ),
+                  const SizedBox(height: 28),
+                  // ✅ عنوان كبير بتدرج برتقالي
+                  ShaderMask(
+                    shaderCallback: (Rect r) =>
+                        const LinearGradient(colors: <Color>[
+                          AppColors.orange,
+                          Color(0xFFF26B0F)
+                        ]).createShader(r),
+                    child: Text(
+                        s.isArabic
+                            ? 'ترقبوا التحديث القادم'
+                            : 'Stay tuned for next update',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(height: 16),
+                  // ✅ سطر تشجيعي
+                  Text(
+                      s.isArabic
+                          ? 'نعمل على محتوى إعلامي جديد\nيخص شركتنا وشركائنا'
+                          : 'We are preparing new media content\nabout our company and partners',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: dark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.6)),
+                  const SizedBox(height: 28),
+                  // ✅ بطاقة معلومات متدرجة
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: <Color>[
+                          Color(0xFF6A11CB),
+                          Color(0xFF2575FC),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2575FC).withAlpha(80),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.new_releases_rounded,
+                                color: Colors.white, size: 22),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                  s.isArabic
+                                      ? 'شروحات فيديو'
+                                      : 'Video tutorials',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(Icons.article_rounded,
+                                color: Colors.white, size: 22),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                  s.isArabic
+                                      ? 'مقالات ونشرات'
+                                      : 'Articles & newsletters',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(Icons.event_rounded,
+                                color: Colors.white, size: 22),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                  s.isArabic
+                                      ? 'فعاليات ومعارض'
+                                      : 'Events & exhibitions',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onOpenProducts;
   const HomeScreen({super.key, this.onOpenProducts});
@@ -760,6 +941,73 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 📢 بطاقة قسم «إعلام» — تدرج بنفسجي-أزرق متلاشي مع ظل ناعم
+  Widget _media(IconData ic, String label, VoidCallback onTap) {
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: <Color>[
+              Color(0xFF6A11CB),
+              Color(0xFF2575FC),
+              Color(0xFF1E3C72),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: <double>[0.0, 0.55, 1.0],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF6A11CB).withAlpha(90),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(40),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withAlpha(80)),
+              ),
+              child: Icon(ic, color: Colors.white, size: 26),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(
+                      context.watch<AppSettings>().isArabic
+                          ? 'ترقبوا التحديث القادم'
+                          : 'Stay tuned for the next update',
+                      style: TextStyle(
+                          color: Colors.white.withAlpha(200),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_left_rounded,
+                color: Colors.white, size: 26),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _companyText(String key, Color c) {
     return Container(
       color: c.withAlpha(20),
@@ -1008,6 +1256,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 26),
+                // ✅ قسم «إعلام» الجديد
+                _secTitle(s.isArabic ? 'إعلام' : 'Media'),
+                _media(
+                  Icons.campaign_rounded,
+                  s.isArabic ? 'أخبار وشروحات الشركة' : 'Company news & guides',
+                  () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const _ComingSoonScreen())),
                 ),
                 const SizedBox(height: 26),
                 _secTitle(s.isArabic ? 'الشركات' : 'Companies'),
