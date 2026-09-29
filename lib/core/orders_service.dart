@@ -104,6 +104,13 @@ class Order {
 
 class OrdersService {
   static Future<void> _putJson(String path, dynamic data) async {
+    // ✅ لقطة حماية: نسخة كاملة من آخر نشر للطلبات
+    if (path == kOrdersPath && data is List) {
+      final m = <String, dynamic>{
+        for (final e in data.whereType<Map>()) '${e['id']}': e,
+      };
+      await _savePushSnapshot(m);
+    }
     final body = jsonEncode({
       'path': path,
       'content': base64Encode(utf8.encode(jsonEncode(data))),
@@ -253,6 +260,34 @@ class OrdersService {
     await p.setString(_kStatusTimesKey, jsonEncode(m));
   }
 
+  // ====================================================
+  // 📸 لقطة آخر نشر: حماية المبالغ/الفواتير غير الملتحقة
+  // ====================================================
+  static const String _kPushSnapKey = 'orders_last_push_snapshot';
+
+  static Future<Map<String, dynamic>> _loadPushSnapshot() async {
+    final p = await SharedPreferences.getInstance();
+    final s = p.getString(_kPushSnapKey);
+    if (s == null || s.isEmpty) return {};
+    try {
+      return Map<String, dynamic>.from(jsonDecode(s) as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> _savePushSnapshot(Map<String, dynamic> m) async {
+    // ✅ احتفظ بآخر 60 طلباً فقط (حدّ التخزين)
+    final keys = m.keys.toList();
+    if (keys.length > 60) {
+      for (final k in keys.take(keys.length - 60)) {
+        m.remove(k);
+      }
+    }
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kPushSnapKey, jsonEncode(m));
+  }
+
   static Future<void> _saveOverride(String id, String status) async {
     final m = await _loadOverrides();
     m[id] = status;
@@ -281,10 +316,23 @@ class OrdersService {
       final ov = await _loadOverrides();
       if (ov.isNotEmpty) {
         bool changed = false;
+        final snap = await _loadPushSnapshot();
         for (final o in list) {
           final st = ov[o.id];
           if (st != null) {
-            if (o.status == st) {
+            // ✅ استكمل السعر/الفاتورة/النقاط من لقطة آخر نشر
+            final sn = snap[o.id];
+            if (sn is Map) {
+              o.total = (sn['total'] as num?)?.toDouble() ?? o.total;
+              o.invoiceNo = '${sn['invoiceNo'] ?? ''}';
+              o.points = (sn['points'] as num?)?.toInt() ?? o.points;
+              o.stored = (sn['stored'] as num?)?.toInt() ?? o.stored;
+            }
+            // ✅ لا تُزل الحماية إلا بعد لحاق الحالة والسعر معاً
+            final serverOk = o.status == st &&
+                (sn == null ||
+                    ((sn['total'] as num?)?.toDouble() ?? -1) == o.total);
+            if (serverOk) {
               ov.remove(o.id);
               changed = true;
             } else {
@@ -488,7 +536,11 @@ class OrdersService {
         return 'retry_failed';
       }
     }
-    // ✅ بعد 4 دقائق: تحرير إجباري + تنظيف ذاكرة البانر
+    // ✅ بعد 4 دقائق: محاولة نشر أخيرة كاملة ثم تحرير إجباري
+    try {
+      final list = await loadOrders();
+      await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+    } catch (_) {}
     await _saveOverrides({});
     await _saveStatusTimes({});
     final p2 = await SharedPreferences.getInstance();
