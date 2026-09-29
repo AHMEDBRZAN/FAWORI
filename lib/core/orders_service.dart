@@ -337,7 +337,7 @@ class OrdersService {
   }
 
   /// ✅ حذف الطلبات المحلية التي وصلت للسيرفر
-  static Future<void> _cleanMergedSubmitted(Set<String> serverIds) async {
+  static Future<void> cleanMergedSubmitted(Set<String> serverIds) async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_kSubmittedKey);
     if (raw == null || raw.isEmpty) return;
