@@ -128,6 +128,17 @@ class AppSettings extends ChangeNotifier {
           _lastPending >= 0 &&
           pending > _lastPending) {
         final diff = pending - _lastPending;
+        // ✅ ضمان شارة الجرس: أخرج أحدث الطلبات من قائمة "المقروء"
+        final pendingSorted = orders
+            .where((o) => o.status == 'pending')
+            .toList()
+          ..sort((a, b) =>
+              (int.tryParse(b.id) ?? 0).compareTo(int.tryParse(a.id) ?? 0));
+        for (int i = 0; i < diff && i < pendingSorted.length; i++) {
+          _seenIds.remove(pendingSorted[i].id);
+        }
+        unseenCount = relevant.difference(_seenIds).length;
+        if (unseenCount < diff) unseenCount = diff;
         messengerKey.currentState
           ?..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(
