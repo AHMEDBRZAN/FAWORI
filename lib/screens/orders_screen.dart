@@ -87,13 +87,33 @@ class _SyncBannerState extends State<_SyncBanner> {
       if (!mounted) return;
       if (pending || _changed) {
         if (_state != true) {
-          _sinceMs = DateTime.now().millisecondsSinceEpoch;
+          // ✅ استرجاع لحظة البدء المحفوظة (العدّاد لا يُصفّر عند الخروج والدخول)
+          final p = await SharedPreferences.getInstance();
+          final nowMs = DateTime.now().millisecondsSinceEpoch;
+          int since = p.getInt('sync_since_ms') ?? 0;
+          if (since == 0 || nowMs - since > 600000) {
+            since = nowMs;
+            await p.setInt('sync_since_ms', since);
+          }
+          final savedName = p.getString('sync_name') ?? '';
+          if (_lastName.isEmpty && savedName.isNotEmpty) {
+            _lastName = savedName;
+          } else if (_lastName.isNotEmpty) {
+            await p.setString('sync_name', _lastName);
+          }
+          _sinceMs = since;
           setState(() => _state = true);
         } else {
           setState(() {});
         }
+        // ✅ فك التعليق تلقائياً من داخل البانر (حتى خارج صفحة الطلبات)
+        await OrdersService.resolveStaleSync();
       } else {
         if (_state == true) {
+          // ✅ اكتملت المزامنة: تنظيف الذاكرة المحفوظة
+          final p = await SharedPreferences.getInstance();
+          await p.remove('sync_since_ms');
+          await p.remove('sync_name');
           setState(() => _state = false);
           _hideTimer?.cancel();
           _hideTimer = Timer(const Duration(seconds: 4), () {
