@@ -309,7 +309,7 @@ class _OrdersScreenState extends State<OrdersScreen>
     }
     _cache = List<Order>.from(os);
     // ✅ 3) تنظيف الطلبات المحلية التي وصلت للسيرفر
-    await OrdersService._cleanMergedSubmitted(serverIds);
+    await OrdersService.cleanMergedSubmitted(serverIds);
     // ✅ تأجيل markAllSeen 3 ثوانٍ: حتى يرى المستخدم السنackbar الجديد
     if (mounted) {
       Future.delayed(const Duration(seconds: 3), () {
