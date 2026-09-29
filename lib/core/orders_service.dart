@@ -352,6 +352,35 @@ class OrdersService {
     await _saveSet(_kRetTombKey, s);
   }
 
+  // ====================================================
+  // 👤 طوابع حذف المستخدمين: إخفاء فوري + حذف بالخلفية
+  // ====================================================
+  static const String _kUserTombKey = 'user_tombstones';
+
+  static Future<void> markUserDeleted(String id) async {
+    final s = await _loadSet(_kUserTombKey);
+    s.add(id);
+    await _saveSet(_kUserTombKey, s);
+  }
+
+  static Future<void> markOrderDeleted(String id) async {
+    await _markTomb(id);
+  }
+
+  /// ✅ قائمة المستخدمين مع استبعاد المحذوفين محلياً
+  ///    (حتى يلحق السيرفر ويُ temiz الطابع تلقائياً)
+  static Future<List<User>> loadUsersFiltered() async {
+    final list = await StoreService.loadUsers();
+    final tombs = await _loadSet(_kUserTombKey);
+    if (tombs.isNotEmpty) {
+      final ids = list.map((e) => e.id).toSet();
+      tombs.removeWhere((id) => !ids.contains(id));
+      await _saveSet(_kUserTombKey, tombs);
+      list.removeWhere((e) => tombs.contains(e.id));
+    }
+    return list;
+  }
+
   static Future<List<Invoice>> loadInvoicesFiltered() async {
     final list = await StoreService.loadInvoices();
     final tombs = await _loadSet(_kInvTombKey);
