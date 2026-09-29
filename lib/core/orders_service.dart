@@ -475,6 +475,11 @@ class OrdersService {
     }
     if (maxAge < 120000) return 'waiting';
     if (maxAge < 240000) {
+      // ✅ إعادة محاولة واحدة كل 60 ثانية فقط (منع تكرار النشر)
+      final p = await SharedPreferences.getInstance();
+      final last = p.getInt('sync_last_retry_ms') ?? 0;
+      if (now - last < 60000) return 'retry_wait';
+      await p.setInt('sync_last_retry_ms', now);
       try {
         final list = await loadOrders();
         await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
@@ -483,8 +488,12 @@ class OrdersService {
         return 'retry_failed';
       }
     }
+    // ✅ بعد 4 دقائق: تحرير إجباري + تنظيف ذاكرة البانر
     await _saveOverrides({});
     await _saveStatusTimes({});
+    final p2 = await SharedPreferences.getInstance();
+    await p2.remove('sync_since_ms');
+    await p2.remove('sync_name');
     return 'cleared';
   }
 
