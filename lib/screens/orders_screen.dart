@@ -291,15 +291,26 @@ class _OrdersScreenState extends State<OrdersScreen>
   Future<List<Order>> _loadAndMark() async {
     await _loadHidden();
     final os = await OrdersService.loadOrders();
-    // ✅ حماية: أي طلب اختفى فجأة (تأخير CDN) يُبقى عليه من النسخة السابقة
-    //    ← "قيد المراجعة" لا يختفي إلا بتغيّر حالته فعلياً (قبول/رفض)
-    final ids = os.map((o) => o.id).toSet();
+    // ✅ 1) دمج الطلبات المُرسَلة محلياً (تظهر فوراً قبل لحاق السيرفر)
+    final localSubmitted = await OrdersService.loadSubmittedLocal();
+    final serverIds = os.map((o) => o.id).toSet();
+    for (final lo in localSubmitted) {
+      if (!serverIds.contains(lo.id)) {
+        os.insert(0, lo);
+        serverIds.add(lo.id);
+      }
+    }
+    // ✅ 2) حماية: أي طلب اختفى فجأة (تأخير CDN) يُبقى عليه من النسخة السابقة
     for (final c in _cache) {
-      if (!ids.contains(c.id)) os.add(c);
+      if (!serverIds.contains(c.id)) {
+        os.add(c);
+        serverIds.add(c.id);
+      }
     }
     _cache = List<Order>.from(os);
+    // ✅ 3) تنظيف الطلبات المحلية التي وصلت للسيرفر
+    await OrdersService._cleanMergedSubmitted(serverIds);
     // ✅ تأجيل markAllSeen 3 ثوانٍ: حتى يرى المستخدم السنackbar الجديد
-    //    ثم تُصفّر الشارة تدريجياً بدلاً من الاختفاء الفوري
     if (mounted) {
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) context.read<AppSettings>().markAllSeen();
