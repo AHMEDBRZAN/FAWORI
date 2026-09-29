@@ -4,7 +4,7 @@ import '../core/app_settings.dart';
 import '../core/theme.dart';
 import 'admin_users.dart';
 import 'home_screen.dart';
-import 'orders_screen.dart';
+import 'media_admin_screen.dart';
 import 'products_screen.dart';
 import 'profile_screen.dart';
 import 'simple_screens.dart';
@@ -31,7 +31,7 @@ class _MainScreenState extends State<MainScreen> {
       isController
           ? const AdminCodeView()
           : (isAdmin ? const CreateAccountPage() : const FavoritesScreen()),
-      isAdmin ? const OrdersScreen() : const ProfileScreen(),
+      isAdmin ? const MediaAdminScreen() : const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -74,11 +74,11 @@ class _MainScreenState extends State<MainScreen> {
                       : (isAdmin ? 'Create' : 'Favorites'))),
           BottomNavigationBarItem(
               icon: Icon(isAdmin
-                  ? Icons.receipt_long_rounded
+                  ? Icons.campaign_rounded
                   : Icons.person_rounded),
               label: s.isArabic
-                  ? (isAdmin ? 'الطلبات' : 'ملف شخصي')
-                  : (isAdmin ? 'Orders' : 'Profile')),
+                  ? (isAdmin ? 'إدارة الإعلام' : 'ملف شخصي')
+                  : (isAdmin ? 'Media' : 'Profile')),
         ],
       ),
     );
