@@ -303,10 +303,67 @@ class OrdersService {
     return list;
   }
 
+  // ====================================================
+  // 🆕 طلبات مُرسَلة حديثاً (تظهر فوراً قبل لحاق السيرفر)
+  // ====================================================
+  static const String _kSubmittedKey = 'submitted_orders_local';
+
+  /// ✅ حفظ الطلب محلياً ليظهر فوراً في "قيد المراجعة"
+  static Future<void> _saveSubmittedLocal(Order o) async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getString(_kSubmittedKey);
+    final List<dynamic> list =
+        raw == null || raw.isEmpty ? [] : (jsonDecode(raw) as List);
+    // تجنب التكرار
+    list.removeWhere((e) => e is Map && e['id'] == o.id);
+    list.insert(0, o.toJson());
+    await p.setString(_kSubmittedKey, jsonEncode(list));
+  }
+
+  /// ✅ قراءة الطلبات المحلية (لدمجها مع طلبات السيرفر)
+  static Future<List<Order>> loadSubmittedLocal() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final raw = p.getString(_kSubmittedKey);
+      if (raw == null || raw.isEmpty) return [];
+      final list = jsonDecode(raw) as List;
+      return list
+          .whereType<Map>()
+          .map((e) => Order.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// ✅ حذف الطلبات المحلية التي وصلت للسيرفر
+  static Future<void> _cleanMergedSubmitted(Set<String> serverIds) async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getString(_kSubmittedKey);
+    if (raw == null || raw.isEmpty) return;
+    final list = jsonDecode(raw) as List;
+    final before = list.length;
+    list.removeWhere((e) => e is Map && serverIds.contains(e['id']));
+    if (list.length != before) {
+      if (list.isEmpty) {
+        await p.remove(_kSubmittedKey);
+      } else {
+        await p.setString(_kSubmittedKey, jsonEncode(list));
+      }
+    }
+  }
+
   static Future<void> submitOrder(Order o) async {
-    final list = await loadOrders();
-    list.add(o);
-    await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+    // ✅ 1) حفظ فوري محلياً ← يظهر فوراً في "قيد المراجعة"
+    await _saveSubmittedLocal(o);
+    // ✅ 2) إرسال للمستودع بالخلفية
+    try {
+      final list = await loadOrders();
+      list.add(o);
+      await _putJson(kOrdersPath, list.map((e) => e.toJson()).toList());
+    } catch (_) {
+      // الإرسال فشل ← الطلب يبقى محلياً حتى المحاولة التالية
+    }
   }
 
   static Future<void> updateOrder(Order o) async {
