@@ -1204,7 +1204,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final u = await StoreService.loadUsers();
+      final u = await OrdersService.loadUsersFiltered();
       final i = await OrdersService.loadInvoicesFiltered();
       final r = await OrdersService.loadReturnsFiltered();
       if (mounted) {
@@ -1521,22 +1521,37 @@ class _AdminPointsViewState extends State<AdminPointsView> {
       ),
     );
     if (ok != true) return;
-    try {
-      await OrdersService.deleteUserAll(u.id);
-      if (_sel?.id == u.id) _sel = null;
-      await _load();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(s.isArabic
-                ? '🗑️ تم حذف ${u.name} وكل فواتيره'
-                : 'Deleted ${u.name} and all invoices')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('فشل: $e')));
+    // ✅ 1) إخفاء فوري محلياً (طوابع حذف لكل ما يخص المستخدم)
+    await OrdersService.markUserDeleted(u.id);
+    for (final i in _invoices.where((x) => x.userId == u.id)) {
+      await OrdersService.markInvoiceDeleted(i.id);
+    }
+    for (final r in _returnsOf(u)) {
+      if (r['legacy'] == true) {
+        await OrdersService.markInvoiceDeleted('${r['id']}');
+      } else {
+        await OrdersService.markReturnDeleted('${r['id']}');
       }
     }
+    try {
+      final os = await OrdersService.loadOrders();
+      for (final o in os.where((x) => x.userId == u.id)) {
+        await OrdersService.markOrderDeleted(o.id);
+      }
+    } catch (_) {}
+    // ✅ تحديث فوري للشاشة بدون انتظار السيرفر
+    setState(() {
+      _users.removeWhere((x) => x.id == u.id);
+      if (_sel?.id == u.id) _sel = null;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.isArabic
+              ? '🗑️ تم حذف ${u.name} وكل فواتيره'
+              : 'Deleted ${u.name} and all invoices')));
+    }
+    // ✅ 2) حذف من المستودع بالخلفية (صامت — بدون تعليق الواجهة)
+    OrdersService.deleteUserAll(u.id).catchError((_) {});
   }
 
   Future<void> _confirmDeleteInvoice(Invoice i, AppSettings s) async {
