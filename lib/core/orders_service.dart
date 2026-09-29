@@ -325,8 +325,8 @@ class OrdersService {
             if (sn is Map) {
               o.total = (sn['total'] as num?)?.toDouble() ?? o.total;
               o.invoiceNo = '${sn['invoiceNo'] ?? ''}';
-              o.points = (sn['points'] as num?)?.toInt() ?? o.points;
-              o.stored = (sn['stored'] as num?)?.toInt() ?? o.stored;
+              o.points = (sn['points'] as num?)?.toDouble() ?? o.points;
+              o.stored = (sn['stored'] as num?)?.toDouble() ?? o.stored;
             }
             // ✅ لا تُزل الحماية إلا بعد لحاق الحالة والسعر معاً
             final serverOk = o.status == st &&
