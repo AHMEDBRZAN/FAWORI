@@ -472,8 +472,29 @@ class OrdersService {
     await _markTomb(id);
   }
 
-  /// ✅ قائمة المستخدمين مع استبعاد المحذوفين محلياً
-  ///    (حتى يلحق السيرفر ويُ temiz الطابع تلقائياً)
+  static const String _kUserPatchKey = 'user_patches_local';
+
+  static Future<Map<String, dynamic>> _loadUserPatches() async {
+    final p = await SharedPreferences.getInstance();
+    final s = p.getString(_kUserPatchKey);
+    if (s == null || s.isEmpty) return {};
+    try {
+      return Map<String, dynamic>.from(jsonDecode(s) as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// ✅ حفظ تعديل محلي (يظهر فوراً ويُنى تلقائياً عند لحاق السيرفر)
+  static Future<void> markUserPatched(
+      String id, Map<String, dynamic> patch) async {
+    final p = await SharedPreferences.getInstance();
+    final m = await _loadUserPatches();
+    m[id] = patch;
+    await p.setString(_kUserPatchKey, jsonEncode(m));
+  }
+
+  /// ✅ المستخدمون: استبعاد المحذوفين + تطبيق التعديلات المحلية
   static Future<List<User>> loadUsersFiltered() async {
     final list = await StoreService.loadUsers();
     final tombs = await _loadSet(_kUserTombKey);
@@ -482,6 +503,37 @@ class OrdersService {
       tombs.removeWhere((id) => !ids.contains(id));
       await _saveSet(_kUserTombKey, tombs);
       list.removeWhere((e) => tombs.contains(e.id));
+    }
+    final patches = await _loadUserPatches();
+    if (patches.isNotEmpty) {
+      bool cleaned = false;
+      for (final u in list) {
+        final pt = patches[u.id];
+        if (pt is! Map) continue;
+        final cur = u.toJson();
+        bool matches = true;
+        pt.forEach((k, v) {
+          if ('${cur[k] ?? ''}' != '${v ?? ''}') matches = false;
+        });
+        if (matches) {
+          // ✅ السيرفر لحق ← نظّف الرقعة
+          patches.remove(u.id);
+          cleaned = true;
+        } else {
+          // ✅ طبّق التعديل المحلي فوراً
+          u.name = '${pt['name'] ?? u.name}';
+          u.phone = '${pt['phone'] ?? u.phone}';
+          u.password = '${pt['password'] ?? u.password}';
+          u.role = '${pt['role'] ?? u.role}';
+          u.points = (pt['points'] as num?)?.toInt() ?? u.points;
+          u.stored = (pt['stored'] as num?)?.toInt() ?? u.stored;
+        }
+      }
+      patches.removeWhere((id, _) => !list.any((u) => u.id == id));
+      if (cleaned || patches.isEmpty) {
+        final p = await SharedPreferences.getInstance();
+        await p.setString(_kUserPatchKey, jsonEncode(patches));
+      }
     }
     return list;
   }
