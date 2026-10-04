@@ -187,7 +187,6 @@ class _WalletScreenState extends State<WalletScreen> {
             as List? ??
         [])
         .map((e) => Map<String, dynamic>.from(e as Map)));
-    bool faworiOnly = false;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -197,11 +196,7 @@ class _WalletScreenState extends State<WalletScreen> {
       ),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSt) {
-          final shown = faworiOnly
-              ? items
-                  .where((it) => '${it['name'] ?? ''}'.contains('فاوري'))
-                  .toList()
-              : items;
+          final shown = items;
           final total = (h['total'] as num?)?.toDouble() ?? 0;
           final pts = (h['points'] as num?)?.toInt() ?? 0;
           final stg = (h['stored'] as num?)?.toInt() ?? 0;
@@ -256,20 +251,6 @@ class _WalletScreenState extends State<WalletScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _filterChipHist(
-                          s.isArabic ? 'الكل' : 'All',
-                          !faworiOnly,
-                          () => setSt(() => faworiOnly = false)),
-                      const SizedBox(width: 8),
-                      _filterChipHist(
-                          s.isArabic ? 'مواد فاوري فقط' : 'Fawori only',
-                          faworiOnly,
-                          () => setSt(() => faworiOnly = true)),
-                    ],
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -410,34 +391,6 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _filterChipHist(String label, bool active, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: active
-              ? const LinearGradient(colors: <Color>[
-                  Color(0xFF9B59B6),
-                  Color(0xFF7D3C98)
-                ])
-              : null,
-          color: active ? null : const Color(0xFF9B59B6).withAlpha(18),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: const Color(0xFF9B59B6).withAlpha(active ? 180 : 80)),
-        ),
-        child: Text(label,
-            style: TextStyle(
-                color: active ? Colors.white : const Color(0xFF9B59B6),
-                fontWeight: FontWeight.w900,
-                fontSize: 11)),
       ),
     );
   }
