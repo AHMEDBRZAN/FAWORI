@@ -664,14 +664,19 @@ class _WalletScreenState extends State<WalletScreen> {
     int sumSales = 0;
     int sumReturns = 0;
     for (final r in rows) {
+      // ✅ دفاعي: تاريخي / فاتورة / مرتجع — بدون انهيار
+      final hv = r['hist'] as Map<String, dynamic>?;
+      final inv = r['inv'] as Invoice?;
+      final ret = r['ret'] as Map<String, dynamic>?;
+      final int t = hv != null
+          ? ((hv['total'] as num?)?.toDouble() ?? 0).toInt()
+          : inv != null
+              ? inv.total.toInt()
+              : ((ret?['total'] as num?)?.toInt() ?? 0);
       if (r['kind'] == 'sale') {
-        sumSales += (r['inv'] as Invoice).total.toInt();
+        sumSales += t.abs();
       } else {
-        final inv = r['inv'] as Invoice?;
-        final ret = r['ret'] as Map<String, dynamic>?;
-        sumReturns += inv != null
-            ? inv.total.toInt().abs()
-            : ((ret?['total'] as num?)?.toInt() ?? 0).abs();
+        sumReturns += t.abs();
       }
     }
     final net = sumSales - sumReturns;
