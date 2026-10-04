@@ -51,15 +51,44 @@ class InvoiceItem {
   final String name;
   final int qty;
   final int price;
+  // ✅ حقول إضافية للفواتير التاريخية (اختيارية — backward compatible)
+  final String code;
+  final String unit;
+  final double unitPrice;
+  final double subtotal;
 
-  InvoiceItem({required this.name, this.qty = 1, this.price = 0});
+  InvoiceItem({
+    required this.name,
+    this.qty = 1,
+    this.price = 0,
+    this.code = '',
+    this.unit = '',
+    this.unitPrice = 0,
+    this.subtotal = 0,
+  });
 
-  Map<String, dynamic> toJson() => {'name': name, 'qty': qty, 'price': price};
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'name': name,
+      'qty': qty,
+      'price': price,
+    };
+    // ✅ الحقول الاختيارية تُحفظ فقط إذا كانت غير فارغة (للحفاظ على حجم الفواتير القديمة)
+    if (code.isNotEmpty) m['code'] = code;
+    if (unit.isNotEmpty) m['unit'] = unit;
+    if (unitPrice > 0) m['unit_price'] = unitPrice;
+    if (subtotal > 0) m['subtotal'] = subtotal;
+    return m;
+  }
 
   factory InvoiceItem.fromJson(Map<String, dynamic> j) => InvoiceItem(
         name: '${j['name'] ?? ''}',
         qty: (j['qty'] as num?)?.toInt() ?? 1,
         price: (j['price'] as num?)?.toInt() ?? 0,
+        code: '${j['code'] ?? ''}',
+        unit: '${j['unit'] ?? ''}',
+        unitPrice: (j['unit_price'] as num?)?.toDouble() ?? 0,
+        subtotal: (j['subtotal'] as num?)?.toDouble() ?? 0,
       );
 }
 
@@ -73,6 +102,12 @@ class Invoice {
   int points;
   int stored;
   final List<InvoiceItem> items;
+  // ✅ حقول إضافية للفواتير التاريخية (اختيارية — backward compatible)
+  final String legacyNo;      // رقم الفاتورة القديم من Excel
+  final String customerName;  // اسم العميل من المستورد (للمطابقة لاحقاً)
+  final String cashier;       // منظم الفاتورة
+  final String time;          // الوقت (HH:MM:SS)
+  final String source;        // المصدر: 'excel_import' أو '' للفواتير الجديدة
 
   Invoice({
     required this.id,
@@ -84,19 +119,33 @@ class Invoice {
     this.points = 0,
     this.stored = 0,
     required this.items,
+    this.legacyNo = '',
+    this.customerName = '',
+    this.cashier = '',
+    this.time = '',
+    this.source = '',
   });
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'userId': userId,
-        'date': date,
-        'type': type,
-        'no': no,
-        'total': total,
-        'points': points,
-        'stored': stored,
-        'items': items.map((e) => e.toJson()).toList(),
-      };
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'id': id,
+      'userId': userId,
+      'date': date,
+      'type': type,
+      'no': no,
+      'total': total,
+      'points': points,
+      'stored': stored,
+      'items': items.map((e) => e.toJson()).toList(),
+    };
+    // ✅ الحقول الاختيارية تُحفظ فقط إذا كانت غير فارغة
+    if (legacyNo.isNotEmpty) m['legacy_no'] = legacyNo;
+    if (customerName.isNotEmpty) m['customer_name'] = customerName;
+    if (cashier.isNotEmpty) m['cashier'] = cashier;
+    if (time.isNotEmpty) m['time'] = time;
+    if (source.isNotEmpty) m['source'] = source;
+    return m;
+  }
 
   factory Invoice.fromJson(Map<String, dynamic> j) => Invoice(
         id: '${j['id'] ?? ''}',
@@ -110,6 +159,11 @@ class Invoice {
         items: (j['items'] as List<dynamic>? ?? [])
             .map((e) => InvoiceItem.fromJson(e as Map<String, dynamic>))
             .toList(),
+        legacyNo: '${j['legacy_no'] ?? ''}',
+        customerName: '${j['customer_name'] ?? ''}',
+        cashier: '${j['cashier'] ?? ''}',
+        time: '${j['time'] ?? ''}',
+        source: '${j['source'] ?? ''}',
       );
 }
 
