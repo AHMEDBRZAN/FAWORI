@@ -231,7 +231,10 @@ class _WalletScreenState extends State<WalletScreen> {
                         const SizedBox(width: 6),
                         Directionality(
                           textDirection: TextDirection.ltr,
-                          child: Text(_dmy('${h['date'] ?? ''}'),
+                          child: Text(
+                              ('${h['time'] ?? ''}').isEmpty
+                                  ? _dmy('${h['date'] ?? ''}')
+                                  : '${_dmy('${h['date'] ?? ''}')} • ${h['time']}',
                               style: TextStyle(
                                   color: dark
                                       ? Colors.grey.shade200
