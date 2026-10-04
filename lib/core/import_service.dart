@@ -47,6 +47,21 @@ class ImportService {
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
+    // ✅ تنظيف دفاعي: تاريخ معه وقت ← يُفصل | رقم معه .0 ← يُحذف
+    for (final inv in list) {
+      var d = '${inv['date'] ?? ''}';
+      if (d.contains(' ')) {
+        final parts = d.split(' ');
+        inv['date'] = parts[0];
+        final t = '${inv['time'] ?? ''}';
+        if (t.isEmpty || t == '00:00:00') {
+          inv['time'] = parts.length > 1 ? parts[1] : '';
+        }
+      }
+      var no = '${inv['legacy_no'] ?? ''}';
+      if (no.endsWith('.0')) no = no.substring(0, no.length - 2);
+      inv['legacy_no'] = no;
+    }
     _cache = list;
     _cacheVersion = ver;
     final m = <String, List<Map<String, dynamic>>>{};
