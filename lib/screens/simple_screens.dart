@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/favorites.dart';
+import '../core/import_service.dart';
 import '../core/orders_service.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
@@ -43,6 +44,7 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   List<Invoice> _invoices = [];
   List<Map<String, dynamic>> _returns = [];
+  List<Map<String, dynamic>> _history = [];
   int _lastVersion = -1;
   String _wFilter = 'all';
   bool _netOpen = false;
@@ -70,12 +72,371 @@ class _WalletScreenState extends State<WalletScreen> {
     } catch (_) {}
     final invs = await OrdersService.loadInvoicesFiltered();
     final rets = await OrdersService.loadReturnsFiltered();
+    final hist = await ImportService.historyFor(s.user?.name ?? '');
     if (mounted) {
       setState(() {
         _invoices = invs;
         _returns = rets;
+        _history = hist;
       });
     }
+  }
+
+  Widget _histTile(AppSettings s, Map<String, dynamic> h, bool dark) {
+    final total = (h['total'] as num?)?.toDouble() ?? 0;
+    final pts = (h['points'] as num?)?.toInt() ?? 0;
+    final neg = total < 0;
+    return Pressable(
+      onTap: () => _histSheet(s, h, dark),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF1E1E28) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border:
+              Border.all(color: const Color(0xFF9B59B6).withAlpha(60)),
+        ),
+        child: SizedBox(
+          height: 62,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(_dmy('${h['date'] ?? ''}'),
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 12)),
+                    ),
+                    const SizedBox(height: 4),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(fmtThousands(total),
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: neg
+                                  ? Colors.red.shade300
+                                  : (dark ? Colors.white : AppColors.ink))),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF9B59B6).withAlpha(30),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                        neg
+                            ? (s.isArabic ? 'مرتجع' : 'Return')
+                            : (s.isArabic ? 'شراء' : 'Sale'),
+                        style: const TextStyle(
+                            color: Color(0xFF9B59B6),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: pts >= 0
+                          ? AppColors.orange.withAlpha(30)
+                          : Colors.red.withAlpha(30),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(pts >= 0 ? '+$pts' : '-${pts.abs()}',
+                          style: TextStyle(
+                              color:
+                                  pts >= 0 ? AppColors.orange : Colors.red,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _histSheet(AppSettings s, Map<String, dynamic> h, bool dark) {
+    final items = List<Map<String, dynamic>>.from((h['items']
+            as List? ??
+        [])
+        .map((e) => Map<String, dynamic>.from(e as Map)));
+    bool faworiOnly = false;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          final shown = faworiOnly
+              ? items
+                  .where((it) => '${it['name'] ?? ''}'.contains('فاوري'))
+                  .toList()
+              : items;
+          final total = (h['total'] as num?)?.toDouble() ?? 0;
+          final pts = (h['points'] as num?)?.toInt() ?? 0;
+          final stg = (h['stored'] as num?)?.toInt() ?? 0;
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: <Color>[
+                          const Color(0xFF9B59B6).withAlpha(dark ? 50 : 25),
+                          const Color(0xFF9B59B6).withAlpha(dark ? 20 : 8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFF9B59B6).withAlpha(70)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today_rounded,
+                            size: 15, color: Color(0xFF9B59B6)),
+                        const SizedBox(width: 6),
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(_dmy('${h['date'] ?? ''}'),
+                              style: TextStyle(
+                                  color: dark
+                                      ? Colors.grey.shade200
+                                      : AppColors.ink,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 13)),
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.receipt_long_outlined,
+                            size: 15, color: AppColors.orange),
+                        const SizedBox(width: 6),
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text('${h['legacy_no'] ?? ''}',
+                              style: const TextStyle(
+                                  color: AppColors.orange,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _filterChipHist(
+                          s.isArabic ? 'الكل' : 'All',
+                          !faworiOnly,
+                          () => setSt(() => faworiOnly = false)),
+                      const SizedBox(width: 8),
+                      _filterChipHist(
+                          s.isArabic ? 'مواد فاوري فقط' : 'Fawori only',
+                          faworiOnly,
+                          () => setSt(() => faworiOnly = true)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: AppColors.orange.withAlpha(60)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 10, horizontal: 12),
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(colors: <Color>[
+                              Color(0xFFFF8C00),
+                              Color(0xFFF26B0F)
+                            ]),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                  child: Text(
+                                      s.isArabic ? 'المادة' : 'Item',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 12))),
+                              SizedBox(
+                                  width: 34,
+                                  child: Text(s.isArabic ? 'العدد' : 'Qty',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 11))),
+                              SizedBox(
+                                  width: 70,
+                                  child: Text(
+                                      s.isArabic ? 'مفرد' : 'Unit',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 11))),
+                              SizedBox(
+                                  width: 80,
+                                  child: Text(
+                                      s.isArabic ? 'اجمالي' : 'Total',
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 11))),
+                            ],
+                          ),
+                        ),
+                        for (int i = 0; i < shown.length; i++)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 12),
+                            color: i.isOdd
+                                ? (dark
+                                    ? Colors.white.withAlpha(8)
+                                    : Colors.black.withAlpha(6))
+                                : Colors.transparent,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                    child: Text('${shown[i]['name'] ?? ''}',
+                                        style: TextStyle(
+                                            color: dark
+                                                ? Colors.white
+                                                : AppColors.ink,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700))),
+                                SizedBox(
+                                    width: 34,
+                                    child: Text(
+                                        '${shown[i]['qty'] ?? ''}',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: dark
+                                                ? Colors.grey.shade300
+                                                : Colors.grey.shade700,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800))),
+                                SizedBox(
+                                    width: 70,
+                                    child: Directionality(
+                                      textDirection: TextDirection.ltr,
+                                      child: Text(
+                                          fmtThousands((shown[i]['unit_price']
+                                                      as num?)
+                                                  ?.toDouble() ??
+                                              0),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                              color: AppColors.teal,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800)),
+                                    )),
+                                SizedBox(
+                                    width: 80,
+                                    child: Directionality(
+                                      textDirection: TextDirection.ltr,
+                                      child: Text(
+                                          fmtThousands((shown[i]['subtotal']
+                                                      as num?)
+                                                  ?.toDouble() ??
+                                              0),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                              color: AppColors.orange,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900)),
+                                    )),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _row(s.isArabic ? 'الإجمالي' : 'Total',
+                      fmtThousands(total), AppColors.orange,
+                      big: true),
+                  _row(
+                      s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
+                      '${pts >= 0 ? '+' : ''}${fmtThousands(pts)}',
+                      pts >= 0 ? AppColors.teal : Colors.red),
+                  _row(s.isArabic ? 'رصيد مخزن منها' : 'Stored',
+                      fmtThousands(stg), AppColors.teal),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _filterChipHist(String label, bool active, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(colors: <Color>[
+                  Color(0xFF9B59B6),
+                  Color(0xFF7D3C98)
+                ])
+              : null,
+          color: active ? null : const Color(0xFF9B59B6).withAlpha(18),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: const Color(0xFF9B59B6).withAlpha(active ? 180 : 80)),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: active ? Colors.white : const Color(0xFF9B59B6),
+                fontWeight: FontWeight.w900,
+                fontSize: 11)),
+      ),
+    );
   }
 
   String _typeLabel(Invoice inv, bool ar) {
@@ -152,7 +513,8 @@ class _WalletScreenState extends State<WalletScreen> {
             : ((rt?['total'] as num?)?.toInt() ?? 0).abs();
       }
     }
-    final int net = sumSales - sumRets;
+    final int histNet = ImportService.historyNet(_history);
+    final int net = sumSales - sumRets + histNet;
     final int pointsNet = net ~/ kPointUnit;
     final int storedMod = net % kPointUnit;
     final int remaining = kPointUnit - storedMod;
@@ -323,6 +685,35 @@ class _WalletScreenState extends State<WalletScreen> {
               if (rows.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _netCard(s, dark, rows),
+              ],
+              // ===== السجل التاريخي من ملف الفواتير =====
+              if (_history.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                          s.isArabic ? 'السجل التاريخي' : 'History',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900)),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF9B59B6).withAlpha(30),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text('${_history.length}',
+                          style: const TextStyle(
+                              color: Color(0xFF9B59B6),
+                              fontWeight: FontWeight.w900)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                for (final h in _history) _histTile(s, h, dark),
               ],
             ],
           ),
