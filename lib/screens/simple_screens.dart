@@ -1550,8 +1550,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool quiet = false}) async {
+    if (!quiet) setState(() => _loading = true);
     try {
       final u = await OrdersService.loadUsersFiltered();
       final i = await OrdersService.loadInvoicesFiltered();
@@ -1567,6 +1567,18 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// ✅ تحديث صامت بالخلفية بعد النشر (بدون دائرة تحميل)
+  void _backgroundReload() {
+    Future.delayed(const Duration(seconds: 6), () async {
+      if (!mounted) return;
+      await _load(quiet: true);
+      Future.delayed(const Duration(seconds: 20), () async {
+        if (!mounted) return;
+        await _load(quiet: true);
+      });
+    });
   }
 
   String _roleAr(String r) {
@@ -1721,13 +1733,14 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                         MaterialPageRoute(
                             builder: (_) => const CreateAccountPage()));
                     if (created == true) {
-                      await _load();
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text(
                                     '✅ تم إنشاء الحساب والسجل بنجاح')));
                       }
+                      // ✅ يظهر تلقائياً لحظة اكتمال النشر (تحديث صامت)
+                      _backgroundReload();
                     }
                   },
                 ),
@@ -1901,6 +1914,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     }
     // ✅ 2) حذف من المستودع بالخلفية (صامت — بدون تعليق الواجهة)
     OrdersService.deleteUserAll(u.id).catchError((_) {});
+    _backgroundReload();
   }
 
   Future<void> _confirmDeleteInvoice(Invoice i, AppSettings s) async {
@@ -2225,15 +2239,31 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                   icon: const Icon(Icons.edit_rounded,
                       color: AppColors.teal, size: 20),
                   onPressed: () async {
-                    final done = await EditUserDialog.show(context, u);
-                    if (done == true) {
-                      await _load();
+                    final before = jsonEncode(u.toJson());
+                    final dynamic res = await EditUserDialog.show(context, u);
+                    final done = res == true || res is User;
+                    if (done) {
+                      // ✅ تطبيق فوري: حفظ رقعة محلية (سواء عدّل الحوار الكائن أو أعاده)
+                      Map<String, dynamic>? patch;
+                      if (res is User) {
+                        patch = res.toJson();
+                      } else {
+                        if (jsonEncode(u.toJson()) != before) {
+                          patch = u.toJson();
+                        }
+                      }
+                      if (patch != null) {
+                        await OrdersService.markUserPatched(u.id, patch);
+                      }
+                      if (mounted) setState(() {});
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(s.isArabic
                                 ? '✅ تم تحديث بيانات المستخدم'
                                 : 'User updated')));
                       }
+                      // ✅ مزامنة صامتة بالخلفية
+                      _backgroundReload();
                     }
                   },
                 ),
