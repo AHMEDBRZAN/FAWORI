@@ -446,6 +446,12 @@ class _WalletScreenState extends State<WalletScreen> {
         {'kind': 'return', 'inv': i},
       for (final r in _returns.where((x) => x['userId'] == s.user?.id))
         {'kind': 'return', 'ret': r},
+      // ✅ دمج السجل التاريخي مع الفواتير (نفس القائمة والفلاتر)
+      for (final h in _history)
+        {
+          'kind': h['type'] == 'return' ? 'return' : 'sale',
+          'hist': h,
+        },
     ];
 
     final filtered = _wFilter == 'sale'
@@ -459,18 +465,22 @@ class _WalletScreenState extends State<WalletScreen> {
     int sumSales = 0;
     int sumRets = 0;
     for (final r in rows) {
+      final hv = r['hist'] as Map<String, dynamic>?;
       if (r['kind'] == 'sale') {
-        sumSales += (r['inv'] as Invoice).total.toInt();
+        sumSales += hv != null
+            ? ((hv['total'] as num?)?.toDouble() ?? 0).toInt().abs()
+            : (r['inv'] as Invoice).total.toInt();
       } else {
         final iv = r['inv'] as Invoice?;
         final rt = r['ret'] as Map<String, dynamic>?;
-        sumRets += iv != null
-            ? iv.total.toInt().abs()
-            : ((rt?['total'] as num?)?.toInt() ?? 0).abs();
+        sumRets += hv != null
+            ? ((hv['total'] as num?)?.toDouble() ?? 0).toInt().abs()
+            : iv != null
+                ? iv.total.toInt().abs()
+                : ((rt?['total'] as num?)?.toInt() ?? 0).abs();
       }
     }
-    final int histNet = ImportService.historyNet(_history);
-    final int net = sumSales - sumRets + histNet;
+    final int net = sumSales - sumRets;
     final int pointsNet = net ~/ kPointUnit;
     final int storedMod = net % kPointUnit;
     final int remaining = kPointUnit - storedMod;
@@ -641,35 +651,6 @@ class _WalletScreenState extends State<WalletScreen> {
               if (rows.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _netCard(s, dark, rows),
-              ],
-              // ===== السجل التاريخي من ملف الفواتير =====
-              if (_history.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                          s.isArabic ? 'السجل التاريخي' : 'History',
-                          style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900)),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9B59B6).withAlpha(30),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text('${_history.length}',
-                          style: const TextStyle(
-                              color: Color(0xFF9B59B6),
-                              fontWeight: FontWeight.w900)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                for (final h in _history) _histTile(s, h, dark),
               ],
             ],
           ),
@@ -849,6 +830,12 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   int _tsOfRow(Map<String, dynamic> row) {
+    final hist = row['hist'] as Map<String, dynamic>?;
+    if (hist != null) {
+      return DateTime.tryParse('${hist['date'] ?? ''}')
+              ?.millisecondsSinceEpoch ??
+          0;
+    }
     final inv = row['inv'] as Invoice?;
     final ret = row['ret'] as Map<String, dynamic>?;
     final id = inv != null ? inv.id : '${ret?['id'] ?? ''}';
@@ -886,21 +873,36 @@ class _WalletScreenState extends State<WalletScreen> {
     final isSale = row['kind'] == 'sale';
     final Invoice? inv = row['inv'] as Invoice?;
     final Map<String, dynamic>? ret = row['ret'] as Map<String, dynamic>?;
-    final String date = inv != null ? inv.date : '${ret?['date'] ?? ''}';
-    final String no = inv != null ? inv.no : '${ret?['no'] ?? ''}';
-    final int total = inv != null
-        ? inv.total.toInt()
-        : -(((ret?['total'] as num?)?.toInt() ?? 0).abs());
-    final int pts = inv != null
-        ? inv.points.toInt()
-        : -(((ret?['points'] as num?)?.toInt() ?? 0).abs());
+    final Map<String, dynamic>? hist = row['hist'] as Map<String, dynamic>?;
+    final String date = hist != null
+        ? '${hist['date'] ?? ''}'
+        : inv != null
+            ? inv.date
+            : '${ret?['date'] ?? ''}';
+    final String no = hist != null
+        ? '${hist['legacy_no'] ?? ''}'
+        : inv != null
+            ? inv.no
+            : '${ret?['no'] ?? ''}';
+    final int total = hist != null
+        ? ((hist['total'] as num?)?.toDouble() ?? 0).toInt()
+        : inv != null
+            ? inv.total.toInt()
+            : -(((ret?['total'] as num?)?.toInt() ?? 0).abs());
+    final int pts = hist != null
+        ? ((hist['points'] as num?)?.toInt() ?? 0)
+        : inv != null
+            ? inv.points.toInt()
+            : -(((ret?['points'] as num?)?.toInt() ?? 0).abs());
     final c = isSale ? AppColors.teal : Colors.red;
     final bool neg = total < 0;
 
     return Pressable(
-      onTap: () => inv != null
-          ? _openDetails(s, inv)
-          : _openReturnSheet(s, ret!, dark),
+      onTap: () => hist != null
+          ? _histSheet(s, hist, dark)
+          : inv != null
+              ? _openDetails(s, inv)
+              : _openReturnSheet(s, ret!, dark),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
