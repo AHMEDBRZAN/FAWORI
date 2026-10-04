@@ -2,12 +2,14 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-/// ✅ خدمة الفواتير التاريخية (من imported_invoices.json)
+/// ✅ خدمة الفواتير التاريخية v2 (مواد فاوري فقط + كاش ذكي)
 class ImportService {
   static const String _raw =
       'https://raw.githubusercontent.com/AHMEDBRZAN/FAWORI/main';
+  static const String _site = 'https://ahmedbrzan.github.io/FAWORI';
 
   static List<Map<String, dynamic>>? _cache;
+  static String? _cacheVersion;
   static Map<String, List<Map<String, dynamic>>>? _byCustomer;
 
   /// ✅ تطبيع الاسم: إزالة الأرقام والرموز والمسافات الزائدة
@@ -18,37 +20,46 @@ class ImportService {
     return s;
   }
 
-  /// ✅ قراءة الملف مرة واحدة مع كاش + فهرسة حسب العميل
-  static Future<List<Map<String, dynamic>>> loadImported() async {
-    if (_cache != null) return _cache!;
-    try {
-      final r = await http
-          .get(Uri.parse(
-              '$_raw/assets/data/imported_invoices.json?t=${DateTime.now().millisecondsSinceEpoch}'))
-          .timeout(const Duration(seconds: 25));
-      if (r.statusCode == 200) {
-        final j = jsonDecode(r.body);
-        final list = (j['invoices'] as List? ?? [])
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-        _cache = list;
-        final m = <String, List<Map<String, dynamic>>>{};
-        for (final inv in list) {
-          final key = normalizeName('${inv['customer_name'] ?? ''}');
-          if (key.isEmpty) continue;
-          m.putIfAbsent(key, () => []).add(inv);
+  static Future<Map<String, dynamic>?> _fetchJson() async {
+    for (final base in const [_raw, _site]) {
+      try {
+        final r = await http
+            .get(Uri.parse(
+                '$base/assets/data/imported_invoices.json?t=${DateTime.now().millisecondsSinceEpoch}'))
+            .timeout(const Duration(seconds: 30));
+        if (r.statusCode == 200) {
+          return jsonDecode(r.body) as Map<String, dynamic>;
         }
-        _byCustomer = m;
-        return list;
-      }
-    } catch (_) {}
-    _cache = [];
-    _byCustomer = {};
-    return [];
+      } catch (_) {}
+    }
+    return null;
   }
 
-  /// ✅ فواتير عميل بالاسم (مطابقة بعد التطبيع + مطابقة جزئية احتياطية)
+  /// ✅ قراءة الملف مع كاش يتحدث تلقائياً عند رفع نسخة جديدة
+  static Future<List<Map<String, dynamic>>> loadImported() async {
+    final j = await _fetchJson();
+    if (j == null) return _cache ?? const [];
+    final ver = '${j['meta'] is Map ? (j['meta'] as Map)['version'] ?? '' : ''}';
+    if (_cache != null && _cacheVersion == ver && ver.isNotEmpty) {
+      return _cache!;
+    }
+    final list = (j['invoices'] as List? ?? [])
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+    _cache = list;
+    _cacheVersion = ver;
+    final m = <String, List<Map<String, dynamic>>>{};
+    for (final inv in list) {
+      final key = normalizeName('${inv['customer_name'] ?? ''}');
+      if (key.isEmpty) continue;
+      m.putIfAbsent(key, () => []).add(inv);
+    }
+    _byCustomer = m;
+    return list;
+  }
+
+  /// ✅ فواتير عميل بالاسم (مطابقة بعد التطبيع + جزئية احتياطية)
   static Future<List<Map<String, dynamic>>> historyFor(
       String userName) async {
     await loadImported();
@@ -65,7 +76,7 @@ class ImportService {
     return const [];
   }
 
-  /// ✅ صافي السجل التاريخي (موجب شراء / سالب مرتجع)
+  /// ✅ صافي مواد فاوري (موجب شراء / سالب مرتجع)
   static int historyNet(List<Map<String, dynamic>> hist) {
     double sum = 0;
     for (final h in hist) {
