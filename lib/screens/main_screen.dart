@@ -78,6 +78,7 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(index: _idx, children: screens),
       bottomNavigationBar: _FancyBottomNav(
         index: _idx,
