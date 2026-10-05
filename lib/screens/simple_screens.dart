@@ -2619,11 +2619,13 @@ class _AdminPointsViewState extends State<AdminPointsView> {
       else
         for (final row in merged)
           row['hist'] != null
-              ? _histRow(row['hist'] as Map<String, dynamic>, s, dark)
+              ? _histCard(row['hist'] as Map<String, dynamic>, s, dark)
               : row['inv'] != null
-                  ? _saleRow(row['inv'] as Invoice, s, dark, false)
+                  ? _saleRow(row['inv'] as Invoice, s, dark, false,
+                      hint: s.isArabic ? 'طلب شراء أون لاين' : 'Online order')
                   : _returnRow(
-                      row['ret'] as Map<String, dynamic>, s, dark, false),
+                      row['ret'] as Map<String, dynamic>, s, dark, false,
+                      hint: s.isArabic ? 'طلب شراء أون لاين' : 'Online order'),
     ];
   }
 
@@ -2938,6 +2940,148 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
+  Widget _hintChip(String label, IconData icon, Color c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.withAlpha(22),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: c.withAlpha(70)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: c),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  color: c, fontSize: 9, fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ بطاقة السجل التاريخي — بنفس شكل بطاقات الشراء/المرتجع تماماً
+  Widget _histCard(Map<String, dynamic> h, AppSettings s, bool dark) {
+    final total = (h['total'] as num?)?.toDouble() ?? 0;
+    final pts = (h['points'] as num?)?.toInt() ?? 0;
+    final neg = total < 0;
+    final cashier = '${h['cashier'] ?? ''}'.trim();
+    final c = neg ? Colors.red : AppColors.teal;
+    return Pressable(
+      onTap: () => _openHistDetails(h, s, dark),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: dark
+                ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+                : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: c.withAlpha(50)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(dark ? 50 : 10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: neg
+                      ? <Color>[Colors.red, const Color(0xFFB02A2A)]
+                      : <Color>[AppColors.teal, const Color(0xFF0AA87A)],
+                ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                      color: c.withAlpha(40),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Text(
+                  neg
+                      ? (s.isArabic ? 'مرتجع' : 'Return')
+                      : (s.isArabic ? 'شراء' : 'Sale'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                        cashier.isEmpty
+                            ? '${h['date'] ?? ''}'
+                            : '${h['date'] ?? ''} • $cashier',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 11)),
+                  ),
+                  const SizedBox(height: 4),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                        neg
+                            ? '-${fmtThousands(total.abs())}'
+                            : fmtThousands(total),
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: neg
+                                ? Colors.red.shade300
+                                : (dark ? Colors.white : AppColors.ink))),
+                  ),
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text('${h['legacy_no'] ?? ''}',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 10)),
+                  ),
+                  const SizedBox(height: 4),
+                  _hintChip(s.isArabic ? 'من الحاسبة' : 'From PC',
+                      Icons.computer_rounded, const Color(0xFF9B59B6)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: <Color>[c.withAlpha(60), c.withAlpha(25)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: c.withAlpha(120)),
+              ),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(pts >= 0 ? '+$pts' : '-${pts.abs()}',
+                    style: TextStyle(
+                        color: c, fontSize: 14, fontWeight: FontWeight.w900)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _chip(String label, String value, Color c) {
     final active = _filter == value;
     return Padding(
@@ -2978,7 +3122,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  Widget _saleRow(Invoice i, AppSettings s, bool dark, bool glow) {
+  Widget _saleRow(Invoice i, AppSettings s, bool dark, bool glow,
+      {String hint = ''}) {
     return _Glow(
       glow: glow,
       child: Pressable(
@@ -3060,6 +3205,11 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                                 color: Colors.grey.shade500, fontSize: 10)),
                       ),
                     ],
+                    if (hint.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _hintChip(hint, Icons.shopping_cart_checkout_rounded,
+                          AppColors.teal),
+                    ],
                   ],
                 ),
               ),
@@ -3109,8 +3259,8 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     );
   }
 
-  Widget _returnRow(
-      Map<String, dynamic> r, AppSettings s, bool dark, bool glow) {
+  Widget _returnRow(Map<String, dynamic> r, AppSettings s, bool dark, bool glow,
+      {String hint = ''}) {
     final no = '${r['no'] ?? ''}';
     final total = ((r['total'] as num?)?.toInt() ?? 0).abs();
     final pts = ((r['points'] as num?)?.toInt() ?? 0).abs();
@@ -3195,6 +3345,11 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                             style: TextStyle(
                                 color: Colors.grey.shade500, fontSize: 10)),
                       ),
+                    ],
+                    if (hint.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _hintChip(hint, Icons.shopping_cart_checkout_rounded,
+                          AppColors.teal),
                     ],
                   ],
                 ),
