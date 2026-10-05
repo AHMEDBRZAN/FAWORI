@@ -101,6 +101,7 @@ class _MainScreenState extends State<MainScreen> {
     final bool isAdmin = s.isAdmin || s.isImageAdmin;
     final bool isController = s.user?.id == 'ctrl';
     final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
 
     final screens = <Widget>[
       HomeScreen(onOpenProducts: () => setState(() => _idx = 1)),
@@ -198,6 +199,7 @@ class _MainScreenState extends State<MainScreen> {
                   AnimatedPositionedDirectional(
                     duration: const Duration(milliseconds: 380),
                     curve: Curves.easeOutCubic,
+                    textDirection: Directionality.of(context),
                     start: slot * _idx + (slot - 56) / 2,
                     bottom: 34,
                     width: 56,
