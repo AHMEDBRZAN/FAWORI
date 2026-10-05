@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _phoneFocus = FocusNode();
   final _passFocus = FocusNode();
   late final AnimationController _glow = AnimationController(
-      vsync: this, duration: const Duration(seconds: 4))
+      vsync: this, duration: const Duration(seconds: 7))
     ..repeat();
   bool _busy = false;
   String? _err;
@@ -582,18 +582,20 @@ class _GlowBorderPainter extends CustomPainter {
     final rrect =
         RRect.fromRectAndRadius(rect, const Radius.circular(24));
     final gradient = SweepGradient(
-      startAngle: angle - math.pi,
-      endAngle: angle + math.pi,
+      startAngle: angle,
+      endAngle: angle + 2 * math.pi,
       colors: const <Color>[
         Colors.transparent,
         Color(0xFFFF8C00),
         Colors.transparent,
-        Colors.transparent,
         AppColors.teal,
         Colors.transparent,
+        Color(0xFFFF8C00),
         Colors.transparent,
       ],
-      stops: const <double>[0.0, 0.08, 0.18, 0.5, 0.58, 0.68, 1.0],
+      stops: const <double>[
+        0.0, 0.1667, 0.3333, 0.5, 0.6667, 0.8333, 1.0
+      ],
     );
     final shader = gradient.createShader(rect);
     // توهج خارجي ناعم
