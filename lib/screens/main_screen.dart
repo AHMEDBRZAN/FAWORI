@@ -11,82 +11,16 @@ import 'products_screen.dart';
 import 'profile_screen.dart';
 import 'simple_screens.dart';
 
-/// ✅ رسّام الشريط: الغرزة تلتحم بالحواف الطرفية مثل الفيديو تماماً
-class _NotchPainter extends CustomPainter {
-  final double cx;
-  final bool dark;
-  _NotchPainter({required this.cx, required this.dark});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const barH = 58.0;
-    final top = size.height - barH;
-    const r = barH / 2;
-    const d = 30.0;
-    const w = 22.0;
-    const s = 4.0;
-    final W = size.width;
-    final lx = cx - w - s;
-    final rx = cx + w + s;
-
-    // ✅ نقطة التقاء الغرزة مع قوس الحافة (يسار/يمين)
-    double capYLeft(double x) {
-      if (x >= r) return top;
-      final dx = r - x;
-      if (dx >= r) return top + r;
-      return top + r - math.sqrt(r * r - dx * dx);
-    }
-
-    double capYRight(double x) {
-      if (x <= W - r) return top;
-      final dx = x - (W - r);
-      if (dx >= r) return top + r;
-      return top + r - math.sqrt(r * r - dx * dx);
-    }
-
-    final ly = capYLeft(lx);
-    final ry = capYRight(rx);
-
-    final p = Path()..moveTo(0, top + r);
-    if (lx >= r) {
-      p.quadraticBezierTo(0, top, r, top);
-      p.lineTo(lx, top);
-    } else {
-      // ✅ الغرزة تبدأ من داخل قوس الحافة (التحام كامل)
-      p.quadraticBezierTo(0, ly, lx, ly);
-    }
-    p.quadraticBezierTo(cx - w + 2, ly + 2, cx - w + 5, top + d * 0.55);
-    p.quadraticBezierTo(cx - w * 0.45, top + d, cx, top + d);
-    p.quadraticBezierTo(cx + w * 0.45, top + d, cx + w - 5, top + d * 0.55);
-    p.quadraticBezierTo(cx + w - 2, ry + 2, rx, ry);
-    if (rx <= W - r) {
-      p.lineTo(W - r, top);
-      p.quadraticBezierTo(W, top, W, top + r);
-    } else {
-      // ✅ الغرزة تنتهي داخل قوس الحافة اليمنى
-      p.quadraticBezierTo(W, ry, W, top + r);
-    }
-    p.quadraticBezierTo(W, top + barH, W - r, top + barH);
-    p.lineTo(r, top + barH);
-    p.quadraticBezierTo(0, top + barH, 0, top + r);
-    p.close();
-
-    canvas.drawShadow(p, Colors.black.withAlpha(80), 12, true);
-    final paint = Paint()
-      ..shader = LinearGradient(
-        colors: dark
-            ? const <Color>[Color(0xFF23232C), Color(0xFF1B1B22)]
-            : const <Color>[Colors.white, Color(0xFFF6F6F9)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, top, W, barH));
-    canvas.drawPath(p, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _NotchPainter old) =>
-      old.cx != cx || old.dark != dark;
-}
+// ======================================================
+// 📐 هندسة الشريط الثابتة (مطابقة للفيديو)
+// ======================================================
+const double _kBarH = 62; // ارتفاع الحبّة
+const double _kStackH = 84; // الارتفاع الكلي مع الدائرة
+const double _kCircle = 54; // قطر الدائرة الطافية
+const double _kR = _kBarH / 2; // نصف قطر حافة الحبّة
+const double _kNotchW = 30; // نصف عرض الغرزة عند الحافة
+const double _kNotchS = 8; // كتف الغرزة
+const double _kNotchD = 39; // عمق الغرزة
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -94,29 +28,8 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen>
-    with SingleTickerProviderStateMixin {
+class _MainScreenState extends State<MainScreen> {
   int _idx = 0;
-  int _prevIdx = 0;
-  bool _navPress = false;
-  late final AnimationController _navC = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 450));
-
-  @override
-  void dispose() {
-    _navC.dispose();
-    super.dispose();
-  }
-
-  /// ✅ تبويب تفاعلي: الدائرة + الغرزة تنزلقان معاً
-  void _goTab(int i) {
-    if (i == _idx) return;
-    setState(() {
-      _prevIdx = _idx;
-      _idx = i;
-    });
-    _navC.forward(from: 0);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,186 +48,335 @@ class _MainScreenState extends State<MainScreen>
       isAdmin ? const MediaAdminScreen() : const ProfileScreen(),
     ];
 
+    final icons = <IconData>[
+      Icons.home_rounded,
+      Icons.grid_view_rounded,
+      Icons.account_balance_wallet_rounded,
+      isController
+          ? Icons.code_rounded
+          : (isAdmin
+              ? Icons.person_add_alt_1_rounded
+              : Icons.favorite_rounded),
+      isAdmin ? Icons.campaign_rounded : Icons.person_rounded,
+    ];
+    final labels = <String>[
+      s.isArabic ? 'الرئيسية' : 'Home',
+      s.isArabic ? 'المنتجات' : 'Products',
+      s.isArabic
+          ? (isAdmin ? 'النقاط والرصيد' : 'المحفظة')
+          : (isAdmin ? 'Points' : 'Wallet'),
+      s.isArabic
+          ? (isController
+              ? 'الإدارة'
+              : (isAdmin ? 'إنشاء حساب' : 'المفضلة'))
+          : (isController
+              ? 'Admin'
+              : (isAdmin ? 'Create' : 'Favorites')),
+      s.isArabic
+          ? (isAdmin ? 'إدارة الإعلام' : 'ملف شخصي')
+          : (isAdmin ? 'Media' : 'Profile'),
+    ];
+
     return Scaffold(
       body: IndexedStack(index: _idx, children: screens),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.fromLTRB(
-            18, 0, 18, MediaQuery.of(context).padding.bottom + 12),
-        child: LayoutBuilder(
-          builder: (context, cons) {
-            final double W = cons.maxWidth;
-            final bool rtl = Directionality.of(context) == TextDirection.rtl;
-            const double pad = 24;
-            final double slotInner = (W - pad * 2) / 5;
-            double centerOf(int i) {
-              final c = pad + slotInner * i + slotInner / 2;
-              return rtl ? W - c : c;
-            }
+      bottomNavigationBar: _FancyBottomNav(
+        index: _idx,
+        dark: dark,
+        icons: icons,
+        labels: labels,
+        onTap: (i) => setState(() => _idx = i),
+      ),
+    );
+  }
+}
 
-            final icons = <IconData>[
-              Icons.home_rounded,
-              Icons.grid_view_rounded,
-              Icons.account_balance_wallet_rounded,
-              isController
-                  ? Icons.code_rounded
-                  : (isAdmin
-                      ? Icons.person_add_alt_1_rounded
-                      : Icons.favorite_rounded),
-              isAdmin ? Icons.campaign_rounded : Icons.person_rounded,
-            ];
-            final labels = <String>[
-              s.isArabic ? 'الرئيسية' : 'Home',
-              s.isArabic ? 'المنتجات' : 'Products',
-              s.isArabic
-                  ? (isAdmin ? 'النقاط والرصيد' : 'المحفظة')
-                  : (isAdmin ? 'Points' : 'Wallet'),
-              s.isArabic
-                  ? (isController
-                      ? 'الإدارة'
-                      : (isAdmin ? 'إنشاء حساب' : 'المفضلة'))
-                  : (isController
-                      ? 'Admin'
-                      : (isAdmin ? 'Create' : 'Favorites')),
-              s.isArabic
-                  ? (isAdmin ? 'إدارة الإعلام' : 'ملف شخصي')
-                  : (isAdmin ? 'Media' : 'Profile'),
-            ];
-            return AnimatedBuilder(
-              animation: _navC,
-              builder: (context, _) {
-                final t = Curves.easeOutBack.transform(_navC.value);
-                final cx = centerOf(_prevIdx) +
-                    (centerOf(_idx) - centerOf(_prevIdx)) * t;
-                return SizedBox(
-                  height: 92,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // ✅ الشريط المغروز (يرسم حيّاً مع الحركة)
-                      CustomPaint(
-                        size: Size(W, 92),
-                        painter: _NotchPainter(cx: cx, dark: dark),
+// ======================================================
+// 🎀 الشريط العائم: غرزة تحتضن دائرة تنزلق بنعومة
+// ======================================================
+class _FancyBottomNav extends StatefulWidget {
+  final int index;
+  final bool dark;
+  final List<IconData> icons;
+  final List<String> labels;
+  final ValueChanged<int> onTap;
+  const _FancyBottomNav({
+    required this.index,
+    required this.dark,
+    required this.icons,
+    required this.labels,
+    required this.onTap,
+  });
+  @override
+  State<_FancyBottomNav> createState() => _FancyBottomNavState();
+}
+
+class _FancyBottomNavState extends State<_FancyBottomNav>
+    with SingleTickerProviderStateMixin {
+  late int _prev = widget.index;
+  bool _press = false;
+  final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 430));
+
+  @override
+  void initState() {
+    super.initState();
+    _c.value = 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant _FancyBottomNav old) {
+    super.didUpdateWidget(old);
+    if (old.index != widget.index) {
+      _prev = old.index;
+      _c.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = widget.dark;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          18, 0, 18, MediaQuery.of(context).padding.bottom + 10),
+      child: LayoutBuilder(
+        builder: (context, cons) {
+          final W = cons.maxWidth;
+          double centerOf(int i) {
+            final c = W * (i * 2 + 1) / 10;
+            return rtl ? W - c : c;
+          }
+
+          return AnimatedBuilder(
+            animation: _c,
+            builder: (context, _) {
+              final t = Curves.easeOutBack.transform(_c.value);
+              final cx = centerOf(_prev) +
+                  (centerOf(widget.index) - centerOf(_prev)) * t;
+              return SizedBox(
+                height: _kStackH,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // ✅ الحبّة المغروفة (ترسم حياً مع الحركة)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: CustomPaint(
+                        size: Size(W, _kBarH),
+                        painter: _BarPainter(cx: cx, dark: dark),
                       ),
-                      // ✅ خط المقبض الصغير (لمسة جمالية مثل الفيديو)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 7,
-                        child: Center(
-                          child: Container(
-                            width: 64,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: dark
-                                  ? Colors.white.withAlpha(30)
-                                  : Colors.black.withAlpha(25),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
+                    ),
+                    // ✅ خط المقبض أسفل المنتصف
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 8,
+                      child: Center(
+                        child: Container(
+                          width: 56,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: dark
+                                ? Colors.white.withAlpha(28)
+                                : Colors.black.withAlpha(22),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
-                      // ✅ الأيقونات (النشطة تتلاشى لأن الدائرة تحملها)
-                      Positioned(
-                        left: pad,
-                        right: pad,
-                        bottom: 0,
-                        child: SizedBox(
-                          height: 58,
-                          child: Row(
-                            children: List.generate(5, (i) {
-                              final active = _idx == i;
-                              return Expanded(
-                                child: Tooltip(
-                                  message: labels[i],
-                                  child: InkWell(
-                                    onTap: () => _goTab(i),
-                                    borderRadius: BorderRadius.circular(29),
-                                    child: SizedBox(
-                                      height: 58,
-                                      child: AnimatedOpacity(
-                                        duration:
-                                            const Duration(milliseconds: 220),
-                                        opacity: active ? 0 : 1,
-                                        child: Icon(icons[i],
-                                            size: 22,
-                                            color: dark
-                                                ? Colors.grey.shade300
-                                                : const Color(0xFF43434E)),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
-                      ),
-                      // ✅ الدائرة الطافية داخل الغرزة (تنضغط عند اللمس)
-                      Positioned(
-                        left: cx - 28,
-                        top: 6,
-                        child: GestureDetector(
-                          onTapDown: (_) => setState(() => _navPress = true),
-                          onTapUp: (_) => setState(() => _navPress = false),
-                          onTapCancel: () =>
-                              setState(() => _navPress = false),
-                          onTap: () => _goTab(_idx),
-                          child: Tooltip(
-                            message: labels[_idx],
-                            child: AnimatedScale(
-                              scale: _navPress ? 0.88 : 1,
-                              duration: const Duration(milliseconds: 140),
-                              curve: Curves.easeOut,
-                              child: Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: <Color>[
-                                      Color(0xFFFF8C00),
-                                      Color(0xFFE8446B)
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFE8446B)
-                                          .withAlpha(dark ? 130 : 100),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                    BoxShadow(
-                                      color: AppColors.orange.withAlpha(70),
-                                      blurRadius: 34,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 220),
-                                  switchInCurve: Curves.easeOutBack,
+                    ),
+                    // ✅ الأيقونات (النشطة تختفي لأنها داخل الدائرة)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: SizedBox(
+                        height: _kBarH,
+                        child: Row(
+                          children: List.generate(5, (i) {
+                            final active = widget.index == i;
+                            return Expanded(
+                              child: _NavInk(
+                                onTap: () => widget.onTap(i),
+                                tooltip: widget.labels[i],
+                                child: AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 200),
+                                  opacity: active ? 0 : 1,
                                   child: Icon(
-                                    icons[_idx],
-                                    key: ValueKey<int>(_idx),
-                                    color: Colors.white,
-                                    size: 24,
+                                    widget.icons[i],
+                                    size: 23,
+                                    color: dark
+                                        ? Colors.grey.shade300
+                                        : const Color(0xFF3F3F4A),
                                   ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+                    // ✅ الدائرة الماجنتا الطافية داخل الغرزة
+                    Positioned(
+                      left: cx - _kCircle / 2,
+                      top: _kStackH - _kBarH - _kCircle / 2 + 8,
+                      child: GestureDetector(
+                        onTapDown: (_) => setState(() => _press = true),
+                        onTapUp: (_) => setState(() => _press = false),
+                        onTapCancel: () => setState(() => _press = false),
+                        onTap: () => widget.onTap(widget.index),
+                        child: Tooltip(
+                          message: widget.labels[widget.index],
+                          child: AnimatedScale(
+                            scale: _press ? 0.9 : 1,
+                            duration: const Duration(milliseconds: 130),
+                            curve: Curves.easeOut,
+                            child: Container(
+                              width: _kCircle,
+                              height: _kCircle,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: <Color>[
+                                    Color(0xFFE8446B),
+                                    Color(0xFFAD1457),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFE8446B)
+                                        .withAlpha(dark ? 140 : 110),
+                                    blurRadius: 22,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: Icon(
+                                  widget.icons[widget.index],
+                                  key: ValueKey<int>(widget.index),
+                                  color: Colors.white,
+                                  size: 24,
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _NavInk extends StatelessWidget {
+  final VoidCallback onTap;
+  final String tooltip;
+  final Widget child;
+  const _NavInk(
+      {required this.onTap, required this.tooltip, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_kR),
+        child: SizedBox(
+          height: _kBarH,
+          child: Center(child: child),
         ),
       ),
     );
   }
+}
+
+// ======================================================
+// 🖌️ رسّام الحبّة + الغرزة (تلتحم بالحواف الطرفية)
+// ======================================================
+class _BarPainter extends CustomPainter {
+  final double cx;
+  final bool dark;
+  _BarPainter({required this.cx, required this.dark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final W = size.width;
+    const top = 0.0;
+    final lx = cx - _kNotchW - _kNotchS;
+    final rx = cx + _kNotchW + _kNotchS;
+
+    double capYLeft(double x) {
+      if (x >= _kR) return top;
+      final dx = _kR - x;
+      if (dx >= _kR) return top + _kR;
+      return top + _kR - math.sqrt(_kR * _kR - dx * dx);
+    }
+
+    double capYRight(double x) {
+      if (x <= W - _kR) return top;
+      final dx = x - (W - _kR);
+      if (dx >= _kR) return top + _kR;
+      return top + _kR - math.sqrt(_kR * _kR - dx * dx);
+    }
+
+    final ly = capYLeft(lx);
+    final ry = capYRight(rx);
+
+    final p = Path()..moveTo(0, top + _kR);
+    if (lx >= _kR) {
+      p.quadraticBezierTo(0, top, _kR, top);
+      p.lineTo(lx, top);
+    } else {
+      p.quadraticBezierTo(0, ly, lx, ly);
+    }
+    p.quadraticBezierTo(
+        cx - _kNotchW + 4, ly + 4, cx - _kNotchW + 6, _kNotchD * 0.5);
+    p.quadraticBezierTo(cx - _kNotchW * 0.4, _kNotchD, cx, _kNotchD);
+    p.quadraticBezierTo(cx + _kNotchW * 0.4, _kNotchD, cx + _kNotchW - 6,
+        _kNotchD * 0.5);
+    p.quadraticBezierTo(cx + _kNotchW - 4, ry + 4, rx, ry);
+    if (rx <= W - _kR) {
+      p.lineTo(W - _kR, top);
+      p.quadraticBezierTo(W, top, W, top + _kR);
+    } else {
+      p.quadraticBezierTo(W, ry, W, top + _kR);
+    }
+    p.quadraticBezierTo(W, top + _kBarH, W - _kR, top + _kBarH);
+    p.lineTo(_kR, top + _kBarH);
+    p.quadraticBezierTo(0, top + _kBarH, 0, top + _kR);
+    p.close();
+
+    canvas.drawShadow(p, Colors.black.withAlpha(90), 14, true);
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: dark
+            ? const <Color>[Color(0xFF24242E), Color(0xFF191920)]
+            : const <Color>[Colors.white, Color(0xFFF4F4F8)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, top, W, _kBarH));
+    canvas.drawPath(p, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BarPainter old) =>
+      old.cx != cx || old.dark != dark;
 }
