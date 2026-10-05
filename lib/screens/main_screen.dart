@@ -112,14 +112,16 @@ class _FancyBottomNav extends StatefulWidget {
 
 class _FancyBottomNavState extends State<_FancyBottomNav>
     with SingleTickerProviderStateMixin {
-  late int _prev = widget.index;
+  late int _prev;
   bool _press = false;
-  final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 430));
+  late final AnimationController _c;
 
   @override
   void initState() {
     super.initState();
+    _prev = widget.index;
+    _c = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 430));
     _c.value = 1;
   }
 
