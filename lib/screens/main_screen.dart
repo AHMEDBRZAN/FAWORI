@@ -18,9 +18,9 @@ const double _kBarH = 62; // ارتفاع الحبّة
 const double _kStackH = 84; // الارتفاع الكلي مع الدائرة
 const double _kCircle = 54; // قطر الدائرة الطافية
 const double _kR = _kBarH / 2; // نصف قطر حافة الحبّة
-const double _kNotchW = 30; // نصف عرض الغرزة عند الحافة
-const double _kNotchS = 8; // كتف الغرزة
-const double _kNotchD = 39; // عمق الغرزة
+const double _kNotchW = 26; // نصف عرض الغرزة عند الحافة
+const double _kNotchS = 6; // كتف الغرزة
+const double _kNotchD = 38; // عمق الغرزة
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -151,8 +151,10 @@ class _FancyBottomNavState extends State<_FancyBottomNav>
       child: LayoutBuilder(
         builder: (context, cons) {
           final W = cons.maxWidth;
+          const double pad = 14;
+          final slotInner = (W - pad * 2) / 5;
           double centerOf(int i) {
-            final c = W * (i * 2 + 1) / 10;
+            final c = pad + slotInner * i + slotInner / 2;
             return rtl ? W - c : c;
           }
 
@@ -197,8 +199,8 @@ class _FancyBottomNavState extends State<_FancyBottomNav>
                     ),
                     // ✅ الأيقونات (النشطة تختفي لأنها داخل الدائرة)
                     Positioned(
-                      left: 0,
-                      right: 0,
+                      left: pad,
+                      right: pad,
                       bottom: 0,
                       child: SizedBox(
                         height: _kBarH,
@@ -238,7 +240,11 @@ class _FancyBottomNavState extends State<_FancyBottomNav>
                         child: Tooltip(
                           message: widget.labels[widget.index],
                           child: AnimatedScale(
-                            scale: _press ? 0.9 : 1,
+                            scale: (_press ? 0.9 : 1) *
+                                (1 +
+                                    0.14 *
+                                        math.sin(math.pi *
+                                            _c.value.clamp(0.0, 1.0))),
                             duration: const Duration(milliseconds: 130),
                             curve: Curves.easeOut,
                             child: Container(
