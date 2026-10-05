@@ -570,7 +570,6 @@ class _LoginScreenState extends State<LoginScreen>
   }
 }
 
-/// 🌈 رسّام الحدود المتوهجة الدوارة (برتقالي + تركوازي)
 /// 🌈 رسّام الحدود: حلقة أساسية خافتة دائماً + توهجان يدوران بلا نهاية
 class _GlowBorderPainter extends CustomPainter {
   final double angle;
