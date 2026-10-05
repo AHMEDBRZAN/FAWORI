@@ -200,6 +200,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final s = context.watch<AppSettings>();
     final u = s.user;
     final bool isGuest = u == null || u.role == 'guest';
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+
+    // ✅ واجهة الضيف: شعار فاوري كبير + زر تسجيل دخول تفاعلي
+    if (isGuest) {
+      return Scaffold(
+        backgroundColor: dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Container(
+                    width: 180,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: <Color>[
+                          AppColors.orange.withAlpha(40),
+                          AppColors.orange.withAlpha(10),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.orange.withAlpha(60),
+                          blurRadius: 40,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Image.asset(
+                        'assets/images/logo.webp',
+                        width: 140,
+                        height: 140,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.format_paint_rounded,
+                          size: 80,
+                          color: AppColors.orange,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  ShaderMask(
+                    shaderCallback: (Rect bounds) => const LinearGradient(
+                      colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
+                    ).createShader(bounds),
+                    child: Text(
+                      s.isArabic ? 'شركة فاوري' : 'FAWORI Co.',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    s.isArabic
+                        ? 'سجل دخولك للاستمتاع بكافة المميزات'
+                        : 'Sign in to enjoy all features',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 50),
+                  Container(
+                    width: double.infinity,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.orange.withAlpha(100),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      ),
+                      icon: const Icon(Icons.login_rounded, size: 24),
+                      label: Text(
+                        s.isArabic ? 'تسجيل الدخول' : 'Sign In',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 60),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -278,35 +403,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          // ===== زر دخول للضيف =====
-          if (isGuest) ...[
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: <Color>[AppColors.orange, Color(0xFFF26B0F)]),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white),
-                  onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const LoginScreen())),
-                  child: Text(
-                      s.isArabic ? 'تسجيل الدخول' : 'Login',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w900)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
+(اتركه فارغاً / احذف الكتلة بالكامل)
           // ===== الإعدادات مدمجة هنا (بدل زر الإعدادات) =====
           Container(
             decoration: BoxDecoration(
