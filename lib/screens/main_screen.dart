@@ -253,8 +253,8 @@ class _FancyBottomNavState extends State<_FancyBottomNav>
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   colors: <Color>[
-                                    Color(0xFFE8446B),
-                                    Color(0xFFAD1457),
+                                    Color(0xFFFFA500),
+                                    Color(0xFFF26B0F),
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -262,10 +262,16 @@ class _FancyBottomNavState extends State<_FancyBottomNav>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFE8446B)
-                                        .withAlpha(dark ? 140 : 110),
-                                    blurRadius: 22,
+                                    color: const Color(0xFFF26B0F)
+                                        .withAlpha(dark ? 150 : 120),
+                                    blurRadius: 24,
                                     offset: const Offset(0, 8),
+                                  ),
+                                  BoxShadow(
+                                    color: const Color(0xFFFFA500)
+                                        .withAlpha(70),
+                                    blurRadius: 36,
+                                    spreadRadius: 2,
                                   ),
                                 ],
                               ),
