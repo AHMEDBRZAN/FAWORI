@@ -18,89 +18,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _idx = 0;
 
-  Widget _pillItem(int i, IconData icon, bool dark, String tooltip) {
-    final active = _idx == i;
-    return Expanded(
-      child: Tooltip(
-        message: tooltip,
-        child: InkWell(
-          onTap: () => setState(() => _idx = i),
-          borderRadius: BorderRadius.circular(28),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            height: 56,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              color: active
-                  ? (dark ? const Color(0xFF2A2A33) : Colors.white)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(dark ? 60 : 18),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Icon(
-              icon,
-              size: 24,
-              color: active
-                  ? (dark ? Colors.white : const Color(0xFF111111))
-                  : (dark ? Colors.grey.shade400 : Colors.grey.shade600),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _pillCenter(int i, IconData icon, bool dark, String tooltip) {
-    final active = _idx == i;
-    return Expanded(
-      child: Tooltip(
-        message: tooltip,
-        child: InkWell(
-          onTap: () => setState(() => _idx = i),
-          borderRadius: BorderRadius.circular(28),
-          child: SizedBox(
-            height: 56,
-            child: Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                width: active ? 56 : 48,
-                height: active ? 56 : 48,
-                decoration: BoxDecoration(
-                  color: dark ? Colors.white : const Color(0xFF111111),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(dark ? 80 : 60),
-                      blurRadius: 14,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Icon(icon,
-                    size: 22,
-                    color: dark ? const Color(0xFF111111) : Colors.white),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppSettings>();
     final bool isAdmin = s.isAdmin || s.isImageAdmin;
     final bool isController = s.user?.id == 'ctrl';
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
     final screens = <Widget>[
