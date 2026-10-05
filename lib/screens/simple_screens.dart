@@ -1652,6 +1652,23 @@ class _AdminPointsViewState extends State<AdminPointsView> {
   List<Map<String, dynamic>> _histOf(User u) =>
       ImportService.historyForSync(u.name);
 
+  int _tsOfMerged(Map<String, dynamic> row) {
+    final inv = row['inv'] as Invoice?;
+    if (inv != null) {
+      return DateTime.tryParse(inv.date)?.millisecondsSinceEpoch ?? 0;
+    }
+    final ret = row['ret'] as Map<String, dynamic>?;
+    if (ret != null) {
+      return DateTime.tryParse('${ret['date'] ?? ''}')
+              ?.millisecondsSinceEpoch ??
+          0;
+    }
+    final hist = row['hist'] as Map<String, dynamic>?;
+    return DateTime.tryParse('${hist?['date'] ?? ''}')
+            ?.millisecondsSinceEpoch ??
+        0;
+  }
+
   int _pointsOf(User u) => _netOf(u) ~/ kPointUnit;
 
   int _storedOf(User u) => _netOf(u) % kPointUnit;
@@ -2304,9 +2321,24 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final u = _sel!;
     var sales = _salesOf(u);
     var rets = _returnsOf(u);
-    final int sumSales = sales.fold(0, (s2, i) => s2 + i.total.toInt());
+    final histAll = _histOf(u);
+    final int sumSales = sales.fold(0, (s2, i) => s2 + i.total.toInt()) +
+        histAll
+            .where((h) => h['type'] != 'return')
+            .fold(
+                0,
+                (s2, h) =>
+                    s2 +
+                    ((h['total'] as num?)?.toDouble() ?? 0).toInt().abs());
     final int sumRets = rets.fold(
-        0, (s2, r) => s2 + ((r['total'] as num?)?.toInt() ?? 0).abs());
+            0, (s2, r) => s2 + ((r['total'] as num?)?.toInt() ?? 0).abs()) +
+        histAll
+            .where((h) => h['type'] == 'return')
+            .fold(
+                0,
+                (s2, h) =>
+                    s2 +
+                    ((h['total'] as num?)?.toDouble() ?? 0).toInt().abs());
     // ✅ داخل المستخدم: البحث يشمل فواتيره هو فقط
     if (q.isNotEmpty) {
       sales = sales
@@ -2324,6 +2356,29 @@ class _AdminPointsViewState extends State<AdminPointsView> {
               '${r['date'] ?? ''}'.contains(q))
           .toList();
     }
+    // ✅ دمج السجل التاريخي مع الفواتير (نمط وضع المستخدم)
+    var histF = histAll;
+    if (q.isNotEmpty) {
+      histF = histAll
+          .where((h) =>
+              '${h['legacy_no'] ?? ''}'.contains(q) ||
+              '${h['date'] ?? ''}'.contains(q) ||
+              fmtThousands((h['total'] as num?)?.toDouble() ?? 0)
+                  .contains(q))
+          .toList();
+    }
+    final merged = <Map<String, dynamic>>[
+      if (_filter != 'return')
+        for (final i in sales) {'kind': 'sale', 'inv': i},
+      if (_filter != 'sale')
+        for (final r in rets) {'kind': 'return', 'ret': r},
+      for (final h in histF)
+        if (_filter == 'all' ||
+            (_filter == 'sale' && h['type'] != 'return') ||
+            (_filter == 'return' && h['type'] == 'return'))
+          {'kind': h['type'] == 'return' ? 'return' : 'sale', 'hist': h},
+    ];
+    merged.sort((a, b) => _tsOfMerged(b).compareTo(_tsOfMerged(a)));
     return [
       Container(
         padding: const EdgeInsets.all(18),
@@ -2524,36 +2579,18 @@ class _AdminPointsViewState extends State<AdminPointsView> {
         ],
       ),
       const SizedBox(height: 14),
-      if (_filter != 'return') ...[
-        _sectionTitle(s.isArabic ? 'فواتير الشراء' : 'Sale invoices',
-            Icons.shopping_bag_rounded, AppColors.teal),
-        const SizedBox(height: 10),
-        if (sales.isEmpty)
-          Text(s.isArabic ? 'لا توجد' : 'None',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 12))
-        else
-          for (final i in sales) _saleRow(i, s, dark, false),
-      ],
-      if (_filter != 'sale') ...[
-        const SizedBox(height: 14),
-        _sectionTitle(s.isArabic ? 'المرتجعات' : 'Returns',
-            Icons.assignment_return_rounded, Colors.red),
-        const SizedBox(height: 10),
-        if (rets.isEmpty)
-          Text(s.isArabic ? 'لا توجد' : 'None',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 12))
-        else
-          for (final r in rets) _returnRow(r, s, dark, false),
-      ],
-      if (_histOf(u).isNotEmpty) ...[
-        const SizedBox(height: 14),
-        _sectionTitle(
-            s.isArabic ? 'السجل التاريخي' : 'History',
-            Icons.history_rounded,
-            const Color(0xFF9B59B6)),
-        const SizedBox(height: 10),
-        for (final h in _histOf(u)) _histRow(h, s, dark),
-      ],
+      // ✅ قائمة موحّدة: الحالي + التاريخي مدموجان بترتيب زمني
+      if (merged.isEmpty)
+        Text(s.isArabic ? 'لا توجد' : 'None',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 12))
+      else
+        for (final row in merged)
+          row['hist'] != null
+              ? _histRow(row['hist'] as Map<String, dynamic>, s, dark)
+              : row['inv'] != null
+                  ? _saleRow(row['inv'] as Invoice, s, dark, false)
+                  : _returnRow(
+                      row['ret'] as Map<String, dynamic>, s, dark, false),
     ];
   }
 
