@@ -2632,9 +2632,74 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final pts = (h['points'] as num?)?.toInt() ?? 0;
     final neg = total < 0;
     final cashier = '${h['cashier'] ?? ''}'.trim();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+    return Pressable(
+      onTap: () => _openHistDetails(h, s, dark),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF1E1E28) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF9B59B6).withAlpha(50)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF9B59B6).withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                  neg
+                      ? (s.isArabic ? 'مرتجع' : 'Return')
+                      : (s.isArabic ? 'شراء' : 'Sale'),
+                  style: const TextStyle(
+                      color: Color(0xFF9B59B6),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                        cashier.isEmpty
+                            ? '${h['date'] ?? ''}'
+                            : '${h['date'] ?? ''} • $cashier',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 10)),
+                  ),
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(fmtThousands(total),
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: neg
+                                ? Colors.red.shade300
+                                : (dark ? Colors.white : AppColors.ink))),
+                  ),
+                ],
+              ),
+            ),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Text(pts >= 0 ? '+$pts' : '-${pts.abs()}',
+                  style: TextStyle(
+                      color: pts >= 0 ? AppColors.orange : Colors.red,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
       decoration: BoxDecoration(
         color: dark ? const Color(0xFF1E1E28) : Colors.white,
         borderRadius: BorderRadius.circular(14),
