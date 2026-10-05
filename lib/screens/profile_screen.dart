@@ -34,7 +34,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await OrdersService.recalcUserTotals(uid);
       await s.refreshUser();
     } catch (_) {}
-    // ✅ قراءة مباشرة من الفواتير (صحيحة دائماً حتى لو تأخرت الكتابة)
     try {
       final invs = await OrdersService.loadInvoicesFiltered();
       final rets = await OrdersService.loadReturnsFiltered();
@@ -166,7 +165,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ===== الأيقونة داخل دائرة بيضاء شفافة =====
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -176,7 +174,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Icon(icon, color: Colors.white, size: 24),
           ),
           const SizedBox(height: 10),
-          // ===== الرقم =====
           Text(fmtThousands(value),
               style: const TextStyle(
                   color: Colors.white,
@@ -184,7 +181,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.3)),
           const SizedBox(height: 4),
-          // ===== النص =====
           Text(label,
               style: TextStyle(
                   color: Colors.white.withAlpha(220),
@@ -202,123 +198,153 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool isGuest = u == null || u.role == 'guest';
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
-    // ✅ واجهة الضيف: شعار فاوري كبير + زر تسجيل دخول تفاعلي
+    // ==================================================
+    // 🚪 الضيف: صفحة دخول كاملة (شعار كبير + زر تفاعلي)
+    // ==================================================
     if (isGuest) {
       return Scaffold(
-        backgroundColor: dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
+        backgroundColor:
+            dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
         body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 40),
-                  Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: <Color>[
-                          AppColors.orange.withAlpha(40),
-                          AppColors.orange.withAlpha(10),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.orange.withAlpha(60),
-                          blurRadius: 40,
-                          spreadRadius: 5,
+          child: LayoutBuilder(
+            builder: (context, cons) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: cons.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 2),
+                      // ✅ شعار فاوري كبير بهالة متوهجة
+                      Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: <Color>[
+                              AppColors.orange.withAlpha(70),
+                              AppColors.orange.withAlpha(0),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Image.asset(
-                        'assets/images/logo.webp',
-                        width: 140,
-                        height: 140,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.format_paint_rounded,
-                          size: 80,
-                          color: AppColors.orange,
+                        child: Center(
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(34),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.orange.withAlpha(110),
+                                  blurRadius: 40,
+                                  offset: const Offset(0, 14),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(34),
+                              child: Image.asset(
+                                'assets/images/logo.webp',
+                                fit: BoxFit.cover,
+                                gaplessPlayback: true,
+                                errorBuilder: (c, o, st) => const Center(
+                                  child: Text('FAWORI',
+                                      style: TextStyle(
+                                          color: AppColors.orange,
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w900)),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 26),
+                      ShaderMask(
+                        shaderCallback: (Rect r) => const LinearGradient(
+                                colors: <Color>[
+                                  AppColors.teal,
+                                  AppColors.orange
+                                ]).createShader(r),
+                        child: Text(
+                            s.isArabic ? 'شركة فاوِري' : 'FAWORI Co.',
+                            style: const TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white)),
+                      ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                            s.isArabic
+                                ? 'سجّل دخولك لمتابعة نقاطك ومشترياتك'
+                                : 'Sign in to track your points & purchases',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: dark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                      const Spacer(flex: 2),
+                      // ✅ زر تسجيل دخول كبير تفاعلي
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+                        child: Container(
+                          width: double.infinity,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                                colors: <Color>[
+                                  AppColors.orange,
+                                  Color(0xFFF26B0F)
+                                ]),
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: AppColors.orange.withAlpha(110),
+                                  blurRadius: 22,
+                                  offset: const Offset(0, 10)),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18)),
+                            ),
+                            onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const LoginScreen())),
+                            icon: const Icon(Icons.login_rounded, size: 22),
+                            label: Text(
+                                s.isArabic ? 'تسجيل الدخول' : 'Sign in',
+                                style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900)),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Text(
+                            s.isArabic
+                                ? 'نقاطك ومشترياتك بانتظارك ⭐'
+                                : 'Your points & purchases await ⭐',
+                            style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                      const Spacer(flex: 1),
+                    ],
                   ),
-                  const SizedBox(height: 30),
-                  ShaderMask(
-                    shaderCallback: (Rect bounds) => const LinearGradient(
-                      colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
-                    ).createShader(bounds),
-                    child: Text(
-                      s.isArabic ? 'شركة فاوري' : 'FAWORI Co.',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    s.isArabic
-                        ? 'سجل دخولك للاستمتاع بكافة المميزات'
-                        : 'Sign in to enjoy all features',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: dark ? Colors.grey.shade400 : Colors.grey.shade700,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 50),
-                  Container(
-                    width: double.infinity,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: <Color>[AppColors.orange, Color(0xFFF26B0F)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.orange.withAlpha(100),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      ),
-                      icon: const Icon(Icons.login_rounded, size: 24),
-                      label: Text(
-                        s.isArabic ? 'تسجيل الدخول' : 'Sign In',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                ],
+                ),
               ),
             ),
           ),
@@ -326,6 +352,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
+    // ==================================================
+    // 👤 المستخدم المسجل: الصفحة الأصلية كاملة
+    // ==================================================
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -336,7 +365,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           const SizedBox(height: 12),
-          // ===== الصورة الشخصية =====
           Center(
             child: Stack(
               children: [
@@ -377,14 +405,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 4),
           Center(
             child: Text(
-              isGuest
-                  ? (s.isArabic ? 'حساب ضيف' : 'Guest account')
-                  : '${s.isArabic ? _roleAr(u!.role) : u.role}${u!.phone.isNotEmpty ? ' • ${u.phone}' : ''}',
+              '${s.isArabic ? _roleAr(u!.role) : u.role}${u.phone.isNotEmpty ? ' • ${u.phone}' : ''}',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
             ),
           ),
           const SizedBox(height: 20),
-          // ===== النقاط والرصيد =====
           Row(
             children: [
               Expanded(
@@ -403,7 +428,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          // ===== الإعدادات مدمجة هنا (بدل زر الإعدادات) =====
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
@@ -470,7 +494,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(
             child: Text(
               s.isArabic ? 'شركة فاوري' : 'FAWORI Co.',
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+              style:
+                  const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
             ),
           ),
         ],
