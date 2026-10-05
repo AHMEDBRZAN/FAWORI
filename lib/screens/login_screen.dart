@@ -571,7 +571,61 @@ class _LoginScreenState extends State<LoginScreen>
 }
 
 /// 🌈 رسّام الحدود المتوهجة الدوارة (برتقالي + تركوازي)
+/// 🌈 رسّام الحدود: حلقة أساسية خافتة دائماً + توهجان يدوران بلا نهاية
 class _GlowBorderPainter extends CustomPainter {
+  final double angle;
+  final bool dark;
+  _GlowBorderPainter({required this.angle, required this.dark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(4, 4, size.width - 8, size.height - 8);
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(24));
+
+    // ✅ 1) حلقة أساسية خافتة حول البطاقة كاملة (لا اختفاء أبداً)
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = AppColors.orange.withAlpha(dark ? 80 : 60);
+    canvas.drawRRect(rrect, base);
+
+    // ✅ 2) توهجان يدوران: اللون عند 0.0 = اللون عند 1.0 (التفاف بلا درزة)
+    final gradient = SweepGradient(
+      startAngle: angle,
+      endAngle: angle + 2 * math.pi,
+      colors: const <Color>[
+        Color(0xFFFF8C00),
+        Colors.transparent,
+        AppColors.teal,
+        Colors.transparent,
+        Color(0xFFFF8C00),
+      ],
+      stops: const <double>[0.0, 0.25, 0.5, 0.75, 1.0],
+    );
+    final shader = gradient.createShader(rect);
+
+    // توهج خارجي ناعم
+    canvas.drawRRect(
+        rrect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+          ..shader = shader);
+
+    // الخط الحاد
+    canvas.drawRRect(
+        rrect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..shader = shader);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlowBorderPainter old) =>
+      old.angle != angle || old.dark != dark;
+}
   final double angle;
   final bool dark;
   _GlowBorderPainter({required this.angle, required this.dark});
