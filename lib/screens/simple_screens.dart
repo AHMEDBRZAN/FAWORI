@@ -2632,68 +2632,308 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final pts = (h['points'] as num?)?.toInt() ?? 0;
     final neg = total < 0;
     final cashier = '${h['cashier'] ?? ''}'.trim();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF1E1E28) : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF9B59B6).withAlpha(50)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF9B59B6).withAlpha(25),
-              borderRadius: BorderRadius.circular(8),
+    return Pressable(
+      onTap: () => _openHistDetails(h, s, dark),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF1E1E28) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF9B59B6).withAlpha(50)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF9B59B6).withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                  neg
+                      ? (s.isArabic ? 'مرتجع' : 'Return')
+                      : (s.isArabic ? 'شراء' : 'Sale'),
+                  style: const TextStyle(
+                      color: Color(0xFF9B59B6),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800)),
             ),
-            child: Text(
-                neg
-                    ? (s.isArabic ? 'مرتجع' : 'Return')
-                    : (s.isArabic ? 'شراء' : 'Sale'),
-                style: const TextStyle(
-                    color: Color(0xFF9B59B6),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(
-                      cashier.isEmpty
-                          ? '${h['date'] ?? ''}'
-                          : '${h['date'] ?? ''} • $cashier',
-                      style: TextStyle(
-                          color: Colors.grey.shade500, fontSize: 10)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                        cashier.isEmpty
+                            ? '${h['date'] ?? ''}'
+                            : '${h['date'] ?? ''} • $cashier',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 10)),
+                  ),
+                  const SizedBox(height: 2),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(fmtThousands(total),
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: neg
+                                ? Colors.red.shade300
+                                : (dark ? Colors.white : AppColors.ink))),
+                  ),
+                ],
+              ),
+            ),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Text(pts >= 0 ? '+$pts' : '-${pts.abs()}',
+                  style: TextStyle(
+                      color: pts >= 0 ? AppColors.orange : Colors.red,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openHistDetails(Map<String, dynamic> h, AppSettings s, bool dark) {
+    final items = List<Map<String, dynamic>>.from((h['items'] as List? ?? [])
+        .map((e) => Map<String, dynamic>.from(e as Map)));
+    final total = (h['total'] as num?)?.toDouble() ?? 0;
+    final pts = (h['points'] as num?)?.toInt() ?? 0;
+    final stg = (h['stored'] as num?)?.toInt() ?? 0;
+    final cashier = '${h['cashier'] ?? ''}'.trim();
+    final time = '${h['time'] ?? ''}'.trim();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: dark ? const Color(0xFF1E1E28) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      const Color(0xFF9B59B6).withAlpha(dark ? 50 : 25),
+                      const Color(0xFF9B59B6).withAlpha(dark ? 20 : 8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: const Color(0xFF9B59B6).withAlpha(70)),
                 ),
-                const SizedBox(height: 2),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Text(fmtThousands(total),
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          color: neg
-                              ? Colors.red.shade300
-                              : (dark ? Colors.white : AppColors.ink))),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 15, color: Color(0xFF9B59B6)),
+                    const SizedBox(width: 6),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                          time.isEmpty
+                              ? _dmy('${h['date'] ?? ''}')
+                              : '${_dmy('${h['date'] ?? ''}')} • $time',
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade200
+                                  : AppColors.ink,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13)),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.receipt_long_outlined,
+                        size: 15, color: AppColors.orange),
+                    const SizedBox(width: 6),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text('${h['legacy_no'] ?? ''}',
+                          style: const TextStyle(
+                              color: AppColors.orange,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ),
+              if (cashier.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 10, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.teal.withAlpha(dark ? 30 : 18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.teal.withAlpha(60)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.badge_rounded,
+                          size: 16, color: AppColors.teal),
+                      const SizedBox(width: 6),
+                      Text(s.isArabic ? 'منظم الفاتورة' : 'Cashier',
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade200
+                                  : AppColors.ink,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800)),
+                      const Spacer(),
+                      Text(cashier,
+                          style: const TextStyle(
+                              color: AppColors.teal,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12)),
+                    ],
+                  ),
                 ),
               ],
-            ),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.orange.withAlpha(60)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 12),
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: <Color>[
+                          Color(0xFFFF8C00),
+                          Color(0xFFF26B0F)
+                        ]),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                              child: Text(s.isArabic ? 'المادة' : 'Item',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 12))),
+                          SizedBox(
+                              width: 34,
+                              child: Text(s.isArabic ? 'العدد' : 'Qty',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 11))),
+                          SizedBox(
+                              width: 70,
+                              child: Text(s.isArabic ? 'مفرد' : 'Unit',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 11))),
+                          SizedBox(
+                              width: 80,
+                              child: Text(s.isArabic ? 'اجمالي' : 'Total',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 11))),
+                        ],
+                      ),
+                    ),
+                    for (int i = 0; i < items.length; i++)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 12),
+                        color: i.isOdd
+                            ? (dark
+                                ? Colors.white.withAlpha(8)
+                                : Colors.black.withAlpha(6))
+                            : Colors.transparent,
+                        child: Row(
+                          children: [
+                            Expanded(
+                                child: Text('${items[i]['name'] ?? ''}',
+                                    style: TextStyle(
+                                        color: dark
+                                            ? Colors.white
+                                            : AppColors.ink,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700))),
+                            SizedBox(
+                                width: 34,
+                                child: Text('${items[i]['qty'] ?? ''}',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: dark
+                                            ? Colors.grey.shade300
+                                            : Colors.grey.shade700,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800))),
+                            SizedBox(
+                                width: 70,
+                                child: Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: Text(
+                                      fmtThousands((items[i]['unit_price']
+                                                  as num?)
+                                              ?.toDouble() ??
+                                          0),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: AppColors.teal,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800)),
+                                )),
+                            SizedBox(
+                                width: 80,
+                                child: Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: Text(
+                                      fmtThousands((items[i]['subtotal']
+                                                  as num?)
+                                              ?.toDouble() ??
+                                          0),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: AppColors.orange,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900)),
+                                )),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _sheetRow(s.isArabic ? 'الإجمالي' : 'Total',
+                  fmtThousands(total), AppColors.orange, dark,
+                  big: true),
+              _sheetRow(
+                  s.isArabic ? 'نقاط هذه الفاتورة' : 'Points',
+                  '${pts >= 0 ? '+' : ''}${fmtThousands(pts)}',
+                  pts >= 0 ? AppColors.teal : Colors.red,
+                  dark),
+              _sheetRow(s.isArabic ? 'رصيد مخزن منها' : 'Stored',
+                  fmtThousands(stg), AppColors.teal, dark),
+              const SizedBox(height: 16),
+            ],
           ),
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Text(pts >= 0 ? '+$pts' : '-${pts.abs()}',
-                style: TextStyle(
-                    color: pts >= 0 ? AppColors.orange : Colors.red,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12)),
-          ),
-        ],
+        ),
       ),
     );
   }
