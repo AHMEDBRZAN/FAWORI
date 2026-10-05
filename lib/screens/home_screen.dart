@@ -1168,7 +1168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       clipBehavior: Clip.none,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.notifications_none_rounded,
+                          icon: Icon(Icons.notifications_none_rounded,
                               color: s.isGuest
                                   ? Colors.grey
                                   : AppColors.orange),
