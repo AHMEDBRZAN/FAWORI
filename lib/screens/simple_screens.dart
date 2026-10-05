@@ -1561,6 +1561,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
       final u = await OrdersService.loadUsersFiltered();
       final i = await OrdersService.loadInvoicesFiltered();
       final r = await OrdersService.loadReturnsFiltered();
+      await ImportService.loadImported();
       if (mounted) {
         setState(() {
           _users = u.where((x) => x.role != 'guest').toList();
@@ -1635,8 +1636,21 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     rets += _invoices
         .where((i) => i.userId == u.id && i.type == 'return')
         .fold(0, (s, i) => s + i.total.toInt().abs());
+    // ✅ دمج السجل التاريخي من الملف المنشور بالمستودع
+    final hist = ImportService.historyForSync(u.name);
+    for (final h in hist) {
+      final t = ((h['total'] as num?)?.toDouble() ?? 0).toInt().abs();
+      if (h['type'] == 'return') {
+        rets += t;
+      } else {
+        sales += t;
+      }
+    }
     return sales - rets;
   }
+
+  List<Map<String, dynamic>> _histOf(User u) =>
+      ImportService.historyForSync(u.name);
 
   int _pointsOf(User u) => _netOf(u) ~/ kPointUnit;
 
@@ -2531,7 +2545,83 @@ class _AdminPointsViewState extends State<AdminPointsView> {
         else
           for (final r in rets) _returnRow(r, s, dark, false),
       ],
+      if (_histOf(u).isNotEmpty) ...[
+        const SizedBox(height: 14),
+        _sectionTitle(
+            s.isArabic ? 'السجل التاريخي' : 'History',
+            Icons.history_rounded,
+            const Color(0xFF9B59B6)),
+        const SizedBox(height: 10),
+        for (final h in _histOf(u)) _histRow(h, s, dark),
+      ],
     ];
+  }
+
+  Widget _histRow(Map<String, dynamic> h, AppSettings s, bool dark) {
+    final total = (h['total'] as num?)?.toDouble() ?? 0;
+    final pts = (h['points'] as num?)?.toInt() ?? 0;
+    final neg = total < 0;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF1E1E28) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF9B59B6).withAlpha(50)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF9B59B6).withAlpha(25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+                neg
+                    ? (s.isArabic ? 'مرتجع' : 'Return')
+                    : (s.isArabic ? 'شراء' : 'Sale'),
+                style: const TextStyle(
+                    color: Color(0xFF9B59B6),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text('${h['date'] ?? ''}',
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 10)),
+                ),
+                const SizedBox(height: 2),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(fmtThousands(total),
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: neg
+                              ? Colors.red.shade300
+                              : (dark ? Colors.white : AppColors.ink))),
+                ),
+              ],
+            ),
+          ),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(pts >= 0 ? '+$pts' : '-${pts.abs()}',
+                style: TextStyle(
+                    color: pts >= 0 ? AppColors.orange : Colors.red,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _chip(String label, String value, Color c) {
