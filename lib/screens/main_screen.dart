@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
@@ -9,7 +11,7 @@ import 'products_screen.dart';
 import 'profile_screen.dart';
 import 'simple_screens.dart';
 
-/// ✅ رسّام الشريط: حبّة دائرية مع «غرزة» مقعّرة تحتضن الدائرة
+/// ✅ رسّام الشريط: الغرزة تلتحم بالحواف الطرفية مثل الفيديو تماماً
 class _NotchPainter extends CustomPainter {
   final double cx;
   final bool dark;
@@ -23,21 +25,52 @@ class _NotchPainter extends CustomPainter {
     const d = 30.0;
     const w = 22.0;
     const s = 4.0;
-    final double ccx = cx.clamp(r + w + s, size.width - r - w - s);
-    final p = Path()
-      ..moveTo(0, top + r)
-      ..quadraticBezierTo(0, top, r, top)
-      ..lineTo(ccx - w - s, top)
-      ..quadraticBezierTo(ccx - w + 2, top + 2, ccx - w + 5, top + d * 0.55)
-      ..quadraticBezierTo(ccx - w * 0.45, top + d, ccx, top + d)
-      ..quadraticBezierTo(ccx + w * 0.45, top + d, ccx + w - 5, top + d * 0.55)
-      ..quadraticBezierTo(ccx + w - 2, top + 2, ccx + w + s, top)
-      ..lineTo(size.width - r, top)
-      ..quadraticBezierTo(size.width, top, size.width, top + r)
-      ..quadraticBezierTo(size.width, top + barH, size.width - r, top + barH)
-      ..lineTo(r, top + barH)
-      ..quadraticBezierTo(0, top + barH, 0, top + r)
-      ..close();
+    final W = size.width;
+    final lx = cx - w - s;
+    final rx = cx + w + s;
+
+    // ✅ نقطة التقاء الغرزة مع قوس الحافة (يسار/يمين)
+    double capYLeft(double x) {
+      if (x >= r) return top;
+      final dx = r - x;
+      if (dx >= r) return top + r;
+      return top + r - math.sqrt(r * r - dx * dx);
+    }
+
+    double capYRight(double x) {
+      if (x <= W - r) return top;
+      final dx = x - (W - r);
+      if (dx >= r) return top + r;
+      return top + r - math.sqrt(r * r - dx * dx);
+    }
+
+    final ly = capYLeft(lx);
+    final ry = capYRight(rx);
+
+    final p = Path()..moveTo(0, top + r);
+    if (lx >= r) {
+      p.quadraticBezierTo(0, top, r, top);
+      p.lineTo(lx, top);
+    } else {
+      // ✅ الغرزة تبدأ من داخل قوس الحافة (التحام كامل)
+      p.quadraticBezierTo(0, ly, lx, ly);
+    }
+    p.quadraticBezierTo(cx - w + 2, ly + 2, cx - w + 5, top + d * 0.55);
+    p.quadraticBezierTo(cx - w * 0.45, top + d, cx, top + d);
+    p.quadraticBezierTo(cx + w * 0.45, top + d, cx + w - 5, top + d * 0.55);
+    p.quadraticBezierTo(cx + w - 2, ry + 2, rx, ry);
+    if (rx <= W - r) {
+      p.lineTo(W - r, top);
+      p.quadraticBezierTo(W, top, W, top + r);
+    } else {
+      // ✅ الغرزة تنتهي داخل قوس الحافة اليمنى
+      p.quadraticBezierTo(W, ry, W, top + r);
+    }
+    p.quadraticBezierTo(W, top + barH, W - r, top + barH);
+    p.lineTo(r, top + barH);
+    p.quadraticBezierTo(0, top + barH, 0, top + r);
+    p.close();
+
     canvas.drawShadow(p, Colors.black.withAlpha(80), 12, true);
     final paint = Paint()
       ..shader = LinearGradient(
@@ -46,7 +79,7 @@ class _NotchPainter extends CustomPainter {
             : const <Color>[Colors.white, Color(0xFFF6F6F9)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, top, size.width, barH));
+      ).createShader(Rect.fromLTWH(0, top, W, barH));
     canvas.drawPath(p, paint);
   }
 
@@ -149,7 +182,7 @@ class _MainScreenState extends State<MainScreen>
             return AnimatedBuilder(
               animation: _navC,
               builder: (context, _) {
-                final t = Curves.easeInOutCubic.transform(_navC.value);
+                final t = Curves.easeOutBack.transform(_navC.value);
                 final cx = centerOf(_prevIdx) +
                     (centerOf(_idx) - centerOf(_prevIdx)) * t;
                 return SizedBox(
@@ -161,6 +194,24 @@ class _MainScreenState extends State<MainScreen>
                       CustomPaint(
                         size: Size(W, 92),
                         painter: _NotchPainter(cx: cx, dark: dark),
+                      ),
+                      // ✅ خط المقبض الصغير (لمسة جمالية مثل الفيديو)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 7,
+                        child: Center(
+                          child: Container(
+                            width: 64,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: dark
+                                  ? Colors.white.withAlpha(30)
+                                  : Colors.black.withAlpha(25),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
                       ),
                       // ✅ الأيقونات (النشطة تتلاشى لأن الدائرة تحملها)
                       Positioned(
