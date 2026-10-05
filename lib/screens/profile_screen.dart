@@ -403,7 +403,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-(اتركه فارغاً / احذف الكتلة بالكامل)
           // ===== الإعدادات مدمجة هنا (بدل زر الإعدادات) =====
           Container(
             decoration: BoxDecoration(
