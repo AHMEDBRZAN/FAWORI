@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
+import '../core/guest_guard.dart';
 import '../core/theme.dart';
 import 'admin_users.dart';
 import 'home_screen.dart';
@@ -30,6 +31,23 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _idx = 0;
+
+  /// ✅ تبويب مع قفل الضيف: المحفظة مقفلة للضيوف
+  void _onTab(int i, bool isGuest, bool isArabic) {
+    if (isGuest && i == 2) {
+      GuestGuard.lock(
+        context,
+        title: isArabic ? 'المحفظة مقفلة 🔒' : 'Wallet locked 🔒',
+        message: isArabic
+            ? 'سجل دخولك أولاً واشتري مواد فاوري لتربح النقاط'
+            : 'Sign in first and buy Fawori products to earn points',
+        onLogin: () => setState(() => _idx = 4),
+        loginLabel: isArabic ? 'تسجيل الدخول' : 'Sign in',
+      );
+      return;
+    }
+    setState(() => _idx = i);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +103,7 @@ class _MainScreenState extends State<MainScreen> {
         dark: dark,
         icons: icons,
         labels: labels,
-        onTap: (i) => setState(() => _idx = i),
+        onTap: (i) => _onTab(i, s.isGuest, s.isArabic),
       ),
     );
   }
