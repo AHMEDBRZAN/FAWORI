@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _phoneFocus = FocusNode();
   final _passFocus = FocusNode();
   late final AnimationController _glow = AnimationController(
-      vsync: this, duration: const Duration(seconds: 7))
+      vsync: this, duration: const Duration(seconds: 4))
     ..repeat();
   bool _busy = false;
   String? _err;
