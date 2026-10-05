@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
+import '../core/guest_guard.dart';
 import '../core/store_service.dart';
 import '../core/theme.dart';
 import '../widgets/fawori_logo.dart';
@@ -1164,16 +1165,39 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(child: _gradText(s.tr('appName'), 18)),
                     // 🔔 الجرس + شارة غير المقروء (مدير ومستخدم)
                     Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.notifications_none_rounded,
-                              color: AppColors.orange),
-                          onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const OrdersScreen())),
+                              color: s.isGuest
+                                  ? Colors.grey
+                                  : AppColors.orange),
+                          onPressed: () {
+                            if (s.isGuest) {
+                              GuestGuard.lock(
+                                context,
+                                title: s.isArabic
+                                    ? 'الإشعارات مقفلة 🔒'
+                                    : 'Notifications locked 🔒',
+                                message: s.isArabic
+                                    ? 'سجل دخولك أولاً لتتمكن من مشاهدة إشعاراتك وطلباتك'
+                                    : 'Sign in first to view your notifications and orders',
+                                onLogin: () => Navigator.of(context)
+                                    .push(MaterialPageRoute(
+                                        builder: (_) => const LoginScreen())),
+                                loginLabel: s.isArabic
+                                    ? 'سجل دخولك الآن'
+                                    : 'Sign in now',
+                              );
+                              return;
+                            }
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const OrdersScreen()));
+                          },
                         ),
-                        if (s.unseenCount > 0)
+                        if (!s.isGuest && s.unseenCount > 0)
                           Positioned(
                             right: 6,
                             top: 6,
@@ -1185,6 +1209,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: const TextStyle(
                                       color: Colors.white, fontSize: 10)),
                             ),
+                          ),
+                        if (s.isGuest)
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: GuestGuard.badge(size: 13),
                           ),
                       ],
                     ),
@@ -1240,19 +1270,51 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _quick(
-                        Icons.redeem_rounded,
-                        s.isArabic ? 'الهدايا' : 'Gifts',
-                        AppColors.teal,
-                        () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => Scaffold(
-                                      appBar: AppBar(
-                                          title: Text(
-                                              s.isArabic ? 'الهدايا' : 'Gifts')),
-                                      body: const GiftsView(),
-                                    ))),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          _quick(
+                            Icons.redeem_rounded,
+                            s.isArabic ? 'الهدايا' : 'Gifts',
+                            s.isGuest ? Colors.grey : AppColors.teal,
+                            () {
+                              if (s.isGuest) {
+                                GuestGuard.lock(
+                                  context,
+                                  title: s.isArabic
+                                      ? 'الهدايا مقفلة 🔒'
+                                      : 'Gifts locked 🔒',
+                                  message: s.isArabic
+                                      ? 'متاحة للمستخدمين المسجلين فقط. سجل دخولك لتتمكن من استبدال نقاطك بالهدايا'
+                                      : 'Available for registered users only. Sign in to redeem your points for gifts',
+                                  onLogin: () => Navigator.of(context)
+                                      .push(MaterialPageRoute(
+                                          builder: (_) => const LoginScreen())),
+                                  loginLabel: s.isArabic
+                                      ? 'سجل دخولك الآن'
+                                      : 'Sign in now',
+                                );
+                                return;
+                              }
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => Scaffold(
+                                            appBar: AppBar(
+                                                title: Text(s.isArabic
+                                                    ? 'الهدايا'
+                                                    : 'Gifts')),
+                                            body: const GiftsView(),
+                                          )));
+                            },
+                          ),
+                          if (s.isGuest)
+                            Positioned(
+                              right: -2,
+                              top: -2,
+                              child: GuestGuard.badge(size: 18),
+                            ),
+                        ],
                       ),
                     ),
                   ],
