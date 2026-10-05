@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
+import '../core/guest_guard.dart';
 import '../core/orders_service.dart';
+import 'login_screen.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
@@ -197,7 +199,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 color: dark ? Colors.white : AppColors.ink)),
         actions: [
           IconButton(
-            onPressed: _openCart,
+            onPressed: () {
+              if (s.isGuest) {
+                GuestGuard.lock(
+                  context,
+                  title: s.isArabic ? 'السلة مقفلة 🔒' : 'Cart locked 🔒',
+                  message: s.isArabic
+                      ? 'متاحة للمستخدمين المسجلين فقط. سجل دخولك لتتمكن من إضافة المنتجات وطلبها'
+                      : 'Available for registered users only. Sign in to add and order products',
+                  onLogin: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LoginScreen())),
+                  loginLabel: s.isArabic ? 'سجل دخولك الآن' : 'Sign in now',
+                );
+                return;
+              }
+              _openCart();
+            },
             icon: Stack(
               children: [
                 const Icon(Icons.shopping_cart_outlined,
@@ -528,10 +545,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         ),
                       ),
                     ),
-                    PositionedDirectional(
-                      bottom: 10,
-                      end: 10,
-                      child: Material(
+                    if (!s.isGuest)
+                      PositionedDirectional(
+                        bottom: 10,
+                        end: 10,
+                        child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () => _addToCart(p, 1),
