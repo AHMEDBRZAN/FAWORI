@@ -2632,11 +2632,9 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final pts = (h['points'] as num?)?.toInt() ?? 0;
     final neg = total < 0;
     final cashier = '${h['cashier'] ?? ''}'.trim();
-    return Pressable(
-      onTap: () => _openHistDetails(h, s, dark),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: dark ? const Color(0xFF1E1E28) : Colors.white,
         borderRadius: BorderRadius.circular(14),
