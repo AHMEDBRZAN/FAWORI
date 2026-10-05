@@ -74,7 +74,7 @@ class _MainScreenState extends State<MainScreen> {
             return SizedBox(
               height: 90,
               child: Stack(
-                clipBehavior: none,
+                clipBehavior: Clip.none,
                 children: [
                   // ✅ الشريط (الحبة)
                   Positioned(
@@ -121,7 +121,6 @@ class _MainScreenState extends State<MainScreen> {
                   AnimatedPositionedDirectional(
                     duration: const Duration(milliseconds: 380),
                     curve: Curves.easeOutCubic,
-                    textDirection: Directionality.of(context),
                     start: slot * _idx + (slot - 56) / 2,
                     bottom: 34,
                     width: 56,
