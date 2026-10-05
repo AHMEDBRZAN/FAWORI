@@ -91,6 +91,21 @@ class ImportService {
     return const [];
   }
 
+  /// ✅ نسخة متزامنة (بعد التحميل) — لصفحة المدير
+  static List<Map<String, dynamic>> historyForSync(String userName) {
+    final key = normalizeName(userName);
+    if (key.isEmpty || _byCustomer == null) return const [];
+    final exact = _byCustomer![key];
+    if (exact != null && exact.isNotEmpty) return exact;
+    for (final e in _byCustomer!.entries) {
+      if (e.key.isNotEmpty &&
+          (e.key.contains(key) || key.contains(e.key))) {
+        return e.value;
+      }
+    }
+    return const [];
+  }
+
   /// ✅ صافي مواد فاوري (موجب شراء / سالب مرتجع)
   static int historyNet(List<Map<String, dynamic>> hist) {
     double sum = 0;
