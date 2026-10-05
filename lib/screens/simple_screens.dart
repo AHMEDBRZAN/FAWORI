@@ -253,6 +253,39 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  if ('${h['cashier'] ?? ''}'.trim().isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.teal.withAlpha(dark ? 30 : 18),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.teal.withAlpha(60)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.badge_rounded,
+                              size: 16, color: AppColors.teal),
+                          const SizedBox(width: 6),
+                          Text(s.isArabic ? 'منظم الفاتورة' : 'Cashier',
+                              style: TextStyle(
+                                  color: dark
+                                      ? Colors.grey.shade200
+                                      : AppColors.ink,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800)),
+                          const Spacer(),
+                          Text('${h['cashier']}',
+                              style: const TextStyle(
+                                  color: AppColors.teal,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(
@@ -2598,6 +2631,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final total = (h['total'] as num?)?.toDouble() ?? 0;
     final pts = (h['points'] as num?)?.toInt() ?? 0;
     final neg = total < 0;
+    final cashier = '${h['cashier'] ?? ''}'.trim();
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -2630,7 +2664,10 @@ class _AdminPointsViewState extends State<AdminPointsView> {
               children: [
                 Directionality(
                   textDirection: TextDirection.ltr,
-                  child: Text('${h['date'] ?? ''}',
+                  child: Text(
+                      cashier.isEmpty
+                          ? '${h['date'] ?? ''}'
+                          : '${h['date'] ?? ''} • $cashier',
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 10)),
                 ),
