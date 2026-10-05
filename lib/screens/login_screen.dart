@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
@@ -11,20 +13,23 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  // ✅ 1. Controllers + FocusNodes خارج build (ثابتة)
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _phone = TextEditingController();
   final _pass = TextEditingController();
-  final _phoneFocus = FocusNode(debugLabel: 'phone');
-  final _passFocus = FocusNode(debugLabel: 'pass');
-
+  final _phoneFocus = FocusNode();
+  final _passFocus = FocusNode();
+  late final AnimationController _glow = AnimationController(
+      vsync: this, duration: const Duration(seconds: 4))
+    ..repeat();
   bool _busy = false;
   String? _err;
   bool _obscure = true;
+  bool _open = false;
 
-  // ✅ 2. dispose صحيح لمنع تسرب الذاكرة
   @override
   void dispose() {
+    _glow.dispose();
     _phone.dispose();
     _pass.dispose();
     _phoneFocus.dispose();
@@ -34,7 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _go() {
     if (!mounted) return;
-    // ✅ إزالة التركيز قبل التنقل لتجنب حلقة التركيز
     _phoneFocus.unfocus();
     _passFocus.unfocus();
     Navigator.of(context).pushAndRemoveUntil(
@@ -42,7 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // ✅ حماية من النقر المتكرر أثناء التشغيل
     if (_busy || !mounted) return;
     final settings = context.read<AppSettings>();
     setState(() {
@@ -53,14 +56,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final ph = _phone.text.trim();
       final pw = _pass.text.trim();
       if (ph.isEmpty || pw.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _busy = false;
-            _err = settings.isArabic
-                ? 'أدخل الهاتف وكلمة المرور'
-                : 'Enter phone & password';
-          });
-        }
+        setState(() {
+          _busy = false;
+          _err = settings.isArabic
+              ? 'أدخل الهاتف وكلمة المرور'
+              : 'Enter phone & password';
+        });
         return;
       }
       if (ph == '1' && pw == '2') {
@@ -77,14 +78,12 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
       if (found == null || found.password != pw) {
-        if (mounted) {
-          setState(() {
-            _busy = false;
-            _err = settings.isArabic
-                ? 'بيانات الدخول غير صحيحة'
-                : 'Invalid credentials';
-          });
-        }
+        setState(() {
+          _busy = false;
+          _err = settings.isArabic
+              ? 'بيانات الدخول غير صحيحة'
+              : 'Invalid credentials';
+        });
         return;
       }
       try {
@@ -127,8 +126,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final bool ar = settings.isArabic;
 
     return Scaffold(
-      // ✅ 3. منع لوحة المفاتيح من إعادة تشكيل الصفحة
-      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -153,46 +150,43 @@ class _LoginScreenState extends State<LoginScreen> {
                         Border.all(color: AppColors.orange.withAlpha(60)),
                     boxShadow: [
                       BoxShadow(
-                          color: AppColors.orange.withAlpha(20), blurRadius: 8),
+                          color: AppColors.orange.withAlpha(20),
+                          blurRadius: 8),
                     ],
                   ),
                   child: IconButton(
                     icon: Icon(
-                      dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                      color: AppColors.orange,
-                      size: 22,
-                    ),
+                        dark
+                            ? Icons.light_mode_rounded
+                            : Icons.dark_mode_rounded,
+                        color: AppColors.orange,
+                        size: 22),
                     onPressed: () =>
                         context.read<AppSettings>().toggleDark(),
                   ),
                 ),
               ),
-              // ✅ 4. GestureDetector لإخفاء لوحة المفاتيح عند النقر في الخلفية
-              GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: () {
-                  FocusScope.of(context).unfocus();
-                },
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  children: [
-                    const SizedBox(height: 80),
-                    Center(
-                      child: Container(
-                        width: 120,
-                        height: 120,
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ✅ الشعار بتوهج برتقالي
+                      Container(
+                        width: 84,
+                        height: 84,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
+                          borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                                color: AppColors.orange.withAlpha(80),
-                                blurRadius: 30,
-                                spreadRadius: 5),
+                                color: AppColors.orange.withAlpha(90),
+                                blurRadius: 26,
+                                offset: const Offset(0, 10)),
                           ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
+                          borderRadius: BorderRadius.circular(24),
                           child: Image.asset('assets/images/logo.webp',
                               fit: BoxFit.cover,
                               gaplessPlayback: true,
@@ -207,213 +201,365 @@ class _LoginScreenState extends State<LoginScreen> {
                                       child: Text('FAWORI',
                                           style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 24,
+                                              fontSize: 16,
                                               fontWeight: FontWeight.w900)),
                                     ),
                                   )),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: ShaderMask(
-                        shaderCallback: (Rect r) => const LinearGradient(
-                                colors: <Color>[
-                                  AppColors.teal,
-                                  AppColors.orange
-                                ]).createShader(r),
-                        child: const Text('شركة فاورِي',
-                            style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      ar ? 'سجّل دخولك للمتابعة' : 'Sign in to continue',
-                      style: TextStyle(
-                          color: dark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 40),
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: dark ? const Color(0xFF1E1E28) : Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                            color: AppColors.orange.withAlpha(40), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                              color: AppColors.orange.withAlpha(30),
-                              blurRadius: 20,
-                              spreadRadius: 2),
-                        ],
-                      ),
-                      // ✅ 5. AutofillGroup لمنع شريط المتصفح الرمادي على الويب
-                      child: AutofillGroup(
-                        child: Column(
-                          children: [
-                            TextField(
-                              controller: _phone,
-                              focusNode: _phoneFocus,
-                              keyboardType: TextInputType.phone,
-                              textInputAction: TextInputAction.next,
-                              enableInteractiveSelection: true,
-                              autofillHints: const [AutofillHints.telephoneNumber],
-                              onSubmitted: (_) => _passFocus.requestFocus(),
-                              style: TextStyle(
-                                  color: dark ? Colors.white : AppColors.ink,
-                                  fontSize: 16),
-                              textAlign: TextAlign.right,
-                              decoration: InputDecoration(
-                                hintText: ar ? 'رقم الهاتف' : 'Phone',
-                                hintStyle: TextStyle(
+                      const SizedBox(height: 26),
+                      // ✅ البطاقة المتوهجة الدوارة
+                      AnimatedBuilder(
+                        animation: _glow,
+                        builder: (context, child) => CustomPaint(
+                          painter: _GlowBorderPainter(
+                              angle: _glow.value * 2 * math.pi, dark: dark),
+                          child: child,
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.all(7),
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: dark
+                                ? const Color(0xFF1E1E28)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // ✅ شريط العنوان (يفتح/يغلق النموذج)
+                              InkWell(
+                                onTap: () =>
+                                    setState(() => _open = !_open),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 13),
+                                  decoration: BoxDecoration(
                                     color: dark
-                                        ? Colors.grey.shade500
-                                        : Colors.grey.shade400),
-                                prefixIcon: const Icon(Icons.phone_rounded,
-                                    color: AppColors.orange, size: 24),
-                                filled: true,
-                                fillColor: dark
-                                    ? const Color(0xFF26262E)
-                                    : const Color(0xFFFAFAFA),
-                                border: OutlineInputBorder(
+                                        ? Colors.black.withAlpha(60)
+                                        : const Color(0xFFFAF6EF),
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide.none),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 16),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              controller: _pass,
-                              focusNode: _passFocus,
-                              obscureText: _obscure,
-                              textInputAction: TextInputAction.done,
-                              autofillHints: const [AutofillHints.password],
-                              onSubmitted: (_) => _login(),
-                              style: TextStyle(
-                                  color: dark ? Colors.white : AppColors.ink,
-                                  fontSize: 16),
-                              textAlign: TextAlign.right,
-                              decoration: InputDecoration(
-                                hintText: ar ? 'كلمة المرور' : 'Password',
-                                hintStyle: TextStyle(
-                                    color: dark
-                                        ? Colors.grey.shade500
-                                        : Colors.grey.shade400),
-                                prefixIcon: const Icon(Icons.lock_rounded,
-                                    color: AppColors.orange, size: 24),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                      _obscure
-                                          ? Icons.visibility_off_rounded
-                                          : Icons.visibility_rounded,
-                                      color: Colors.grey.shade500),
-                                  onPressed: () =>
-                                      setState(() => _obscure = !_obscure),
+                                    border: Border.all(
+                                        color: AppColors.orange
+                                            .withAlpha(50)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.orange
+                                              .withAlpha(30),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                                color: AppColors.orange
+                                                    .withAlpha(120),
+                                                blurRadius: 8),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                            Icons.login_rounded,
+                                            color: AppColors.orange,
+                                            size: 15),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      ShaderMask(
+                                        shaderCallback: (Rect r) =>
+                                            const LinearGradient(colors: <Color>[
+                                              AppColors.orange,
+                                              Color(0xFFF26B0F)
+                                            ]).createShader(r),
+                                        child: Text(
+                                            ar ? 'تسجيل الدخول' : 'LOGIN',
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 2)),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              AppColors.teal.withAlpha(30),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                                color: AppColors.teal
+                                                    .withAlpha(120),
+                                                blurRadius: 8),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                            Icons.favorite_rounded,
+                                            color: AppColors.teal,
+                                            size: 15),
+                                      ),
+                                      const Spacer(),
+                                      AnimatedRotation(
+                                        turns: _open ? 0.5 : 0,
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        child: Icon(
+                                            Icons.expand_more_rounded,
+                                            color: dark
+                                                ? Colors.grey.shade400
+                                                : Colors.grey.shade600),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                filled: true,
-                                fillColor: dark
-                                    ? const Color(0xFF26262E)
-                                    : const Color(0xFFFAFAFA),
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide.none),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 16),
                               ),
-                            ),
-                            const SizedBox(height: 20),
-                            Container(
-                              width: double.infinity,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(colors: <Color>[
-                                  AppColors.orange,
-                                  Color(0xFFF26B0F)
-                                ]),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: AppColors.orange.withAlpha(60),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4)),
-                                ],
+                              // ✅ النموذج المتمدد (مثل الفيديو)
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeInOut,
+                                child: _open
+                                    ? Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 18),
+                                        child: Column(
+                                          children: [
+                                            TextField(
+                                              controller: _phone,
+                                              focusNode: _phoneFocus,
+                                              keyboardType:
+                                                  TextInputType.phone,
+                                              textInputAction:
+                                                  TextInputAction.next,
+                                              onSubmitted: (_) =>
+                                                  _passFocus.requestFocus(),
+                                              style: TextStyle(
+                                                  color: dark
+                                                      ? Colors.white
+                                                      : AppColors.ink),
+                                              decoration: InputDecoration(
+                                                hintText: ar
+                                                    ? 'رقم الهاتف'
+                                                    : 'Phone',
+                                                filled: true,
+                                                fillColor: dark
+                                                    ? const Color(0xFF26262E)
+                                                    : const Color(0xFFFAFAFA),
+                                                prefixIcon: const Icon(
+                                                    Icons.phone_rounded,
+                                                    color: AppColors.orange),
+                                                border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30)),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30),
+                                                  borderSide: BorderSide(
+                                                      color: AppColors.orange
+                                                          .withAlpha(90)),
+                                                ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30),
+                                                  borderSide: const BorderSide(
+                                                      color: AppColors.teal,
+                                                      width: 2),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 14),
+                                            TextField(
+                                              controller: _pass,
+                                              focusNode: _passFocus,
+                                              obscureText: _obscure,
+                                              textInputAction:
+                                                  TextInputAction.done,
+                                              onSubmitted: (_) => _login(),
+                                              style: TextStyle(
+                                                  color: dark
+                                                      ? Colors.white
+                                                      : AppColors.ink),
+                                              decoration: InputDecoration(
+                                                hintText: ar
+                                                    ? 'كلمة المرور'
+                                                    : 'Password',
+                                                filled: true,
+                                                fillColor: dark
+                                                    ? const Color(0xFF26262E)
+                                                    : const Color(0xFFFAFAFA),
+                                                prefixIcon: const Icon(
+                                                    Icons.lock_rounded,
+                                                    color: AppColors.orange),
+                                                suffixIcon: IconButton(
+                                                  icon: Icon(
+                                                      _obscure
+                                                          ? Icons
+                                                              .visibility_off_rounded
+                                                          : Icons
+                                                              .visibility_rounded,
+                                                      color: Colors
+                                                          .grey.shade500),
+                                                  onPressed: () => setState(
+                                                      () => _obscure =
+                                                          !_obscure),
+                                                ),
+                                                border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30)),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30),
+                                                  borderSide: BorderSide(
+                                                      color: AppColors.orange
+                                                          .withAlpha(90)),
+                                                ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30),
+                                                  borderSide: const BorderSide(
+                                                      color: AppColors.teal,
+                                                      width: 2),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 18),
+                                            Container(
+                                              width: double.infinity,
+                                              height: 52,
+                                              decoration: BoxDecoration(
+                                                gradient: const LinearGradient(
+                                                    colors: <Color>[
+                                                      AppColors.orange,
+                                                      Color(0xFFF26B0F)
+                                                    ]),
+                                                borderRadius:
+                                                    BorderRadius.circular(30),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                      color: AppColors.orange
+                                                          .withAlpha(110),
+                                                      blurRadius: 18,
+                                                      offset: const Offset(
+                                                          0, 8)),
+                                                ],
+                                              ),
+                                              child: ElevatedButton(
+                                                style: ElevatedButton
+                                                    .styleFrom(
+                                                  backgroundColor:
+                                                      Colors.transparent,
+                                                  shadowColor:
+                                                      Colors.transparent,
+                                                  foregroundColor:
+                                                      Colors.white,
+                                                  shape:
+                                                      RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30),
+                                                  ),
+                                                ),
+                                                onPressed:
+                                                    _busy ? null : _login,
+                                                child: _busy
+                                                    ? const SizedBox(
+                                                        width: 22,
+                                                        height: 22,
+                                                        child: CircularProgressIndicator(
+                                                            strokeWidth: 2.5,
+                                                            color: Colors
+                                                                .white),
+                                                      )
+                                                    : Text(
+                                                        ar
+                                                            ? 'دخول'
+                                                            : 'Sign In',
+                                                        style: const TextStyle(
+                                                            fontSize: 16,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w900)),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                TextButton(
+                                                  onPressed: _busy
+                                                      ? null
+                                                      : _guest,
+                                                  child: Text(
+                                                      ar
+                                                          ? 'دخول كضيف'
+                                                          : 'Enter as guest',
+                                                      style: const TextStyle(
+                                                          color:
+                                                              AppColors.teal,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          fontSize: 13)),
+                                                ),
+                                              ],
+                                            ),
+                                            if (_err != null) ...[
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.all(10),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red
+                                                      .withAlpha(20),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          12),
+                                                  border: Border.all(
+                                                      color: Colors.red
+                                                          .withAlpha(60)),
+                                                ),
+                                                child: Text(_err!,
+                                                    style: const TextStyle(
+                                                        color: Colors.red,
+                                                        fontSize: 12),
+                                                    textAlign:
+                                                        TextAlign.center),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
                               ),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    foregroundColor: Colors.white),
-                                onPressed: _busy ? null : _login,
-                                child: _busy
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            color: Colors.white))
-                                    : Text(ar ? 'تسجيل الدخول' : 'Login',
-                                        style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w900)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          ar ? 'لا تملك حساباً؟' : "Don't have an account?",
-                          style: TextStyle(
-                              color: dark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
-                              fontSize: 14),
-                        ),
-                        TextButton(
-                          onPressed: _busy ? null : _guest,
-                          style: TextButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8)),
-                          child: Text(
-                            ar ? 'دخول كضيف' : 'Enter as guest',
-                            style: const TextStyle(
-                                color: AppColors.orange,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                    if (_err != null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withAlpha(20),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.withAlpha(60)),
-                        ),
-                        child: Text(_err!,
-                            style: const TextStyle(
-                                color: Colors.red, fontSize: 13),
-                            textAlign: TextAlign.center),
                       ),
+                      const SizedBox(height: 18),
+                      Text(
+                          ar
+                              ? 'شركة فاوِري — جودة تدوم'
+                              : 'FAWORI Co. — Quality that lasts',
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade500
+                                  : Colors.grey.shade600,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700)),
                     ],
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -422,4 +568,52 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+/// 🌈 رسّام الحدود المتوهجة الدوارة (برتقالي + تركوازي)
+class _GlowBorderPainter extends CustomPainter {
+  final double angle;
+  final bool dark;
+  _GlowBorderPainter({required this.angle, required this.dark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(4, 4, size.width - 8, size.height - 8);
+    final rrect =
+        RRect.fromRectAndRadius(rect, const Radius.circular(24));
+    final gradient = SweepGradient(
+      startAngle: angle - math.pi,
+      endAngle: angle + math.pi,
+      colors: const <Color>[
+        Colors.transparent,
+        Color(0xFFFF8C00),
+        Colors.transparent,
+        Colors.transparent,
+        AppColors.teal,
+        Colors.transparent,
+        Colors.transparent,
+      ],
+      stops: const <double>[0.0, 0.08, 0.18, 0.5, 0.58, 0.68, 1.0],
+    );
+    final shader = gradient.createShader(rect);
+    // توهج خارجي ناعم
+    canvas.drawRRect(
+        rrect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+          ..shader = shader);
+    // الخط الحاد
+    canvas.drawRRect(
+        rrect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..shader = shader);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlowBorderPainter old) =>
+      old.angle != angle || old.dark != dark;
 }
