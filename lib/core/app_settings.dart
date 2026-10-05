@@ -385,19 +385,28 @@ class AppSettings extends ChangeNotifier {
     _isArabic = p.getBool('isArabic') ?? true;
     _isDark = p.getBool('isDark') ?? false;
     final id = p.getString('userId');
-    if (id != null && id.isNotEmpty) {
+    final role = p.getString('userRole') ?? '';
+
+    // ✅ لا نستعيد جلسات الضيف أبداً — يجب عليهم تسجيل الدخول يدوياً
+    if (id != null && id.isNotEmpty && role != 'guest') {
       final users = await StoreService.loadUsers();
       final found = users.where((u) => u.id == id).toList();
-      final base = found.isNotEmpty
-          ? found.first
-          : User(
-              id: id,
-              name: p.getString('userName') ?? '',
-              role: p.getString('userRole') ?? 'guest',
-            );
-      _user = await _withInvoiceTotals(base);
-      _isImageAdmin = (_user!.role == 'admin');
-      startOrderPolling();
+      if (found.isNotEmpty) {
+        final base = found.first;
+        _user = await _withInvoiceTotals(base);
+        _isImageAdmin = (_user!.role == 'admin');
+        startOrderPolling();
+      } else {
+        // المستخدم لم يعد موجوداً (حُذف) — نظّف التخزين
+        await p.remove('userId');
+        await p.remove('userName');
+        await p.remove('userRole');
+      }
+    } else if (role == 'guest') {
+      // ✅ ضيف قديم خرج — نظّف البيانات ولا تُعده
+      await p.remove('userId');
+      await p.remove('userName');
+      await p.remove('userRole');
     }
     notifyListeners();
   }
