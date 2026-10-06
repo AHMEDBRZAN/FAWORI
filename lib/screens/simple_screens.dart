@@ -2710,6 +2710,7 @@ class _AdminPointsViewState extends State<AdminPointsView> {
     final pts = (h['points'] as num?)?.toInt() ?? 0;
     final stg = (h['stored'] as num?)?.toInt() ?? 0;
     final cashier = '${h['cashier'] ?? ''}'.trim();
+    final note = '${h['note'] ?? ''}'.trim();
     final time = '${h['time'] ?? ''}'.trim();
     showModalBottomSheet(
       context: context,
@@ -2799,6 +2800,46 @@ class _AdminPointsViewState extends State<AdminPointsView> {
                               color: AppColors.teal,
                               fontWeight: FontWeight.w900,
                               fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+              // ✅ البيان من الملف (مدير ومتحكم فقط)
+              if (note.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 10, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF9B59B6).withAlpha(dark ? 30 : 18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: const Color(0xFF9B59B6).withAlpha(60)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.notes_rounded,
+                          size: 16, color: Color(0xFF9B59B6)),
+                      const SizedBox(width: 6),
+                      Text(s.isArabic ? 'البيان' : 'Note',
+                          style: TextStyle(
+                              color: dark
+                                  ? Colors.grey.shade200
+                                  : AppColors.ink,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(note,
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(
+                                color: Color(0xFF9B59B6),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                height: 1.4)),
+                      ),
                     ],
                   ),
                 ),
