@@ -581,28 +581,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 );
                               }),
                             ),
-                                        fit: BoxFit.contain,
-                                        width: double.infinity,
-                                        gaplessPlayback: true,
-                                        loadingBuilder: (c, child, prog) =>
-                                            prog == null
-                                                ? child
-                                                : Center(
-                                                    child: Icon(b.icon,
-                                                        size: 40,
-                                                        color: b.color
-                                                            .withAlpha(120)),
-                                                  ),
-                                        errorBuilder: (c, e, st) => Center(
-                                            child: Icon(b.icon,
-                                                size: 46, color: b.color)),
-                                      ),
-                                    )
-                                  : Center(
-                                      child:
-                                          Icon(b.icon, size: 46, color: b.color),
-                                    ),
-                            ),
                             Text(p.name,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -635,31 +613,31 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         bottom: 10,
                         end: 10,
                         child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _addToCart(p, 1),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: <Color>[
-                                b.color,
-                                b.color.withAlpha(220)
-                              ]),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: b.color.withAlpha(90),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3)),
-                              ],
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _addToCart(p, 1),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: <Color>[
+                                  b.color,
+                                  b.color.withAlpha(220)
+                                ]),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: b.color.withAlpha(90),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3)),
+                                ],
+                              ),
+                              child: const Icon(Icons.add_rounded,
+                                  color: Colors.white, size: 18),
                             ),
-                            child: const Icon(Icons.add_rounded,
-                                color: Colors.white, size: 18),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 );
               },
