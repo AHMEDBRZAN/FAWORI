@@ -513,10 +513,32 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: Center(
-                                child:
-                                    Icon(b.icon, size: 46, color: b.color),
-                              ),
+                              child: p.image.isNotEmpty
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Image.network(
+                                        p.image,
+                                        fit: BoxFit.contain,
+                                        width: double.infinity,
+                                        gaplessPlayback: true,
+                                        loadingBuilder: (c, child, prog) =>
+                                            prog == null
+                                                ? child
+                                                : Center(
+                                                    child: Icon(b.icon,
+                                                        size: 40,
+                                                        color: b.color
+                                                            .withAlpha(120)),
+                                                  ),
+                                        errorBuilder: (c, e, st) => Center(
+                                            child: Icon(b.icon,
+                                                size: 46, color: b.color)),
+                                      ),
+                                    )
+                                  : Center(
+                                      child:
+                                          Icon(b.icon, size: 46, color: b.color),
+                                    ),
                             ),
                             Text(p.name,
                                 maxLines: 2,
