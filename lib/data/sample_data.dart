@@ -21,13 +21,10 @@ class Product {
 
   String get desc => description;
 
-  /// ✅ نسخة محدّثة من المنتج (تُستخدم في الـ overlay)
   Product copyWith({
     String? name,
     String? description,
     String? image,
-    String? category,
-    int? price,
   }) {
     return Product(
       id: id,
@@ -35,19 +32,43 @@ class Product {
       brand: brand,
       description: description ?? this.description,
       image: image ?? this.image,
-      category: category ?? this.category,
-      price: price ?? this.price,
+      category: category,
+      price: price,
     );
   }
 }
 
-/// ============================================================
-/// 🎨 طبقة التحديثات: تصحيح أسماء + أوصاف + صور للمواد المحددة
-/// ============================================================
+///  مجلد الصور التسلسلية في المستودع
 const String _imgBase =
     'https://ahmedbrzan.github.io/FAWORI/assets/images/products';
 
-/// 🔍 البحث عن مادة بالاسم (مطابقة جزئية)
+/// ============================================================
+/// 📋 جدول التحديثات التسلسلي (سطر واحد لكل مادة):
+/// [ كلمة البحث في الكتالوج , الاسم الجديد , ملف الصورة , الوصف ]
+/// ✅ أي حقل تتركه فارغاً '' = لا يتغير
+/// ============================================================
+const List<List<String>> _updates = <List<String>>[
+  [
+    'برايمر خارجي',
+    'برايمر خارجي جديد 20 كغ',
+    'a1.webp',
+    'يُشكّل طبقة رابطة متينة بين الطلاء والسطح، فيزيد من قوة الالتصاق '
+        'ويقلّل من استهلاك الطلاء. يتميّز بنفاذية عالية تسمح بخروج الرطوبة '
+        'من داخل المبنى، ويمنع امتصاص السطح للطلاء بشكل غير متساوٍ، '
+        'ليمنحك تشطيباً خارجياً متجانساً يدوم طويلاً.\n\n'
+        '⏱ مدة الجفاف: 4-8 ساعات\n'
+        '▦ معدل التغطية: 90-145 م²\n'
+        '✨ اللمسة النهائية: طبقة واحدة\n'
+        '📦 التعبئة: 20 كغم\n'
+        '💧 المخفف: ماء 15%',
+  ],
+
+  // 🔮 أضف موادك الجديدة هنا بالترتيب:
+  // ['كلمة من اسم المادة', 'الاسم الجديد', 'a2.webp', 'الوصف المرتّب...'],
+  // ['كلمة من اسم المادة', '', 'a3.webp', ''],   ← صورة فقط بدون تغيير اسم/وصف
+];
+
+/// 🔍 بحث جزئي بالاسم
 Product? _findByName(List<Product> list, String keyword) {
   for (final p in list) {
     if (p.name.contains(keyword)) return p;
@@ -55,52 +76,24 @@ Product? _findByName(List<Product> list, String keyword) {
   return null;
 }
 
-/// ✏️ تطبيق التحديثات على الكتالوج
+/// ✏️ تطبيق الجدول على الكتالوج
 List<Product> _applyOverrides(List<Product> base) {
   final result = List<Product>.from(base);
-
-  // ────────────────────────────────────────────────
-  // ✅ 1) برايمر خارجي جديد 20 كغ
-  // ────────────────────────────────────────────────
-  final primer = _findByName(result, 'برايمر خارجي') ??
-      _findByName(result, 'بريمر خارجي') ??
-      _findByName(result, 'أساس بريميوم خارجي');
-  if (primer != null) {
-    final idx = result.indexOf(primer);
-    result[idx] = primer.copyWith(
-      name: 'برايمر خارجي جديد 20 كغ',
-      image: '$_imgBase/primer_exterior_20kg.webp',
-      description:
-          'يُشكّل طبقة رابطة متينة بين الطلاء والسطح، فيزيد من قوة الالتصاق '
-          'ويقلّل من استهلاك الطلاء. يتميّز بنفاذية عالية تسمح بخروج الرطوبة '
-          'من داخل المبنى، ويمنع امتصاص السطح للطلاء بشكل غير متساوٍ، '
-          'ليمنحك تشطيباً خارجياً متجانساً يدوم طويلاً.\n\n'
-          '⏱ مدة الجفاف: 4-8 ساعات\n'
-          '▦ معدل التغطية: 90-145 م²\n'
-          '✨ اللمسة النهائية: طبقة واحدة\n'
-          '📦 التعبئة: 20 كغم\n'
-          '💧 المخفف: ماء 15%',
+  for (final u in _updates) {
+    final p = _findByName(result, u[0]);
+    if (p == null) continue;
+    final i = result.indexOf(p);
+    result[i] = p.copyWith(
+      name: u[1].isEmpty ? null : u[1],
+      image: u[2].isEmpty ? null : '$_imgBase/${u[2]}',
+      description: u[3].isEmpty ? null : u[3],
     );
   }
-
-  // ────────────────────────────────────────────────
-  // 🔮 أضف تحديثات جديدة هنا بنفس النمط:
-  // ────────────────────────────────────────────────
-  // final x = _findByName(result, 'كلمة البحث');
-  // if (x != null) {
-  //   final i = result.indexOf(x);
-  //   result[i] = x.copyWith(
-  //     name: 'الاسم الجديد',
-  //     image: '$_imgBase/اسم_الملف.webp',
-  //     description: 'الوصف الجديد...',
-  //   );
-  // }
-
   return result;
 }
 
-/// ✅ المتغير الأساسي — كتالوج + تحديثات
+/// ✅ المتغير الأساسي — كتالوج 688 مادة + تحديثاتك التسلسلية
 final List<Product> sampleData = _applyOverrides(buildCatalog());
 
-/// ✅ مرادف لـ sampleData لتوافق products_screen.dart
+/// ✅ مرادف لتوافق products_screen.dart
 final List<Product> sampleProducts = sampleData;
