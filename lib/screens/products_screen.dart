@@ -1,15 +1,16 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../core/app_settings.dart';
 import '../core/guest_guard.dart';
 import '../core/orders_service.dart';
-import 'login_screen.dart';
 import '../core/theme.dart';
 import '../data/sample_data.dart';
 import '../widgets/pressable.dart';
 import 'cart_screen.dart';
+import 'login_screen.dart';
 import 'product_detail_screen.dart';
 
 /// ✅ أسماء الأقسام وألوانها المميزة
@@ -31,7 +32,9 @@ const List<_BrandCfg> _brands = [
       Icons.palette_rounded),
   _BrandCfg('sibax', 'سيباكس', 'Sibax', Color(0xFFC8961E),
       Icons.build_rounded),
-];
+);
+
+const String _siteBase = 'https://ahmedbrzan.github.io/FAWORI';
 
 /// ✅ ملاحظة متدرجة عائمة أسفل (محلية ومستقلة)
 void _gradSnack(
@@ -86,8 +89,6 @@ class ProductsScreen extends StatefulWidget {
   @override
   State<ProductsScreen> createState() => _ProductsScreenState();
 }
-
-const String _siteBase = 'https://ahmedbrzan.github.io/FAWORI';
 
 class _ProductsScreenState extends State<ProductsScreen> {
   int _cartCount = 0;
@@ -238,6 +239,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         actions: [
           IconButton(
             onPressed: () {
+              // 🔒 السلة مقفلة للضيوف
               if (s.isGuest) {
                 GuestGuard.lock(
                   context,
@@ -245,9 +247,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   message: s.isArabic
                       ? 'متاحة للمستخدمين المسجلين فقط. سجل دخولك لتتمكن من إضافة المنتجات وطلبها'
                       : 'Available for registered users only. Sign in to add and order products',
-                  onLogin: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LoginScreen())),
-                  loginLabel: s.isArabic ? 'سجل دخولك الآن' : 'Sign in now',
+                  onLogin: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const LoginScreen())),
+                  loginLabel:
+                      s.isArabic ? 'سجل دخولك الآن' : 'Sign in now',
                 );
                 return;
               }
@@ -550,13 +553,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // ✅ صورة المنتج (المرفوعة ← الكتالوج ← أيقونة)
                             Expanded(
                               child: Builder(builder: (context) {
                                 final url = _imgOf(p);
                                 if (url.isEmpty) {
                                   return Center(
-                                      child: Icon(b.icon,
-                                          size: 46, color: b.color));
+                                    child: Icon(b.icon,
+                                        size: 46, color: b.color),
+                                  );
                                 }
                                 return ClipRRect(
                                   borderRadius: BorderRadius.circular(14),
@@ -569,45 +574,56 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                         prog == null
                                             ? child
                                             : Center(
-                                                child: Icon(b.icon,
-                                                    size: 40,
-                                                    color: b.color
-                                                        .withAlpha(120)),
+                                                child: Icon(
+                                                  b.icon,
+                                                  size: 40,
+                                                  color:
+                                                      b.color.withAlpha(120),
+                                                ),
                                               ),
                                     errorBuilder: (c, e, st) => Center(
-                                        child: Icon(b.icon,
-                                            size: 46, color: b.color)),
+                                      child: Icon(b.icon,
+                                          size: 46, color: b.color),
+                                    ),
                                   ),
                                 );
                               }),
                             ),
-                            Text(p.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
-                                    color: dark
-                                        ? Colors.white
-                                        : AppColors.ink)),
+                            const SizedBox(height: 12),
+                            Text(
+                              p.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                                color: dark ? Colors.white : AppColors.ink,
+                              ),
+                            ),
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: b.color.withAlpha(25),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text(s.isArabic ? b.ar : b.en,
-                                  style: TextStyle(
-                                      color: b.color,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800)),
+                              child: Text(
+                                s.isArabic ? b.ar : b.en,
+                                style: TextStyle(
+                                  color: b.color,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ),
+                    // 🔒 زر الإضافة مخفي عن الضيوف
                     if (!s.isGuest)
                       PositionedDirectional(
                         bottom: 10,
@@ -620,20 +636,26 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: <Color>[
-                                  b.color,
-                                  b.color.withAlpha(220)
-                                ]),
+                                gradient: LinearGradient(
+                                  colors: <Color>[
+                                    b.color,
+                                    b.color.withAlpha(220),
+                                  ],
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                      color: b.color.withAlpha(90),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3)),
+                                    color: b.color.withAlpha(90),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
                                 ],
                               ),
-                              child: const Icon(Icons.add_rounded,
-                                  color: Colors.white, size: 18),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
