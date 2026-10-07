@@ -23,22 +23,17 @@ class _BrandCfg {
   const _BrandCfg(this.key, this.ar, this.en, this.color, this.icon);
 }
 
-const List<_BrandCfg> _brands = [
-  _BrandCfg('fawori', 'فاوري', 'Fawori', Color(0xFFFF8C00),
-      Icons.format_paint_rounded),
-  _BrandCfg('isomat', 'آيزومات', 'Isomat', Color(0xFF2196F3),
-      Icons.water_drop_rounded),
-  _BrandCfg('cadence', 'كادينز', 'Cadence', Color(0xFF9C27B0),
-      Icons.palette_rounded),
-  _BrandCfg('sibax', 'سيباكس', 'Sibax', Color(0xFFC8961E),
-      Icons.build_rounded),
-);
+const List<_BrandCfg> _brands = <_BrandCfg>[
+  _BrandCfg('fawori', 'فاوري', 'Fawori', Color(0xFFFF8C00), Icons.format_paint_rounded),
+  _BrandCfg('isomat', 'آيزومات', 'Isomat', Color(0xFF2196F3), Icons.water_drop_rounded),
+  _BrandCfg('cadence', 'كادينز', 'Cadence', Color(0xFF9C27B0), Icons.palette_rounded),
+  _BrandCfg('sibax', 'سيباكس', 'Sibax', Color(0xFFC8961E), Icons.build_rounded),
+];
 
 const String _siteBase = 'https://ahmedbrzan.github.io/FAWORI';
 
-/// ✅ ملاحظة متدرجة عائمة أسفل (محلية ومستقلة)
-void _gradSnack(
-    BuildContext context, String msg, Color color, IconData icon) {
+/// ✅ ملاحظة متدرجة عائمة أسفل
+void _gradSnack(BuildContext context, String msg, Color color, IconData icon) {
   ScaffoldMessenger.of(context).clearSnackBars();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
@@ -58,10 +53,7 @@ void _gradSnack(
           ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
-            BoxShadow(
-                color: color.withAlpha(80),
-                blurRadius: 12,
-                offset: const Offset(0, 4)),
+            BoxShadow(color: color.withAlpha(80), blurRadius: 12, offset: const Offset(0, 4)),
           ],
         ),
         child: Row(
@@ -70,10 +62,7 @@ void _gradSnack(
             const SizedBox(width: 10),
             Expanded(
               child: Text(msg,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13)),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
             ),
           ],
         ),
@@ -83,7 +72,6 @@ void _gradSnack(
 }
 
 class ProductsScreen extends StatefulWidget {
-  /// ✅ اختياري: فتح الشاشة على قسم معين (تستخدمه الرئيسية)
   final String? initialBrand;
   const ProductsScreen({super.key, this.initialBrand});
   @override
@@ -94,7 +82,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   int _cartCount = 0;
   String _q = '';
   String? _focusBrand;
-  Map<String, String> _prodImg = {};
+  Map<String, String> _prodImg = <String, String>{};
   final _qCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
 
@@ -103,9 +91,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.initState();
     _refreshCount();
     _loadProdImages();
-    // ✅ فتح القسم المطلوب مباشرة (يجلب ما في قائمته من الكتالوج)
-    if (widget.initialBrand != null &&
-        _brands.any((b) => b.key == widget.initialBrand)) {
+    if (widget.initialBrand != null && _brands.any((b) => b.key == widget.initialBrand)) {
       _focusBrand = widget.initialBrand;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _scrollCtrl.hasClients) {
@@ -132,16 +118,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     } catch (_) {}
   }
 
-  /// ✅ تحميل صور المنتجات المرفوعة (نفس مصدر صفحة التفاصيل)
   Future<void> _loadProdImages() async {
-    for (final path in const <String>[
-      'assets/data/images.json',
-      'assets/assets/data/images.json',
-    ]) {
+    for (final path in const <String>['assets/data/images.json', 'assets/assets/data/images.json']) {
       try {
         final r = await http
-            .get(Uri.parse(
-                '$_siteBase/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+            .get(Uri.parse('$_siteBase/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
             .timeout(const Duration(seconds: 5));
         if (r.statusCode == 200) {
           final m = Map<String, dynamic>.from(jsonDecode(r.body));
@@ -155,7 +136,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
-  /// ✅ أفضل صورة للمنتج: المرفوعة ← ثم الكتالوج ← ثم أيقونة
   String _imgOf(Product p) {
     final mapped = _prodImg[p.id];
     if (mapped != null && mapped.isNotEmpty) {
@@ -169,9 +149,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final uid = s.user?.id ?? '';
     if (uid.isEmpty || s.isGuest) {
       if (mounted) {
-        _gradSnack(context,
-            s.isArabic ? 'سجّل الدخول أولاً للشراء' : 'Login first to buy',
-            Colors.red, Icons.lock_rounded);
+        _gradSnack(context, s.isArabic ? 'سجّل الدخول أولاً للشراء' : 'Login first to buy', Colors.red, Icons.lock_rounded);
       }
       return;
     }
@@ -179,16 +157,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
     await _refreshCount();
     if (mounted) {
       _gradSnack(context,
-          s.isArabic
-              ? 'أُضيف إلى السلة : $qty ${p.name}'
-              : 'Added : $qty ${p.name}',
+          s.isArabic ? 'أُضيف إلى السلة : $qty ${p.name}' : 'Added : $qty ${p.name}',
           const Color(0xFF0D9668), Icons.add_shopping_cart_rounded);
     }
   }
 
   Future<void> _openCart() async {
-    await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const CartScreen()));
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
     await _refreshCount();
   }
 
@@ -198,26 +173,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
     await Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(
-                product: p,
-                canBuy: canBuy,
-                onAdd: (q) => _addToCart(p, q))));
+            builder: (_) => ProductDetailScreen(product: p, canBuy: canBuy, onAdd: (q) => _addToCart(p, q))));
     await _refreshCount();
   }
 
-  _BrandCfg _brandCfg(String key) =>
-      _brands.firstWhere((b) => b.key == key);
+  _BrandCfg _brandCfg(String key) => _brands.firstWhere((b) => b.key == key);
 
-  /// ✅ فلترة منتجات قسم معين (البحث يعمل داخل القسم فقط)
   List<Product> _filterBrand(String brandKey) {
     final base = sampleData.where((p) => p.brand == brandKey);
     if (_q.trim().isEmpty) return base.toList();
     final q = _q.trim().toLowerCase();
-    return base
-        .where((p) =>
-            p.name.toLowerCase().contains(q) ||
-            p.description.toLowerCase().contains(q))
-        .toList();
+    return base.where((p) => p.name.toLowerCase().contains(q) || p.description.toLowerCase().contains(q)).toList();
   }
 
   @override
@@ -226,20 +192,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor:
-          dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
+      backgroundColor: dark ? const Color(0xFF141419) : const Color(0xFFFFF8F1),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(s.isArabic ? 'المنتجات' : 'Products',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: dark ? Colors.white : AppColors.ink)),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: dark ? Colors.white : AppColors.ink)),
         actions: [
           IconButton(
             onPressed: () {
-              // 🔒 السلة مقفلة للضيوف
               if (s.isGuest) {
                 GuestGuard.lock(
                   context,
@@ -247,10 +208,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   message: s.isArabic
                       ? 'متاحة للمستخدمين المسجلين فقط. سجل دخولك لتتمكن من إضافة المنتجات وطلبها'
                       : 'Available for registered users only. Sign in to add and order products',
-                  onLogin: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const LoginScreen())),
-                  loginLabel:
-                      s.isArabic ? 'سجل دخولك الآن' : 'Sign in now',
+                  onLogin: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LoginScreen())),
+                  loginLabel: s.isArabic ? 'سجل دخولك الآن' : 'Sign in now',
                 );
                 return;
               }
@@ -258,24 +217,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
             },
             icon: Stack(
               children: [
-                const Icon(Icons.shopping_cart_outlined,
-                    color: AppColors.orange, size: 24),
+                const Icon(Icons.shopping_cart_outlined, color: AppColors.orange, size: 24),
                 if (_cartCount > 0)
                   Positioned(
                     top: 0,
                     right: 0,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                          color: Colors.red, shape: BoxShape.circle),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text('$_cartCount',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900)),
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
                     ),
                   ),
               ],
@@ -287,39 +240,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
         controller: _scrollCtrl,
         padding: const EdgeInsets.all(16),
         children: [
-          // ===== شريط البحث =====
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               gradient: LinearGradient(
-                colors: dark
-                    ? <Color>[
-                        const Color(0xFF1E1E28),
-                        const Color(0xFF26262E)
-                      ]
-                    : <Color>[Colors.white, const Color(0xFFFFF8F1)],
+                colors: dark ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)] : <Color>[Colors.white, const Color(0xFFFFF8F1)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              border:
-                  Border.all(color: AppColors.orange.withAlpha(60), width: 1.2),
+              border: Border.all(color: AppColors.orange.withAlpha(60), width: 1.2),
             ),
             child: TextField(
               controller: _qCtrl,
               onChanged: (v) => setState(() => _q = v),
-              style: TextStyle(
-                  color: dark ? Colors.white : AppColors.ink, fontSize: 15),
+              style: TextStyle(color: dark ? Colors.white : AppColors.ink, fontSize: 15),
               decoration: InputDecoration(
-                hintText:
-                    s.isArabic ? 'ابحث عن مادة...' : 'Search product...',
-                hintStyle: TextStyle(
-                    color: dark ? Colors.grey.shade500 : Colors.grey.shade400),
-                prefixIcon:
-                    const Icon(Icons.search_rounded, color: AppColors.orange),
+                hintText: s.isArabic ? 'ابحث عن مادة...' : 'Search product...',
+                hintStyle: TextStyle(color: dark ? Colors.grey.shade500 : Colors.grey.shade400),
+                prefixIcon: const Icon(Icons.search_rounded, color: AppColors.orange),
                 suffixIcon: _q.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear_rounded,
-                            color: Colors.red, size: 18),
+                        icon: const Icon(Icons.clear_rounded, color: Colors.red, size: 18),
                         onPressed: () {
                           _qCtrl.clear();
                           setState(() => _q = '');
@@ -327,60 +268,44 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
           ),
           const SizedBox(height: 18),
-
-          // ===== شريط القسم المركّز (عند الفتح من الرئيسية) =====
           if (_focusBrand != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: <Color>[
-                      _brandCfg(_focusBrand!).color,
-                      _brandCfg(_focusBrand!).color.withAlpha(220),
-                    ],
+                    colors: <Color>[_brandCfg(_focusBrand!).color, _brandCfg(_focusBrand!).color.withAlpha(220)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(
-                      color: _brandCfg(_focusBrand!).color.withAlpha(80),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
+                    BoxShadow(color: _brandCfg(_focusBrand!).color.withAlpha(80), blurRadius: 12, offset: const Offset(0, 4)),
                   ],
                 ),
                 child: Row(
                   children: [
-                    Icon(_brandCfg(_focusBrand!).icon,
-                        color: Colors.white, size: 22),
+                    Icon(_brandCfg(_focusBrand!).icon, color: Colors.white, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         s.isArabic
                             ? '${_brandCfg(_focusBrand!).ar} — ${_filterBrand(_focusBrand!).length} مادة'
                             : '${_brandCfg(_focusBrand!).en} — ${_filterBrand(_focusBrand!).length} items',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            color: Colors.white),
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.white),
                       ),
                     ),
                     InkWell(
                       onTap: () => setState(() => _focusBrand = null),
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withAlpha(40),
                           borderRadius: BorderRadius.circular(10),
@@ -388,15 +313,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.apps_rounded,
-                                size: 16, color: Colors.white),
+                            const Icon(Icons.apps_rounded, size: 16, color: Colors.white),
                             const SizedBox(width: 4),
-                            Text(
-                                s.isArabic ? 'كل الأقسام' : 'All',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12)),
+                            Text(s.isArabic ? 'كل الأقسام' : 'All',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -405,21 +325,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ),
             ),
-
-          // ===== الأقسام (المركّز عليها أو الكل) =====
-          for (final b in (_focusBrand == null
-              ? _brands
-              : _brands.where((x) => x.key == _focusBrand).toList()))
+          for (final b in (_focusBrand == null ? _brands : _brands.where((x) => x.key == _focusBrand).toList()))
             _buildSection(b, dark, s),
         ],
       ),
     );
   }
 
-  /// ✅ بناء قسم واحد (رأس متدرج + شبكة منتجات)
   Widget _buildSection(_BrandCfg b, bool dark, AppSettings s) {
     final items = _filterBrand(b.key);
-    // ✅ إخفاء القسم الفارغ عند البحث
     if (items.isEmpty && _q.trim().isNotEmpty) {
       return const SizedBox.shrink();
     }
@@ -428,7 +342,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ===== رأس القسم =====
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -439,11 +352,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
-                BoxShadow(
-                  color: b.color.withAlpha(80),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
+                BoxShadow(color: b.color.withAlpha(80), blurRadius: 12, offset: const Offset(0, 4)),
               ],
             ),
             child: Row(
@@ -451,35 +360,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 Icon(b.icon, color: Colors.white, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    s.isArabic ? b.ar : b.en,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16),
-                  ),
+                  child: Text(s.isArabic ? b.ar : b.en,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(40),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                    '${items.length} ${s.isArabic ? 'مادة' : 'items'}',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12),
-                  ),
+                  child: Text('${items.length} ${s.isArabic ? 'مادة' : 'items'}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-
-          // ===== حالة فارغة =====
           if (items.isEmpty)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 30),
@@ -493,19 +389,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   children: [
                     Icon(b.icon, color: b.color.withAlpha(80), size: 48),
                     const SizedBox(height: 8),
-                    Text(
-                        s.isArabic ? 'لا توجد منتجات' : 'No products',
-                        style: TextStyle(
-                            color: dark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
-                            fontWeight: FontWeight.w800)),
+                    Text(s.isArabic ? 'لا توجد منتجات' : 'No products',
+                        style: TextStyle(color: dark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w800)),
                   ],
                 ),
               ),
             )
-
-          // ===== شبكة المنتجات =====
           else
             GridView.builder(
               shrinkWrap: true,
@@ -529,39 +418,25 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: dark
-                                ? <Color>[
-                                    const Color(0xFF1E1E28),
-                                    const Color(0xFF26262E)
-                                  ]
-                                : <Color>[
-                                    Colors.white,
-                                    const Color(0xFFFFF8F1)
-                                  ],
+                                ? <Color>[const Color(0xFF1E1E28), const Color(0xFF26262E)]
+                                : <Color>[Colors.white, const Color(0xFFFFF8F1)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: b.color.withAlpha(50)),
                           boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withAlpha(dark ? 50 : 10),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
+                            BoxShadow(color: Colors.black.withAlpha(dark ? 50 : 10), blurRadius: 10, offset: const Offset(0, 4)),
                           ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // ✅ صورة المنتج (المرفوعة ← الكتالوج ← أيقونة)
                             Expanded(
                               child: Builder(builder: (context) {
                                 final url = _imgOf(p);
                                 if (url.isEmpty) {
-                                  return Center(
-                                    child: Icon(b.icon,
-                                        size: 46, color: b.color),
-                                  );
+                                  return Center(child: Icon(b.icon, size: 46, color: b.color));
                                 }
                                 return ClipRRect(
                                   borderRadius: BorderRadius.circular(14),
@@ -570,60 +445,33 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     fit: BoxFit.contain,
                                     width: double.infinity,
                                     gaplessPlayback: true,
-                                    loadingBuilder: (c, child, prog) =>
-                                        prog == null
-                                            ? child
-                                            : Center(
-                                                child: Icon(
-                                                  b.icon,
-                                                  size: 40,
-                                                  color:
-                                                      b.color.withAlpha(120),
-                                                ),
-                                              ),
-                                    errorBuilder: (c, e, st) => Center(
-                                      child: Icon(b.icon,
-                                          size: 46, color: b.color),
-                                    ),
+                                    loadingBuilder: (c, child, prog) => prog == null
+                                        ? child
+                                        : Center(child: Icon(b.icon, size: 40, color: b.color.withAlpha(120))),
+                                    errorBuilder: (c, e, st) => Center(child: Icon(b.icon, size: 46, color: b.color)),
                                   ),
                                 );
                               }),
                             ),
                             const SizedBox(height: 12),
-                            Text(
-                              p.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                color: dark ? Colors.white : AppColors.ink,
-                              ),
-                            ),
+                            Text(p.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: dark ? Colors.white : AppColors.ink)),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: b.color.withAlpha(25),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text(
-                                s.isArabic ? b.ar : b.en,
-                                style: TextStyle(
-                                  color: b.color,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                              child: Text(s.isArabic ? b.ar : b.en,
+                                  style: TextStyle(color: b.color, fontSize: 10, fontWeight: FontWeight.w800)),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    // 🔒 زر الإضافة مخفي عن الضيوف
                     if (!s.isGuest)
                       PositionedDirectional(
                         bottom: 10,
@@ -636,26 +484,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: <Color>[
-                                    b.color,
-                                    b.color.withAlpha(220),
-                                  ],
-                                ),
+                                gradient: LinearGradient(colors: <Color>[b.color, b.color.withAlpha(220)]),
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
-                                  BoxShadow(
-                                    color: b.color.withAlpha(90),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
+                                  BoxShadow(color: b.color.withAlpha(90), blurRadius: 10, offset: const Offset(0, 3)),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.add_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
+                              child: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
                             ),
                           ),
                         ),
