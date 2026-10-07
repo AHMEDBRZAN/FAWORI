@@ -85,10 +85,13 @@ class ProductsScreen extends StatefulWidget {
   State<ProductsScreen> createState() => _ProductsScreenState();
 }
 
+const String _siteBase = 'https://ahmedbrzan.github.io/FAWORI';
+
 class _ProductsScreenState extends State<ProductsScreen> {
   int _cartCount = 0;
   String _q = '';
   String? _focusBrand;
+  Map<String, String> _prodImg = {};
   final _qCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
 
@@ -96,6 +99,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     _refreshCount();
+    _loadProdImages();
     // ✅ فتح القسم المطلوب مباشرة (يجلب ما في قائمته من الكتالوج)
     if (widget.initialBrand != null &&
         _brands.any((b) => b.key == widget.initialBrand)) {
@@ -123,6 +127,38 @@ class _ProductsScreenState extends State<ProductsScreen> {
         setState(() => _cartCount = cart.fold(0, (p, c) => p + c.qty));
       }
     } catch (_) {}
+  }
+
+  /// ✅ تحميل صور المنتجات المرفوعة (نفس مصدر صفحة التفاصيل)
+  Future<void> _loadProdImages() async {
+    for (final path in const <String>[
+      'assets/data/images.json',
+      'assets/assets/data/images.json',
+    ]) {
+      try {
+        final r = await http
+            .get(Uri.parse(
+                '$_siteBase/$path?t=${DateTime.now().millisecondsSinceEpoch}'))
+            .timeout(const Duration(seconds: 5));
+        if (r.statusCode == 200) {
+          final m = Map<String, dynamic>.from(jsonDecode(r.body));
+          final g = m['products'];
+          if (g is Map && mounted) {
+            setState(() => _prodImg = Map<String, String>.from(g));
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  /// ✅ أفضل صورة للمنتج: المرفوعة ← ثم الكتالوج ← ثم أيقونة
+  String _imgOf(Product p) {
+    final mapped = _prodImg[p.id];
+    if (mapped != null && mapped.isNotEmpty) {
+      return '$_siteBase/assets/$mapped';
+    }
+    return p.image;
   }
 
   Future<void> _addToCart(Product p, int qty) async {
@@ -513,11 +549,36 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: p.image.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Image.network(
-                                        p.image,
+                              child: Builder(builder: (context) {
+                                final url = _imgOf(p);
+                                if (url.isEmpty) {
+                                  return Center(
+                                      child: Icon(b.icon,
+                                          size: 46, color: b.color));
+                                }
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.network(
+                                    url,
+                                    fit: BoxFit.contain,
+                                    width: double.infinity,
+                                    gaplessPlayback: true,
+                                    loadingBuilder: (c, child, prog) =>
+                                        prog == null
+                                            ? child
+                                            : Center(
+                                                child: Icon(b.icon,
+                                                    size: 40,
+                                                    color: b.color
+                                                        .withAlpha(120)),
+                                              ),
+                                    errorBuilder: (c, e, st) => Center(
+                                        child: Icon(b.icon,
+                                            size: 46, color: b.color)),
+                                  ),
+                                );
+                              }),
+                            ),
                                         fit: BoxFit.contain,
                                         width: double.infinity,
                                         gaplessPlayback: true,
