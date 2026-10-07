@@ -39,7 +39,8 @@ class Product {
 }
 
 ///  مجلد الصور التسلسلية في المستودع
-const String _imgBase = 'assets/images/products';
+const String _imgBase =
+    'https://ahmedbrzan.github.io/FAWORI/assets/images/products';
 
 /// ============================================================
 /// 📋 جدول التحديثات التسلسلي (سطر واحد لكل مادة):
